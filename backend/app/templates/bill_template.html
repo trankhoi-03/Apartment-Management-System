@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: 'DejaVu Sans', sans-serif; font-size: 13px; color: #1a1a1a; }
+    .header { text-align: center; margin-bottom: 24px; }
+    .header h1 { font-size: 20px; margin: 0; }
+    .header p { color: #666; margin: 4px 0 0; }
+    .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+    .info-table td { padding: 4px 0; }
+    .info-table td.label { color: #666; width: 140px; }
+    table.items { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    table.items th, table.items td {
+        border: 1px solid #ddd; padding: 8px 10px; text-align: left;
+    }
+    table.items th { background-color: #f5f5f5; }
+    table.items td.amount { text-align: right; }
+    .total-row td { font-weight: bold; font-size: 15px; background-color: #f0f0f0; }
+    .footer { margin-top: 30px; color: #888; font-size: 11px; text-align: center; }
+</style>
+</head>
+<body>
+    <div class="header">
+        <h1>HOÁ ĐƠN TIỀN PHÒNG</h1>
+        <p>Tháng {{ billing_month }}</p>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <td class="label">Phòng:</td>
+            <td>{{ room_number }}</td>
+        </tr>
+        <tr>
+            <td class="label">Người thuê:</td>
+            <td>{{ tenant_name }}</td>
+        </tr>
+        <tr>
+            <td class="label">Số điện thoại:</td>
+            <td>{{ tenant_phone }}</td>
+        </tr>
+    </table>
+
+    <table class="items">
+        <thead>
+            <tr>
+                <th>Khoản mục</th>
+                <th>Chi tiết</th>
+                <th class="amount">Số tiền (đ)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Tiền thuê phòng</td>
+                <td>—</td>
+                <td class="amount">{{ "{:,.0f}".format(rent_amount) }}</td>
+            </tr>
+            <tr>
+                <td>Tiền điện</td>
+                <td>{{ "{:,.1f}".format(electric_consumed) }} kWh</td>
+                <td class="amount">{{ "{:,.0f}".format(electric_amount) }}</td>
+            </tr>
+            <tr>
+                <td>Tiền nước</td>
+                <td>{{ "{:,.1f}".format(water_consumed) }} m³</td>
+                <td class="amount">{{ "{:,.0f}".format(water_amount) }}</td>
+            </tr>
+            <tr>
+                <td>Phí dịch vụ</td>
+                <td>—</td>
+                <td class="amount">{{ "{:,.0f}".format(service_fee) }}</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="2">TỔNG CỘNG</td>
+                <td class="amount">{{ "{:,.0f}".format(total_amount) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Hoá đơn được tạo tự động bởi hệ thống quản lý phòng trọ.
+    </div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+# =========================
+# Application storage
+# =========================
+backend/storage/*
+!backend/storage/.gitkeep
+
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+
+venv/
+.venv/
+env/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+
+# =========================
+# Node.js / React / Vite
+# =========================
+node_modules/
+dist/
+build/
+.npm/
+.eslintcache
+
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+
+# =========================
+# Logs
+# =========================
+*.log
+
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
