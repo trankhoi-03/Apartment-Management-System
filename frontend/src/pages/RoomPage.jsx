@@ -4,6 +4,7 @@ import RoomCard from "../components/rooms/RoomCard";
 import RoomDrawer from "../components/rooms/RoomDrawer";
 import RoomFormModal from "../components/rooms/RoomFormModal";
 import HouseFormModal from "../components/houses/HouseFormModal";
+import ContractTemplateSettings from "../components/houses/ContractTemplateSettings";
 
 const STATUS_FILTERS = [
   { key: "all",      label: "Tất cả" },
@@ -16,25 +17,29 @@ export default function RoomsPage() {
   const isOwner = userRole === "owner";
   const [rooms, setRooms] = useState([]);
   const [houses, setHouses] = useState([]);
+  const [contracts, setContracts] = useState([]); 
   const [selectedHouse, setSelectedHouse] = useState("all");
-  
   const [statusFilter, setStatusFilter] = useState("all"); 
-
   const [loading, setLoading] = useState(true);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
+  
   const [showForm, setShowForm] = useState(false);
   const [showHouseForm, setShowHouseForm] = useState(false);
+  // THÊM: State quản lý hiển thị Modal cài đặt hợp đồng
+  const [showTemplateSettings, setShowTemplateSettings] = useState(false);
 
   async function loadData() {
     setLoading(true);
     try {
-      const [housesRes, roomsRes] = await Promise.all([
+      const [housesRes, roomsRes, contractsRes] = await Promise.all([
         api.get("/houses").catch(() => ({ data: [] })),
-        api.get("/rooms").catch(() => ({ data: [] }))
+        api.get("/rooms").catch(() => ({ data: [] })),
+        api.get("/contracts").catch(() => ({ data: [] }))
       ]);
       setHouses(housesRes.data);
       setRooms(roomsRes.data);
+      setContracts(contractsRes.data);
     } finally {
       setLoading(false);
     }
@@ -72,9 +77,12 @@ export default function RoomsPage() {
 
   const enrichedRooms = rooms.map(room => {
     const house = houses.find(h => h.id === room.house_id);
+    const activeContract = contracts.find(c => c.room_id === room.id && c.status === "active");
+    
     return {
       ...room,
-      computed_house: house
+      computed_house: house,
+      computed_active_contract: activeContract
     };
   });
 
@@ -90,8 +98,11 @@ export default function RoomsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-800">Phòng & Hợp đồng</h1>
+        
+        {/* THANH ĐIỀU HƯỚNG BÊN TRÁI */}
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-800 mr-2">Phòng & Hợp đồng</h1>
+          
           {houses.length > 0 && (
             <select
               value={selectedHouse}
@@ -106,15 +117,36 @@ export default function RoomsPage() {
               ))}
             </select>
           )}
+
           {isOwner && (
-            <button 
-              onClick={() => setShowHouseForm(true)}
-              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition whitespace-nowrap"
-            >
-              + Thêm nhà
-            </button>
+            <>
+              <button 
+                onClick={() => setShowHouseForm(true)}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition whitespace-nowrap"
+              >
+                + Thêm nhà
+              </button>
+              
+              {/* THÊM: Nút Cài đặt mẫu hợp đồng */}
+              {houses.length > 0 && (
+                <button
+                  disabled={selectedHouse === "all"}
+                  onClick={() => setShowTemplateSettings(true)}
+                  title={selectedHouse === "all" ? "Vui lòng chọn một nhà cụ thể để cài đặt mẫu HĐ" : "Cài đặt mẫu hợp đồng cho nhà này"}
+                  className={`px-3 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap ${
+                    selectedHouse === "all" 
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                      : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 shadow-sm"
+                  }`}
+                >
+                  📝 Mẫu hợp đồng
+                </button>
+              )}
+            </>
           )}
         </div>
+
+        {/* NÚT BÊN PHẢI */}
         {isOwner && (
           <button onClick={handleAddRoom}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition whitespace-nowrap">
@@ -123,7 +155,7 @@ export default function RoomsPage() {
         )}
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {STATUS_FILTERS.map((f) => {
           const count = houseFilteredRooms.filter(r => f.key === "all" ? true : r.status === f.key).length;
           
@@ -131,7 +163,7 @@ export default function RoomsPage() {
             <button
               key={f.key}
               onClick={() => setStatusFilter(f.key)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap
                 ${statusFilter === f.key 
                   ? "bg-blue-600 text-white shadow-sm" 
                   : "bg-white border border-gray-200 text-gray-600 hover:border-blue-300"}`}
@@ -200,6 +232,14 @@ export default function RoomsPage() {
             setShowHouseForm(false);
             loadData(); 
           }}
+        />
+      )}
+
+      {/* THÊM: Modal cài đặt hợp đồng */}
+      {showTemplateSettings && selectedHouse !== "all" && (
+        <ContractTemplateSettings
+          houseId={selectedHouse}
+          onClose={() => setShowTemplateSettings(false)}
         />
       )}
     </div>

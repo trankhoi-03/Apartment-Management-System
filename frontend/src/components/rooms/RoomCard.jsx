@@ -12,16 +12,44 @@ export default function RoomCard({ room, onClick, isSelected }) {
   const houseName = room.computed_house?.name;
   const houseColor = room.computed_house?.theme_color || "#3B82F6";
 
+  // Tính toán ngày hết hạn hợp đồng
+  const contract = room.computed_active_contract;
+  let isExpiring = false;
+  let daysLeft = null;
+
+  if (contract && contract.end_date) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = new Date(contract.end_date);
+    endDate.setHours(0, 0, 0, 0);
+    daysLeft = Math.round((endDate - today) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft <= 30) {
+      isExpiring = true;
+    }
+  }
+
   return (
     <div
       onClick={() => onClick && onClick(room)}
       style={{ borderLeft: `6px solid ${houseColor}` }}
       className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md transition 
-                  ${isSelected ? "border-blue-400 ring-2 ring-blue-100" : "border-gray-100"}`}
+                  ${isSelected ? "border-blue-400 ring-2 ring-blue-100" : "border-gray-100"}
+                  ${isExpiring ? "bg-orange-50/30" : ""}`} // Đổi nhẹ màu nền nếu sắp hết hạn
     >
       <div className="flex justify-between items-start mb-3">
         <div>
-          <h3 className="text-lg font-bold text-gray-800">Phòng {room.room_number}</h3>
+          <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+            Phòng {room.room_number}
+            {isExpiring && (
+              <span 
+                title={daysLeft < 0 ? `Đã quá hạn ${Math.abs(daysLeft)} ngày` : `Còn ${daysLeft} ngày hết hạn`} 
+                className="text-red-500 animate-pulse text-base"
+              >
+                HĐ còn {daysLeft < 0 ? ` ${Math.abs(daysLeft)} ngày` : ` ${daysLeft} ngày`}
+              </span>
+            )}
+          </h3>
           
           {houseName && (
             <p className="text-xs font-medium text-blue-600 mt-0.5">

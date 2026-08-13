@@ -14,8 +14,10 @@ class HouseCreate(HouseBase):
 class HouseUpdate(BaseModel):
     name: str | None = Field(default=None, max_length=100)
     address: str | None = None
+    contract_template: str | None = None
 
 
 class HouseResponse(HouseBase):
     id: int
+    contract_template: str | None = None
     model_config = ConfigDict(from_attributes=True)

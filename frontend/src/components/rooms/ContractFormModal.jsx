@@ -160,7 +160,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       
       // Bước 2: Tạo hợp đồng 
       setSubmitStep("Đang tạo hợp đồng...");
-      await api.post("/contracts", {
+      const contractRes = await api.post("/contracts", {
         room_id:            room.id,
         tenant_id:          tenantId,
         start_date:         form.start_date,
@@ -172,6 +172,8 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
         notes:              form.notes, // Gửi dữ liệu ghi chú xuống Backend
         ...(form.end_date && { end_date: form.end_date }),
       });
+
+      const newContractId = contractRes.data.id; // Lưu lại ID hợp đồng vừa tạo
 
       // Bước 3: Khai báo đơn giá điện/nước 
       setSubmitStep("Đang lưu đơn giá điện/nước...");
@@ -197,6 +199,25 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
         water_old:     room.is_water_meter ? Number(form.water_reading) : 0,
         water_new:     room.is_water_meter ? Number(form.water_reading) : 0,
       });
+
+      if (confirm("Tạo hợp đồng thành công! Bạn có muốn tải bản Word về máy để in không?")) {
+        setSubmitStep("Đang tải file hợp đồng Word...");
+        try {
+          const fileRes = await api.get(`/contracts/${newContractId}/export-word`, { 
+            responseType: "blob" 
+          });
+          
+          const url = window.URL.createObjectURL(new Blob([fileRes.data]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", `HopDong_Phong_${room.room_number}.docx`);
+          document.body.appendChild(link);
+          link.click();
+          link.parentNode.removeChild(link);
+        } catch (exportErr) {
+          alert("Không thể tải file hợp đồng. Bạn có thể xuất lại sau ở mục Quản lý phòng.");
+        }
+      }
 
       onSaved();
     } catch (err) {
@@ -234,15 +255,11 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
                 <input name="phone" value={form.phone} onChange={handleChange}
                   required placeholder="0912345678" className={INPUT} />
               </Field>
-              <Field label="CCCD/CMND">
-                <input name="id_card_number" value={form.id_card_number}
-                  onChange={handleChange} placeholder="012345678901" className={INPUT} />
+              <Field label="Email" hint="Dùng để nhận bill hàng tháng" required>
+                <input name="email" type="email" value={form.email} onChange={handleChange}
+                  required placeholder="example@gmail.com" className={INPUT} />
               </Field>
             </div>
-            <Field label="Email" hint="Dùng để nhận bill hàng tháng">
-              <input name="email" type="email" value={form.email} onChange={handleChange}
-                placeholder="example@gmail.com" className={INPUT} />
-            </Field>
           </Section>
 
           {/* 2. Thông tin hợp đồng */}
