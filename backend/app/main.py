@@ -11,6 +11,18 @@ app = FastAPI(
     version="0.1.0"
 )
 
+origins = [
+    "http://localhost:5173",
+    "https://apartment-management-system-mu.vercel.app",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth.router)  
 
@@ -31,18 +43,6 @@ app.include_router(house_router.router, **_protected)
 app.include_router(incident_router.router, **_protected)
 app.include_router(data_router.router, **_protected)
 
-origins = [
-    "http://localhost:5173",
-    "https://apartment-management-system-mu.vercel.app",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.get("/")
 def root():
