@@ -18,6 +18,9 @@ et_xmlfile==2.0.0
 fastapi==0.138.0
 fonttools==4.63.0
 greenlet==3.5.2
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
 h11==0.16.0
 idna==3.18
 Jinja2==3.1.6
