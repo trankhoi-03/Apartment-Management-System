@@ -26,7 +26,6 @@ export default function RoomsPage() {
   
   const [showForm, setShowForm] = useState(false);
   const [showHouseForm, setShowHouseForm] = useState(false);
-  // THÊM: State quản lý hiển thị Modal cài đặt hợp đồng
   const [showTemplateSettings, setShowTemplateSettings] = useState(false);
 
   async function loadData() {
@@ -75,6 +74,26 @@ export default function RoomsPage() {
     setShowForm(true);
   }
 
+  async function handleDeleteHouse() {
+    if (selectedHouse === "all") return;
+
+    const houseToDelete = houses.find(h => h.id === Number(selectedHouse));
+    if (!houseToDelete) return;
+
+    if (!confirm(`Bạn có chắc chắn muốn xóa "${houseToDelete.name}"?\nLưu ý: Bạn phải xóa hết tất cả các phòng trong nhà này trước khi xóa nhà.`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/houses/${selectedHouse}`);
+      alert("Đã xóa nhà trọ thành công!");
+      setSelectedHouse("all"); 
+      loadData(); 
+    } catch (err) {
+      alert(err.response?.data?.detail || "Không thể xóa nhà trọ này.");
+    }
+  }
+
   const enrichedRooms = rooms.map(room => {
     const house = houses.find(h => h.id === room.house_id);
     const activeContract = contracts.find(c => c.room_id === room.id && c.status === "active");
@@ -98,16 +117,14 @@ export default function RoomsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        
-        {/* THANH ĐIỀU HƯỚNG BÊN TRÁI */}
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-800 mr-2">Phòng & Hợp đồng</h1>
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          <h1 className="text-2xl font-bold text-gray-800 mr-2 whitespace-nowrap">Phòng & Hợp đồng</h1>
           
           {houses.length > 0 && (
             <select
               value={selectedHouse}
               onChange={(e) => setSelectedHouse(e.target.value)}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700"
+              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700 max-w-[200px] sm:max-w-xs md:max-w-md truncate"
             >
               <option value="all">🏢 Tất cả nhà trọ</option>
               {houses.map((h) => (
@@ -120,61 +137,76 @@ export default function RoomsPage() {
 
           {isOwner && (
             <>
-              <button 
-                onClick={() => setShowHouseForm(true)}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition whitespace-nowrap"
-              >
-                + Thêm nhà
-              </button>
-              
-              {/* THÊM: Nút Cài đặt mẫu hợp đồng */}
-              {houses.length > 0 && (
-                <button
-                  disabled={selectedHouse === "all"}
-                  onClick={() => setShowTemplateSettings(true)}
-                  title={selectedHouse === "all" ? "Vui lòng chọn một nhà cụ thể để cài đặt mẫu HĐ" : "Cài đặt mẫu hợp đồng cho nhà này"}
-                  className={`px-3 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap ${
-                    selectedHouse === "all" 
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
-                      : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 shadow-sm"
-                  }`}
+              <div className="flex items-center gap-2 bg-gray-100/70 p-1 rounded-xl">
+                <button 
+                  onClick={() => setShowHouseForm(true)}
+                  className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200"
                 >
-                  📝 Mẫu hợp đồng
+                  + Thêm nhà
                 </button>
-              )}
+                
+                {houses.length > 0 && selectedHouse !== "all" && (
+                  <button
+                    onClick={handleDeleteHouse}
+                    className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-600 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200 hover:border-red-200"
+                  >
+                    🗑️ Xóa nhà
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
 
-        {/* NÚT BÊN PHẢI */}
         {isOwner && (
-          <button onClick={handleAddRoom}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition whitespace-nowrap">
-            + Thêm phòng
-          </button>
+          <div className="flex-shrink-0 mt-2 xl:mt-0">
+            <button onClick={handleAddRoom}
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition whitespace-nowrap w-full sm:w-auto shadow-sm">
+              + Thêm phòng
+            </button>
+          </div>
         )}
       </div>
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {STATUS_FILTERS.map((f) => {
-          const count = houseFilteredRooms.filter(r => f.key === "all" ? true : r.status === f.key).length;
-          
-          return (
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">        
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+          {STATUS_FILTERS.map((f) => {
+            const count = houseFilteredRooms.filter(r => f.key === "all" ? true : r.status === f.key).length;
+            
+            return (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap
+                  ${statusFilter === f.key 
+                    ? "bg-blue-600 text-white shadow-sm" 
+                    : "bg-white border border-gray-200 text-gray-600 hover:border-blue-300"}`}
+              >
+                {f.label}
+                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${statusFilter === f.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {isOwner && houses.length > 0 && (
+          <div className="flex-shrink-0">
             <button
-              key={f.key}
-              onClick={() => setStatusFilter(f.key)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap
-                ${statusFilter === f.key 
-                  ? "bg-blue-600 text-white shadow-sm" 
-                  : "bg-white border border-gray-200 text-gray-600 hover:border-blue-300"}`}
+              disabled={selectedHouse === "all"}
+              onClick={() => setShowTemplateSettings(true)}
+              title={selectedHouse === "all" ? "Vui lòng chọn một nhà cụ thể để cài đặt mẫu HĐ" : "Cài đặt mẫu hợp đồng cho nhà này"}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap w-full sm:w-auto shadow-sm border ${
+                selectedHouse === "all" 
+                  ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" 
+                  : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-100"
+              }`}
             >
-              {f.label}
-              <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${statusFilter === f.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
-                {count}
-              </span>
+              📝 Mẫu hợp đồng
             </button>
-          );
-        })}
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -235,7 +267,6 @@ export default function RoomsPage() {
         />
       )}
 
-      {/* THÊM: Modal cài đặt hợp đồng */}
       {showTemplateSettings && selectedHouse !== "all" && (
         <ContractTemplateSettings
           houseId={selectedHouse}

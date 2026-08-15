@@ -6,6 +6,13 @@ backend/storage/*
 
 
 # =========================
+# Google OAuth credentials
+# =========================
+backend/app/services/credentials.json
+backend/app/services/token.json
+
+
+# =========================
 # Environment variables
 # =========================
 .env

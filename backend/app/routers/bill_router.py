@@ -12,7 +12,7 @@ from app.models.utility_rate import UtilityRate
 from app.models.bill import Bill
 from app.schemas.bill_schema import BillGenerateRequest, BillUpdate, BillResponse, BillEditRequest
 from app.services.pdf import generate_bill_pdf
-from app.services.email import send_bill_email
+from app.services.gmail_service import send_bill_email
 from app.models.room import Room
 
 router = APIRouter(prefix="/bills", tags=["bills"])
