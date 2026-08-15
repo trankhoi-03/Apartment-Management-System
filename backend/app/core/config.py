@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     GMAIL_SENDER_NAME: str = "Quản lý phòng trọ"
 
     class Config:
-        env_file = ".env"
+        env_file = ".env",
+        extra="ignore"
 
 
 settings = Settings()

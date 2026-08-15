@@ -12,16 +12,20 @@ from googleapiclient.discovery import build
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
-# Tự động lấy đường dẫn tuyệt đối của thư mục chứa file email.py này
+RENDER_CREDENTIALS = "/etc/secrets/credentials.json"
+RENDER_TOKEN = "/etc/secrets/token.json"
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CREDENTIALS_PATH = os.path.join(BASE_DIR, 'credentials.json')
-TOKEN_PATH = os.path.join(BASE_DIR, 'token.json')
+LOCAL_CREDENTIALS = os.path.join(BASE_DIR, 'credentials.json')
+LOCAL_TOKEN = os.path.join(BASE_DIR, 'token.json')
+
+CREDENTIALS_PATH = RENDER_CREDENTIALS if os.path.exists(RENDER_CREDENTIALS) else LOCAL_CREDENTIALS
+TOKEN_PATH = RENDER_TOKEN if os.path.exists(RENDER_TOKEN) else LOCAL_TOKEN
 
 def get_gmail_service():
     """Hàm xử lý xác thực và trả về Gmail API service"""
     creds = None
     
-    # Kiểm tra xem token.json đã tồn tại ở cùng thư mục chưa
     if os.path.exists(TOKEN_PATH):
         creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
         
@@ -78,7 +82,6 @@ def send_bill_email(
     )
     msg.attach(attachment)
 
-    # Gmail API yêu cầu encode toàn bộ tin nhắn sang định dạng base64url
     raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     
     # --- Thực hiện gửi ---
@@ -87,7 +90,6 @@ def send_bill_email(
     except Exception as e:
         raise RuntimeError(f"Gửi email qua Gmail API thất bại: {str(e)}")
 
-# Đoạn code này chỉ chạy khi bạn thực thi trực tiếp file email.py
 if __name__ == "__main__":
     print("Đang khởi tạo trình duyệt để xác thực Gmail API...")
     get_gmail_service()
