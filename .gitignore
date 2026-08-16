@@ -1,28 +1,20 @@
-# =========================
 # Application storage
-# =========================
 backend/storage/*
 !backend/storage/.gitkeep
 
 
-# =========================
 # Google OAuth credentials
-# =========================
 backend/app/services/credentials.json
 backend/app/services/token.json
 
 
-# =========================
 # Environment variables
-# =========================
 .env
 .env.*
 !.env.example
 
 
-# =========================
 # Python
-# =========================
 __pycache__/
 *.py[cod]
 *.pyo
@@ -36,9 +28,7 @@ env/
 htmlcov/
 
 
-# =========================
 # Node.js / React / Vite
-# =========================
 node_modules/
 dist/
 build/
@@ -46,28 +36,20 @@ build/
 .eslintcache
 
 
-# =========================
 # IDE / Editor
-# =========================
 .vscode/
 .idea/
 
 
-# =========================
 # OS
-# =========================
 .DS_Store
 Thumbs.db
 
 
-# =========================
 # Logs
-# =========================
 *.log
 
 
-# =========================
 # Temporary files
-# =========================
 *.tmp
 *.temp

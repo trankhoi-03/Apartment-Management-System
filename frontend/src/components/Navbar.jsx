@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
 
-// THÊM: Bổ sung icon cho từng mục để hiển thị đẹp hơn trên điện thoại
 const NAV_ITEMS = [
   { to: "/",        label: "Tổng quan",  icon: "📊" },
   { to: "/rooms",   label: "Phòng & HĐ", icon: "🚪" },

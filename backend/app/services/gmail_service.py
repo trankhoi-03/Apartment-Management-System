@@ -1,4 +1,5 @@
 import os
+import shutil
 import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -14,13 +15,21 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
 RENDER_CREDENTIALS = "/etc/secrets/credentials.json"
 RENDER_TOKEN = "/etc/secrets/token.json"
+WRITABLE_RENDER_TOKEN = "/tmp/token.json"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOCAL_CREDENTIALS = os.path.join(BASE_DIR, 'credentials.json')
 LOCAL_TOKEN = os.path.join(BASE_DIR, 'token.json')
 
 CREDENTIALS_PATH = RENDER_CREDENTIALS if os.path.exists(RENDER_CREDENTIALS) else LOCAL_CREDENTIALS
-TOKEN_PATH = RENDER_TOKEN if os.path.exists(RENDER_TOKEN) else LOCAL_TOKEN
+
+if os.path.exists(RENDER_TOKEN):
+    if not os.path.exists(WRITABLE_RENDER_TOKEN):
+        os.makedirs(os.path.dirname(WRITABLE_RENDER_TOKEN), exist_ok=True)
+        shutil.copyfile(RENDER_TOKEN, WRITABLE_RENDER_TOKEN)
+    TOKEN_PATH = WRITABLE_RENDER_TOKEN
+else:
+    TOKEN_PATH = LOCAL_TOKEN
 
 def get_gmail_service():
     """Hàm xử lý xác thực và trả về Gmail API service"""
@@ -33,11 +42,9 @@ def get_gmail_service():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # Mở trình duyệt để đăng nhập nếu chưa có token
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
             creds = flow.run_local_server(port=0)
             
-        # Lưu token lại vào file token.json
         with open(TOKEN_PATH, 'w') as token:
             token.write(creds.to_json())
 
@@ -54,7 +61,7 @@ def send_bill_email(
 
     service = get_gmail_service()
 
-    # --- Tạo email ---
+    # Tạo email 
     msg = MIMEMultipart()
     msg["To"] = to_email
     msg["Subject"] = f"Hoá đơn tiền phòng tháng {billing_month}"
@@ -69,7 +76,7 @@ def send_bill_email(
     """
     msg.attach(MIMEText(body_html, "html", "utf-8"))
 
-    # --- Đính kèm file PDF ---
+    # Đính kèm file PDF 
     with open(pdf_path, "rb") as f:
         attachment = MIMEBase("application", "octet-stream")
         attachment.set_payload(f.read())
@@ -84,7 +91,7 @@ def send_bill_email(
 
     raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     
-    # --- Thực hiện gửi ---
+    # Thực hiện gửi 
     try:
         service.users().messages().send(userId="me", body={'raw': raw_message}).execute()
     except Exception as e:

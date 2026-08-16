@@ -4,10 +4,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       
-      {/* ─── NAvigation Bar (Header) ─── */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          {/* Logo / Tên thương hiệu */}
           <div className="flex items-center gap-2">
             <span className="text-2xl">🏠</span>
             <span className="text-xl font-extrabold text-gray-900 tracking-tight">
@@ -15,7 +13,6 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Cụm nút Đăng nhập / Đăng ký ở góc phải */}
           <div className="flex items-center gap-2 sm:gap-4">
             <Link 
               to="/login" 
@@ -33,7 +30,6 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ─── Hero Section (Phần giới thiệu chính) ─── */}
       <main className="flex-1">
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6 tracking-tight">
@@ -61,7 +57,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ─── Features Section (Các tính năng nổi bật) ─── */}
         <section id="features" className="bg-white py-20 border-t border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
@@ -70,7 +65,6 @@ export default function LandingPage() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-8">
-              {/* Feature 1 */}
               <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:border-blue-100 hover:bg-blue-50/50 transition">
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-2xl mb-6">
                   🧾
@@ -81,7 +75,6 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              {/* Feature 2 */}
               <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:border-green-100 hover:bg-green-50/50 transition">
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-2xl mb-6">
                   📥
@@ -92,7 +85,6 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              {/* Feature 3 */}
               <div className="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:border-orange-100 hover:bg-orange-50/50 transition">
                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-2xl mb-6">
                   ⚠️
@@ -106,7 +98,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ─── Call to Action Cuối trang ─── */}
         <section className="bg-blue-600 py-16">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl font-bold text-white mb-6">Sẵn sàng số hoá quy trình quản lý của bạn?</h2>
@@ -120,7 +111,6 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* ─── Footer ─── */}
       <footer className="bg-white border-t border-gray-200 py-8 text-center">
         <p className="text-gray-500 text-sm">
           &copy; {new Date().getFullYear()} Quản Lý Phòng Trọ. All rights reserved.

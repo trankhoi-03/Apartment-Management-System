@@ -64,7 +64,6 @@ export default function ContractTemplateSettings({ houseId, onClose }) {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      // Tách bỏ phần "data:application/vnd.openxmlformats...;base64,"
       const base64String = event.target.result.split(',')[1];
       setBase64File(base64String);
     };
@@ -112,7 +111,6 @@ export default function ContractTemplateSettings({ houseId, onClose }) {
         ) : (
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             
-            {/* CỘT TRÁI: KHU VỰC UPLOAD FILE */}
             <div className="flex-1 p-8 flex flex-col items-center justify-center border-r border-gray-100 h-full bg-white relative">
               
               <div 
@@ -156,10 +154,9 @@ export default function ContractTemplateSettings({ houseId, onClose }) {
               </div>
             </div>
 
-            {/* CỘT PHẢI: DANH SÁCH BIẾN */}
             <div className="w-full md:w-80 bg-gray-50 p-5 overflow-y-auto h-full border-t md:border-t-0 border-gray-100">
               <h3 className="font-bold text-gray-700 mb-3 text-sm uppercase tracking-wide flex items-center gap-2">
-                🧩 Biến tự động
+                Biến tự động
               </h3>
               <p className="text-xs text-gray-500 mb-4 leading-relaxed">
                 Bấm vào biến để Copy, sau đó dán vào file Word của bạn.
@@ -187,7 +184,6 @@ export default function ContractTemplateSettings({ houseId, onClose }) {
           </div>
         )}
 
-        {/* FOOTER */}
         <div className="p-5 border-t border-gray-100 flex justify-between items-center bg-gray-50 rounded-b-2xl">
           {error ? <span className="text-red-500 text-sm font-medium">{error}</span> : <div></div>}
           
