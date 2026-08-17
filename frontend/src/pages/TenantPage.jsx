@@ -100,7 +100,7 @@ export default function TenantsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Người thuê</h1>
             <p className="text-sm text-gray-500 mt-0.5">
@@ -112,7 +112,7 @@ export default function TenantsPage() {
             <select
               value={selectedHouse}
               onChange={(e) => setSelectedHouse(e.target.value)}
-              className="ml-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700"
+              className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700"
             >
               <option value="all">🏢 Tất cả nhà trọ</option>
               {houses.map((h) => (

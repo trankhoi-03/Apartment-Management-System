@@ -22,18 +22,25 @@ router = APIRouter(prefix="/contracts", tags=["contracts"])
 def replace_text_in_doc(doc, replacements):
     # Xử lý văn bản thường
     for p in doc.paragraphs:
-        for key, val in replacements.items():
-            if key in p.text:
-                p.text = p.text.replace(key, str(val))
+        _replace_text_in_paragraph(p, replacements)
                 
     # Xử lý văn bản bên trong các Bảng (Tables)
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for p in cell.paragraphs:
-                    for key, val in replacements.items():
-                        if key in p.text:
-                            p.text = p.text.replace(key, str(val))
+                    _replace_text_in_paragraph(p, replacements)
+
+
+def _replace_text_in_paragraph(p, replacements):
+    for key, val in replacements.items():
+        if key in p.text:
+            for run in p.runs:
+                if key in run.text:
+                    run.text = run.text.replace(key, str(val))
+            
+            if key in p.text and not any(key in r.text for r in p.runs):
+                p.text = p.text.replace(key, str(val))
 
 
 @router.post("", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
@@ -148,7 +155,13 @@ def delete_contract(contract_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{contract_id}/export-word")
-def export_contract_word(contract_id: int, db: Session = Depends(get_db)):
+def export_contract_word(
+    contract_id: int, 
+    electric_price: float = 0, 
+    water_price: float = 0,
+    electric_reading: float = 0,
+    water_reading: float = 0,
+    db: Session = Depends(get_db)):
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if not contract:
         raise HTTPException(status_code=404, detail="Hợp đồng không tồn tại")
@@ -157,20 +170,33 @@ def export_contract_word(contract_id: int, db: Session = Depends(get_db)):
     house = room.house
     tenant = contract.tenant
 
-    # Tạo từ điển dữ liệu thay thế
+    # Tạo từ điển dữ liệu thay thế an toàn
     replacements = {
         "[NGAY_TAO]": datetime.now().strftime("%d/%m/%Y"),
-        "[TEN_NHA]": house.name if house else "",
-        "[SO_PHONG]": room.room_number if room else "",
-        "[TEN_KHACH]": tenant.full_name if tenant else "",
-        "[SDT_KHACH]": tenant.phone if tenant else "",
+        "[TEN_NHA]": getattr(house, "name", ""),
+        "[DIA_CHI_NHA]": getattr(house, "address", ""),
+        "[SO_PHONG]": getattr(room, "room_number", ""),
+        "[TEN_CHU_NHA]": getattr(house, "owner_name", ""),
+        "[TEN_KHACH]": getattr(tenant, "full_name", ""),
+        "[SDT_KHACH]": getattr(tenant, "phone", ""),
+        
+        # Sửa thành id_card_number theo đúng data của frontend
+        "[CCCD_KHACH]": getattr(tenant, "id_card_number", ""), 
+        
         "[GIA_THUE]": f"{int(contract.monthly_rent):,} VNĐ" if contract.monthly_rent else "0 VNĐ",
         "[TIEN_COC]": f"{int(contract.deposit):,} VNĐ" if contract.deposit else "0 VNĐ",
+        
+        # Sử dụng params truyền từ React lên
+        "[GIA_DIEN]": f"{int(electric_price):,} VNĐ",
+        "[GIA_NUOC]": f"{int(water_price):,} VNĐ",
+        "[CHI_SO_DIEN]": str(electric_reading),
+        "[CHI_SO_NUOC]": str(water_reading),
+        
         "[NGAY_BAT_DAU]": contract.start_date.strftime("%d/%m/%Y") if contract.start_date else "...",
         "[NGAY_KET_THUC]": contract.end_date.strftime("%d/%m/%Y") if contract.end_date else "...",
         "[SO_NGUOI]": str(contract.num_tenants) if contract.num_tenants else "...",
         "[SO_XE]": str(contract.num_vehicles) if contract.num_vehicles else "...",
-        "[NOI_THAT]": ", ".join(room.furnitures) if room and room.furnitures else "Không có",
+        "[NOI_THAT]": ", ".join(getattr(room, "furnitures", [])) if room and getattr(room, "furnitures", None) else "Không có",
     }
 
     template_data = getattr(house, 'contract_template', None)

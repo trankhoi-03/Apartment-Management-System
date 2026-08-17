@@ -203,7 +203,15 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       if (confirm("Tạo hợp đồng thành công! Bạn có muốn tải bản Word về máy để in không?")) {
         setSubmitStep("Đang tải file hợp đồng Word...");
         try {
+          const exportParams = {
+            electric_price: form.electric_price || 0,
+            water_price: room.is_water_meter ? form.water_price : (form.default_water_amount || 0),
+            electric_reading: form.electric_reading || 0,
+            water_reading: room.is_water_meter ? form.water_reading : 0
+          };
+
           const fileRes = await api.get(`/contracts/${newContractId}/export-word`, { 
+            params: exportParams,
             responseType: "blob" 
           });
           

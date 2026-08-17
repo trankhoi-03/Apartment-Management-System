@@ -4,7 +4,7 @@ from .room_schema import RoomResponse
 from .tenant_schema import TenantResponse
 
 class ContractBase(BaseModel):
-    room_id: int
+    room_id: int | None = None
     tenant_id: int
     start_date: date
     end_date: date | None = None
@@ -23,7 +23,8 @@ class ContractBase(BaseModel):
     
 
 class ContractCreate(ContractBase):
-    pass
+    # Khi tạo mới hợp đồng, bắt buộc phải có room_id (không được để trống)
+    room_id: int
 
 
 class ContractUpdate(BaseModel):
@@ -34,10 +35,11 @@ class ContractUpdate(BaseModel):
     end_reason: str | None = None
     notes: str | None = None
 
+
 class ContractResponse(ContractBase):
     id: int
     status: str
-    room: RoomResponse
+    room: RoomResponse | None = None  # Cho phép None nếu phòng gắn liền đã bị xóa
     tenant: TenantResponse
     num_tenants: int
     num_vehicles: int

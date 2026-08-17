@@ -15,8 +15,8 @@ class Contract(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    room_id: Mapped[int] = mapped_column(
-        ForeignKey("rooms.id", ondelete="RESTRICT"), nullable=False
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True
     )
     tenant_id: Mapped[int] = mapped_column(
         ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=False
@@ -42,6 +42,6 @@ class Contract(Base):
 
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
-    room: Mapped["Room"] = relationship(back_populates="contracts")
+    room: Mapped["Room | None"] = relationship(back_populates="contracts")
     tenant: Mapped["Tenant"] = relationship(back_populates="contracts")
     bills: Mapped[list["Bill"]] = relationship(back_populates="contract")
