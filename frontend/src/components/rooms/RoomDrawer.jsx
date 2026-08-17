@@ -73,7 +73,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDeleted, onContrac
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
         </div>
 
-        <div className="p-5 space-y-6 flex-1">
+        <div className="p-5 pb-24 md:pb-5 space-y-6 flex-1">
 
           <section>
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
