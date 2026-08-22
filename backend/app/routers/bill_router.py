@@ -6,14 +6,16 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_db
+from app.core.dependencies import require_owner, get_current_user
 from app.models.contract import Contract
 from app.models.utility_reading import UtilityReading
 from app.models.utility_rate import UtilityRate
 from app.models.bill import Bill
+from app.models.room import Room
+from app.models.user import User
 from app.schemas.bill_schema import BillGenerateRequest, BillUpdate, BillResponse, BillEditRequest
 from app.services.pdf import generate_bill_pdf
 from app.services.gmail_service import send_bill_email
-from app.models.room import Room
 
 router = APIRouter(prefix="/bills", tags=["bills"])
 
@@ -145,10 +147,20 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=list[BillResponse])
-def list_bills(contract_id: int | None = None, db: Session = Depends(get_db)):
-    query = db.query(Bill)
+def list_bills(
+    contract_id: int | None = None, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    if not allowed_house_ids:
+        return []
+
+    query = db.query(Bill).join(Contract).join(Room).filter(Room.house_id.in_(allowed_house_ids))
+    
     if contract_id is not None:
         query = query.filter(Bill.contract_id == contract_id)
+        
     return query.order_by(Bill.billing_month.desc()).all()
 
 

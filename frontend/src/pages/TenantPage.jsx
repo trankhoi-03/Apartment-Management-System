@@ -6,8 +6,9 @@ import TenantDrawer from "../components/tenants/TenantDrawer";
 export default function TenantsPage() {
   const [tenants, setTenants]           = useState([]);
   const [contracts, setContracts]       = useState([]);
-  const [houses, setHouses]             = useState([]); // State danh sách nhà
-  const [selectedHouse, setSelectedHouse] = useState("all"); // State filter nhà
+  const [houses, setHouses]             = useState([]); 
+  const [rooms, setRooms]               = useState([]);
+  const [selectedHouse, setSelectedHouse] = useState("all"); 
   
   const [loading, setLoading]           = useState(true);
   const [selectedTenant, setSelectedTenant] = useState(null);
@@ -18,14 +19,16 @@ export default function TenantsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [housesRes, tenantsRes, contractsRes] = await Promise.all([
+      const [housesRes, tenantsRes, contractsRes, roomsRes] = await Promise.all([
         api.get("/houses").catch(() => ({ data: [] })),
         api.get("/tenants"),
         api.get("/contracts"),
+        api.get("/rooms").catch(() => ({ data: [] })), 
       ]);
       setHouses(housesRes.data);
       setTenants(tenantsRes.data);
       setContracts(contractsRes.data); 
+      setRooms(roomsRes.data); 
     } finally {
       setLoading(false);
     }
@@ -70,11 +73,12 @@ export default function TenantsPage() {
   const filteredTenants = tenants.filter((tenant) => {
     // 1. Kiểm tra Nhà trọ
     if (selectedHouse !== "all") {
-      // Tìm xem tenant này có hợp đồng nào (active hoặc ended) thuộc nhà này không
-      const hasContractInHouse = contracts.some(
-        (c) => c.tenant_id === tenant.id && c.room?.house_id === Number(selectedHouse)
-      );
-      if (!hasContractInHouse) return false; // Nếu không có hợp đồng ở nhà này -> loại
+      const hasContractInHouse = contracts.some((c) => {
+        // FIX 3: Dùng danh sách rooms để tìm house_id
+        const matchedRoom = rooms.find(r => r.id === c.room_id);
+        return c.tenant_id === tenant.id && matchedRoom?.house_id === Number(selectedHouse);
+      });
+      if (!hasContractInHouse) return false; 
     }
 
     // 2. Kiểm tra Search Query
@@ -154,6 +158,8 @@ export default function TenantsPage() {
             const isSelected = selectedTenant?.id === tenant.id;
             const lastEndedContract = !isActive ? getLastEndedContract(tenant.id) : null;
 
+            const contractRoom = contract ? rooms.find(r => r.id === contract.room_id) : null;
+
             return (
               <div
                 key={tenant.id}
@@ -171,7 +177,7 @@ export default function TenantsPage() {
                 <div className="space-y-1 text-sm text-gray-600">
                   {contract && (
                     <p>Phòng: <span className="font-medium text-blue-600">
-                      {contract.room?.room_number ? `Phòng ${contract.room.room_number}` : `Room ID ${contract.room_id}`}
+                      {contractRoom?.room_number ? `Phòng ${contractRoom.room_number}` : `Room ID ${contract.room_id}`}
                     </span></p>
                   )}
                   <p>SĐT: <span className="font-medium text-gray-800">{tenant.phone}</span></p>
@@ -201,6 +207,7 @@ export default function TenantsPage() {
             .sort((a, b) => b.id - a.id)
           }
           houses={houses}
+          rooms={rooms} 
           onClose={() => setSelectedTenant(null)}
           onEdit={handleEdit}
           onDeleted={handleDeleted}

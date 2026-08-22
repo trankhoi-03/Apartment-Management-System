@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_db
-from app.core.dependencies import require_owner
+from app.core.dependencies import require_owner, get_current_user
 from app.models.user import User
 from app.models.room import Room
 from app.models.contract import Contract
@@ -63,8 +63,18 @@ def create_room(payload: RoomCreate, db: Session = Depends(get_db), current_user
 
 
 @router.get("", response_model=list[RoomResponse])
-def list_rooms(db: Session = Depends(get_db)):
-    return db.query(Room).all()
+def list_rooms(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user) # Thêm current_user
+):
+    # Lấy danh sách ID nhà trọ mà tài khoản này quản lý
+    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    
+    if not allowed_house_ids:
+        return []
+        
+    # Chỉ lấy các phòng thuộc các nhà trọ được phép
+    return db.query(Room).filter(Room.house_id.in_(allowed_house_ids)).all()
 
 
 @router.get("/{room_id}", response_model=RoomResponse)

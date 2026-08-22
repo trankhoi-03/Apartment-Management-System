@@ -6,11 +6,18 @@ const NAV_ITEMS = [
   { to: "/rooms",   label: "Phòng & HĐ", icon: "🚪" },
   { to: "/tenants", label: "Người thuê", icon: "👥" },
   { to: "/bills",   label: "Hoá đơn",    icon: "🧾" },
-  { to: "/incidents", label: "Sự cố",    icon: "⚠️" }
+  { to: "/incidents", label: "Sự cố",    icon: "⚠️" },
+  { to: "/staffs",  label: "Nhân viên",  icon: "👨‍💼", ownerOnly: true }
 ];
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const userRole = localStorage.getItem("user_role") || "staff"; 
+  const isOwner = userRole === "owner";
+  
+  // Lấy tên người dùng từ localStorage, nếu chưa có thì hiển thị mặc định
+  const userName = localStorage.getItem("full_name") || (isOwner ? "Chủ trọ" : "Nhân viên");
+
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState("premium_monthly");
@@ -18,6 +25,7 @@ export default function Navbar() {
   function handleLogout() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_role");
+    localStorage.removeItem("full_name"); // Xoá tên khi đăng xuất
     navigate("/login");
   }
 
@@ -35,7 +43,6 @@ export default function Navbar() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Tạo giao dịch thất bại");
       
-      // Chuyển hướng sang trang quét mã VietQR tự động của PayOS
       window.location.href = data.checkoutUrl;
     } catch (err) {
       alert(err.message);
@@ -55,37 +62,48 @@ export default function Navbar() {
           </span>
 
           <div className="flex items-center gap-1">
-            {NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === "/"}
-                className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition
-                   ${isActive
-                     ? "bg-blue-50 text-blue-600"
-                     : "text-gray-600 hover:bg-gray-100"}`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              if (item.ownerOnly && !isOwner) return null;
+              
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === "/"}
+                  className={({ isActive }) =>
+                    `px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition
+                     ${isActive
+                       ? "bg-blue-50 text-blue-600"
+                       : "text-gray-600 hover:bg-gray-100"}`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              );
+            })}
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-1 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition whitespace-nowrap shadow-sm"
-            >
-              ⭐ Gia hạn / Nâng cấp
-            </button>
+          <div className="flex items-center gap-4">
+            {/* THÊM HIỂN THỊ TÊN USER Ở ĐÂY */}
+            <span className="text-sm text-gray-500 whitespace-nowrap">
+              Xin chào, <strong className="text-gray-800">{userName}</strong>
+            </span>
 
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition whitespace-nowrap"
-            >
-              Đăng xuất
-            </button>
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-1 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition whitespace-nowrap shadow-sm"
+              >
+                ⭐ Gia hạn / Nâng cấp
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="text-sm text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition whitespace-nowrap"
+              >
+                Đăng xuất
+              </button>
+            </div>
           </div>
 
         </div>
@@ -93,9 +111,16 @@ export default function Navbar() {
 
       {/* MOBILE HEADER */}
       <header className="md:hidden bg-white border-b border-gray-100 sticky top-0 z-40 flex justify-between items-center px-4 h-14">
-        <span className="font-bold text-blue-600 text-lg whitespace-nowrap">
-          🏠 Phòng trọ
-        </span>
+        <div className="flex flex-col justify-center">
+          <span className="font-bold text-blue-600 text-base leading-tight whitespace-nowrap">
+            🏠 Phòng trọ
+          </span>
+          {/* HIỂN THỊ TÊN USER TRÊN MOBILE */}
+          <span className="text-[10px] text-gray-500 leading-tight">
+            Chào, <strong className="text-gray-700">{userName}</strong>
+          </span>
+        </div>
+        
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowModal(true)}
@@ -115,33 +140,37 @@ export default function Navbar() {
       {/* MOBILE BOTTOM NAV */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] z-50 border-t border-gray-200 pb-safe">
         <div className="flex justify-around items-center h-16 px-1">
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center w-full h-full space-y-1 transition ${
-                  isActive ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <span className={`text-xl ${isActive ? "scale-110" : "scale-100"} transition-transform`}>
-                    {item.icon}
-                  </span>
-                  <span className="text-[10px] font-medium whitespace-nowrap text-center">
-                    {item.label}
-                  </span>
-                </>
-              )}
-            </NavLink>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            if (item.ownerOnly && !isOwner) return null;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                className={({ isActive }) =>
+                  `flex flex-col items-center justify-center w-full h-full space-y-1 transition ${
+                    isActive ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span className={`text-xl ${isActive ? "scale-110" : "scale-100"} transition-transform`}>
+                      {item.icon}
+                    </span>
+                    <span className="text-[10px] font-medium whitespace-nowrap text-center">
+                      {item.label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
 
-      {/* MODAL CHỌN GÓI & THANH TOÁN VIETQR */}
+      {/* MODAL CHỌN GÓI & THANH TOÁN VIETQR (giữ nguyên) */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gray-100">

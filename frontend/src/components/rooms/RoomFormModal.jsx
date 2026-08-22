@@ -6,7 +6,10 @@ const EMPTY = {
 };
 
 export default function RoomFormModal({ room, houses = [], selectedHouseId, onClose, onSaved }) {
-  const isEdit = !!room;
+  // Nếu room có id -> Đang Sửa; Nếu room không có id (hoặc null) -> Đang Thêm mới / Sao chép
+  const isEdit = Boolean(room && room.id);
+  const isDuplicate = Boolean(room && !room.id);
+
   const [form, setForm] = useState(EMPTY);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -14,12 +17,14 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
   useEffect(() => {
     if (room) {
       setForm({
-        room_number: room.room_number,
+        room_number: room.room_number || "",
         area_sqm: room.area_sqm ?? "",
-        base_rent: room.base_rent,
-        is_water_meter: room.is_water_meter,
-        house_id: room.house_id ?? "",
-        furnitures: room.furnitures?.length > 0 ? room.furnitures.join(", ") : "",
+        base_rent: room.base_rent ?? "",
+        is_water_meter: room.is_water_meter ?? true,
+        house_id: room.house_id ?? (selectedHouseId || (houses.length > 0 ? houses[0].id : "")),
+        furnitures: room.furnitures?.length > 0 
+          ? (Array.isArray(room.furnitures) ? room.furnitures.join(", ") : room.furnitures)
+          : "",
       });
     } else {
       setForm({
@@ -73,11 +78,17 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
     }
   }
 
+  const modalTitle = isEdit 
+    ? `Sửa phòng ${room.room_number}` 
+    : isDuplicate 
+      ? "Sao chép phòng mới" 
+      : "Thêm phòng mới";
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
         <h2 className="text-xl font-bold text-gray-800 mb-5">
-          {isEdit ? `Sửa phòng ${room.room_number}` : "Thêm phòng mới"}
+          {modalTitle}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -99,9 +110,14 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Số phòng *</label>
-            <input name="room_number" value={form.room_number} onChange={handleChange} required
+            <input 
+              name="room_number" 
+              value={form.room_number} 
+              onChange={handleChange} 
+              required
               placeholder="vd: P101"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            />
           </div>
 
           <div>

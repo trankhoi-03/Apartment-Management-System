@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import auth, room_router, tenant_router, contract_router, utility_router, utilityrate_router, bill_router, house_router, incident_router, data_router, subscription_router
+from app.routers import auth, room_router, tenant_router, contract_router, utility_router, utilityrate_router, bill_router, house_router, incident_router, data_router, staff_router, subscription_router
 from app.core.dependencies import get_current_user
 
 
@@ -41,6 +41,7 @@ app.include_router(utilityrate_router.router, **_protected)
 app.include_router(bill_router.router, **_protected)
 app.include_router(house_router.router, **_protected)
 app.include_router(incident_router.router, **_protected)
+app.include_router(staff_router.router, **_protected)
 app.include_router(data_router.router, **_protected)
 app.include_router(subscription_router.router, **_protected)
 

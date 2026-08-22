@@ -1,6 +1,6 @@
 import api from "../../api/axios";
 
-export default function TenantDrawer({ tenant, activeContract, pastContracts, houses = [], onClose, onEdit, onDeleted }) {
+export default function TenantDrawer({ tenant, activeContract, pastContracts, houses = [], rooms = [], onClose, onEdit, onDeleted }) {
   async function handleDelete() {
     if (!confirm(`Xoá người thuê "${tenant.full_name}"?`)) return;
     try {
@@ -13,8 +13,10 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
   }
 
   const formatRoomDisplay = (contract) => {
-    const roomNumber = contract.room?.room_number ?? contract.room_id;
-    const house = houses.find(h => h.id === contract.room?.house_id);
+    const matchedRoom = rooms.find(r => r.id === contract.room_id);
+    const roomNumber = matchedRoom?.room_number ?? contract.room_id;
+    const house = houses.find(h => h.id === matchedRoom?.house_id);
+    
     return house ? `Phòng ${roomNumber} - ${house.name}` : `Phòng ${roomNumber}`;
   };
 
@@ -41,7 +43,7 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
             <div className="space-y-2 text-sm">
               <Row label="Số điện thoại" value={tenant.phone} />
               <Row label="Email" value={tenant.email ?? "Chưa có"} />
-              <Row label="CCCD/CMND" value={tenant.id_card_number ?? "Chưa có"} />
+              {/* <Row label="CCCD/CMND" value={tenant.id_card_number ?? "Chưa có"} /> */}
             </div>
             <div className="flex gap-2 mt-4">
               <button onClick={() => onEdit(tenant)}

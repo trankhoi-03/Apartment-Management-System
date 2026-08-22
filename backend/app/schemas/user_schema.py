@@ -44,6 +44,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: int
     role: str
+    full_name: str
     model_config = ConfigDict(from_attributes=True)
 
 

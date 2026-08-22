@@ -149,7 +149,7 @@ export default function ContractTemplateSettings({ houseId, onClose }) {
                 <ul className="list-disc pl-5 space-y-1 mt-2 text-xs">
                   <li>Soạn thảo hợp đồng chuẩn của bạn bằng MS Word.</li>
                   <li>Copy các biến ở cột bên phải dán vào vị trí cần điền trong file Word.</li>
-                  <li>Lưu file Word đó lại và Upload lên đây.</li>
+                  <li>Lưu file Word đó lại và tải lên đây.</li>
                 </ul>
               </div>
             </div>

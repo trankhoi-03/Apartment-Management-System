@@ -52,10 +52,11 @@ export default function RoomsPage() {
 
   function handleRoomSaved() {
     setShowForm(false);
+    const wasEditingExisting = editingRoom && editingRoom.id;
     setEditingRoom(null);
     loadData();
-    if (editingRoom && editingRoom !== "new") {
-      api.get(`/rooms/${editingRoom.id}`).then((res) => setSelectedRoom(res.data));
+    if (wasEditingExisting) {
+      api.get(`/rooms/${wasEditingExisting}`).then((res) => setSelectedRoom(res.data));
     }
   }
 
@@ -66,6 +67,20 @@ export default function RoomsPage() {
 
   function handleEditRoom(room) {
     setEditingRoom(room);
+    setShowForm(true);
+  }
+
+  function handleDuplicateRoom(room) {
+    const duplicatedData = {
+      room_number: `${room.room_number}_copy`,
+      base_rent: room.base_rent,
+      area_sqm: room.area_sqm,
+      is_water_meter: room.is_water_meter,
+      house_id: room.house_id,
+      furnitures: room.furnitures,
+      // Không truyền 'id' để RoomFormModal hiểu là tạo mới (POST)
+    };
+    setEditingRoom(duplicatedData);
     setShowForm(true);
   }
 
@@ -136,25 +151,23 @@ export default function RoomsPage() {
           )}
 
           {isOwner && (
-            <>
-              <div className="flex items-center gap-2 bg-gray-100/70 p-1 rounded-xl">
-                <button 
-                  onClick={() => setShowHouseForm(true)}
-                  className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200"
+            <div className="flex items-center gap-2 bg-gray-100/70 p-1 rounded-xl">
+              <button 
+                onClick={() => setShowHouseForm(true)}
+                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200"
+              >
+                + Thêm nhà
+              </button>
+              
+              {houses.length > 0 && selectedHouse !== "all" && (
+                <button
+                  onClick={handleDeleteHouse}
+                  className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-600 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200 hover:border-red-200"
                 >
-                  + Thêm nhà
+                  🗑️ Xóa nhà
                 </button>
-                
-                {houses.length > 0 && selectedHouse !== "all" && (
-                  <button
-                    onClick={handleDeleteHouse}
-                    className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-600 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200 hover:border-red-200"
-                  >
-                    🗑️ Xóa nhà
-                  </button>
-                )}
-              </div>
-            </>
+              )}
+            </div>
           )}
         </div>
 
@@ -217,7 +230,8 @@ export default function RoomsPage() {
         <div className="text-center py-20 text-gray-400">
           <p className="text-4xl mb-3">🏠</p>
           <p>Không có phòng nào phù hợp với bộ lọc.</p>
-          {statusFilter === "all" && (
+          
+          {statusFilter === "all" && isOwner && (
             <button onClick={handleAddRoom}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium">
               + Thêm phòng đầu tiên
@@ -230,7 +244,9 @@ export default function RoomsPage() {
             <RoomCard
               key={room.id}
               room={room}
+              isOwner={isOwner}
               onClick={handleCardClick}
+              onDuplicate={handleDuplicateRoom}
               isSelected={selectedRoom?.id === room.id}
             />
           ))}
@@ -242,6 +258,7 @@ export default function RoomsPage() {
           room={selectedRoom}
           onClose={() => setSelectedRoom(null)}
           onEdit={handleEditRoom}
+          onDuplicate={handleDuplicateRoom}
           onDeleted={handleRoomDeleted}
           onContractChanged={loadData}
         />

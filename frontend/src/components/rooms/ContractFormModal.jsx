@@ -60,6 +60,7 @@ const INIT = (room) => ({
   start_date: "",
   end_date: "",
   monthly_rent: room?.base_rent ?? "",
+  service_fee: "",
   deposit: "",
   num_tenants: 1,
   num_vehicles: 0,
@@ -165,6 +166,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
         tenant_id:          tenantId,
         start_date:         form.start_date,
         monthly_rent:       Number(form.monthly_rent),
+        service_fee:        form.service_fee ? Number(form.service_fee) : 0,
         deposit:            form.deposit ? Number(form.deposit) : 0,
         num_tenants:        Number(form.num_tenants),
         num_vehicles:       Number(form.num_vehicles),
@@ -294,6 +296,11 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
                 <input name="monthly_rent" type="number" min="0"
                   value={form.monthly_rent} onChange={handleChange}
                   required className={INPUT} />
+              </Field>
+              <Field label="Phí dịch vụ (đ/tháng)">
+                <input name="service_fee" type="number" min="0"
+                  value={form.service_fee} onChange={handleChange}
+                  placeholder="0" className={INPUT} />
               </Field>
               <Field label="Tiền đặt cọc (đ)">
                 <input name="deposit" type="number" min="0"

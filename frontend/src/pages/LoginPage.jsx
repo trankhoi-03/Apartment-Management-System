@@ -18,6 +18,8 @@ export default function LoginPage() {
       localStorage.setItem("access_token", res.data.access_token);
       const role = res.data.role || res.data.user?.role || "staff";
       localStorage.setItem("user_role", role);
+      const fullName = res.data.full_name || res.data.user?.full_name || (role === "owner" ? "Chủ trọ" : "Nhân viên");
+      localStorage.setItem("full_name", fullName);
       // Redirect về dashboard sau khi login thành công
       window.location.href = "/";
     } catch (err) {

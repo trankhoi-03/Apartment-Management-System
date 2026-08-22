@@ -48,6 +48,8 @@ function RoomCard({ room, house }) {
 }
 
 export default function DashboardPage() {
+  const userRole = localStorage.getItem("user_role") || "staff";
+  const isOwner = userRole === "owner";
   const [rooms, setRooms] = useState([]);
   const [houses, setHouses] = useState([]);
   const [contracts, setContracts] = useState([]);
@@ -251,23 +253,27 @@ export default function DashboardPage() {
             {isExporting ? "⏳ Đang xuất..." : "📤 Xuất dữ liệu"}
           </button>
 
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isImporting}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-gray-200 whitespace-nowrap"
-          >
-            {isImporting ? "⏳ Đang xử lý..." : "📥 Nhập dữ liệu"}
-          </button>
+          {isOwner && (
+            <>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-gray-200 whitespace-nowrap"
+              >
+                {isImporting ? "⏳ Đang xử lý..." : "📥 Nhập dữ liệu"}
+              </button>
 
-          <button
-            onClick={handleDownloadTemplate}
-            className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-blue-200 whitespace-nowrap"
-          >
-            📄 Tải file mẫu
-          </button>
+              <button
+                onClick={handleDownloadTemplate}
+                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-blue-200 whitespace-nowrap"
+              >
+                📄 Tải file mẫu
+              </button>
 
-          <input type="file" accept=".xlsx, .xls" ref={fileInputRef} className="hidden" onChange={handleImport} />
-
+              <input type="file" accept=".xlsx, .xls" ref={fileInputRef} className="hidden" onChange={handleImport} />
+            </>
+          )}
+          
           {houses.length > 0 && (
             <select
               value={selectedHouse}
@@ -308,7 +314,7 @@ export default function DashboardPage() {
             <div className="flex justify-between items-start relative z-10">
               <div>
                 <p className="text-emerald-700 text-sm font-semibold mb-1 flex items-center gap-1.5">
-                  💰 Thực thu
+                  💰 Doanh thu
                 </p>
                 <h3 className="text-3xl font-extrabold text-emerald-900 tracking-tight">
                   {revenueStats.collectedThisMonth.toLocaleString("vi-VN")}đ
@@ -346,7 +352,7 @@ export default function DashboardPage() {
 
         <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3.5 flex justify-between items-center text-sm shadow-sm transition hover:bg-blue-50">
            <span className="font-medium text-blue-800 flex items-center gap-2">
-             <span>🗓️</span> Tổng thực thu tháng trước ({revenueStats.lastMonthStr?.slice(-2) || ""}/{revenueStats.lastMonthStr?.slice(0,4) || ""}):
+             <span>🗓️</span> Tổng doanh thu tháng trước ({revenueStats.lastMonthStr?.slice(-2) || ""}/{revenueStats.lastMonthStr?.slice(0,4) || ""}):
            </span>
            <span className="font-extrabold text-blue-900 text-base">
              {revenueStats.collectedLastMonth.toLocaleString("vi-VN")}đ

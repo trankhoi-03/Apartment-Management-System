@@ -1,10 +1,12 @@
 import os
 import shutil
 import base64
+from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+from typing import Optional
 
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -56,23 +58,51 @@ def send_bill_email(
     billing_month: str,
     total_amount: float,
     pdf_path: str,
+    due_date: Optional[str] = None
 ) -> None:
-    """Gửi email kèm PDF qua Gmail API"""
+    """Gửi email kèm PDF và thông báo hạn thanh toán qua Gmail API"""
 
     service = get_gmail_service()
+
+    # Nếu không truyền ngày hạn cụ thể, tự động tính 5 ngày kể từ hôm nay
+    if not due_date:
+        calculated_date = datetime.now() + timedelta(days=5)
+        due_date = calculated_date.strftime("%d/%m/%Y")
 
     # Tạo email 
     msg = MIMEMultipart()
     msg["To"] = to_email
-    msg["Subject"] = f"Hoá đơn tiền phòng tháng {billing_month}"
+    msg["Subject"] = f"[Thông Báo] Hoá đơn tiền phòng tháng {billing_month} - Hạn đóng {due_date}"
 
     body_html = f"""
-    <html><body>
-    <p>Xin chào <strong>{tenant_name}</strong>,</p>
-    <p>Vui lòng xem hoá đơn tiền phòng tháng <strong>{billing_month}</strong> đính kèm trong email này.</p>
-    <p>Tổng số tiền phải thanh toán: <strong>{"{:,.0f}".format(total_amount)} đồng</strong></p>
-    <p>Nếu có thắc mắc, vui lòng liên hệ chủ trọ.<br>Trân trọng.</p>
-    </body></html>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #2563eb; margin-bottom: 8px;">Thông báo hoá đơn tiền phòng</h2>
+      <p>Xin chào <strong>{tenant_name}</strong>,</p>
+      <p>Hệ thống gửi đến bạn hoá đơn tiền phòng tháng <strong>{billing_month}</strong>.</p>
+      
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 20px 0;">
+        <p style="margin: 6px 0; font-size: 15px;">
+          💰 Tổng số tiền thanh toán: 
+          <strong style="color: #2563eb; font-size: 17px;">{"{:,.0f}".format(total_amount)} VNĐ</strong>
+        </p>
+        <p style="margin: 6px 0; font-size: 15px; color: #dc2626;">
+          ⏰ Hạn thanh toán: 
+          <strong>{due_date}</strong> (trong vòng 5 ngày kể từ ngày xuất bill)
+        </p>
+      </div>
+
+      <p>Chi tiết các khoản tiền (tiền phòng, điện, nước, dịch vụ) đã được đính kèm trong file PDF bên dưới.</p>
+      <p style="color: #64748b; font-size: 13px; margin-top: 25px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+        Nếu có bất kỳ thắc mắc hoặc sai sót nào về chỉ số điện/nước, vui lòng phản hồi lại chủ trọ trước thời hạn nêu trên.<br>
+        <em>Trân trọng!</em>
+      </p>
+    </body>
+    </html>
     """
     msg.attach(MIMEText(body_html, "html", "utf-8"))
 

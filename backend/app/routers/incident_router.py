@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.dependencies import require_owner, get_current_user
 from app.models.incident import Incident
+from app.models.user import User
+from app.models.room import Room
 from app.schemas.incident_schema import IncidentCreate, IncidentUpdate, IncidentResponse
 
 router = APIRouter(prefix="/incidents", tags=["incidents"])
@@ -15,11 +18,20 @@ def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)):
     return new_incident
 
 @router.get("", response_model=list[IncidentResponse])
-def list_incidents(room_id: int | None = None, db: Session = Depends(get_db)):
-    query = db.query(Incident)
+def list_incidents(
+    room_id: int | None = None, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    if not allowed_house_ids:
+        return []
+
+    query = db.query(Incident).join(Room).filter(Room.house_id.in_(allowed_house_ids))
+    
     if room_id is not None:
         query = query.filter(Incident.room_id == room_id)
-    # Sắp xếp để sự cố mới nhất hiện lên đầu
+        
     return query.order_by(Incident.id.desc()).all()
 
 @router.patch("/{incident_id}", response_model=IncidentResponse)

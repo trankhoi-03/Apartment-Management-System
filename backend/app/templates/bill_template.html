@@ -5,9 +5,18 @@
 <style>
     @page { size: A4; margin: 2cm; }
     body { font-family: 'DejaVu Sans', sans-serif; font-size: 13px; color: #1a1a1a; }
-    .header { text-align: center; margin-bottom: 24px; }
+    .header { text-align: center; margin-bottom: 20px; }
     .header h1 { font-size: 20px; margin: 0; }
     .header p { color: #666; margin: 4px 0 0; }
+    .due-alert {
+        background-color: #fef2f2;
+        border-left: 4px solid #ef4444;
+        padding: 10px 14px;
+        margin-bottom: 18px;
+        font-size: 12px;
+        color: #991b1b;
+        border-radius: 4px;
+    }
     .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
     .info-table td { padding: 4px 0; }
     .info-table td.label { color: #666; width: 140px; }
@@ -27,6 +36,10 @@
         <p>Tháng {{ billing_month }}</p>
     </div>
 
+    <div class="due-alert">
+        <strong>⏰ Hạn thanh toán:</strong> Vui lòng thanh toán trước ngày <strong>{{ due_date }}</strong> (trong vòng 5 ngày kể từ ngày nhận hoá đơn).
+    </div>
+
     <table class="info-table">
         <tr>
             <td class="label">Phòng:</td>
@@ -39,6 +52,10 @@
         <tr>
             <td class="label">Số điện thoại:</td>
             <td>{{ tenant_phone }}</td>
+        </tr>
+        <tr>
+            <td class="label">Hạn thanh toán:</td>
+            <td style="color: #dc2626; font-weight: bold;">{{ due_date }}</td>
         </tr>
     </table>
 

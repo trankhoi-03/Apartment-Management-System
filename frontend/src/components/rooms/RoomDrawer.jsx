@@ -21,7 +21,7 @@ function Row({ label, value }) {
   );
 }
 
-export default function RoomDrawer({ room, onClose, onEdit, onDeleted, onContractChanged }) {
+export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDeleted, onContractChanged }) {
   const userRole = localStorage.getItem("user_role") || "staff";
   const isOwner = userRole === "owner";
   const [contract, setContract]           = useState(null);
@@ -32,6 +32,18 @@ export default function RoomDrawer({ room, onClose, onEdit, onDeleted, onContrac
   const [showGenerateBill, setShowGenerateBill]   = useState(false);
   const [showIncidentForm, setShowIncidentForm] = useState(false);
 
+  function formatDateVN(dateString) {
+    if (!dateString) return "—";
+    
+    if (dateString.includes("-")) {
+      const [year, month, day] = dateString.split("-");
+      const cleanDay = day.split("T")[0]; 
+      return `${cleanDay}/${month}/${year}`;
+    }
+    
+    return dateString;
+  }
+
   async function loadContract() {
     if (!room) return;
     setLoadingContract(true);
@@ -41,6 +53,16 @@ export default function RoomDrawer({ room, onClose, onEdit, onDeleted, onContrac
       const active = res.data.find(
         (c) => c.room_id === room.id && c.status === "active"
       );
+      
+      if (active && active.tenant_id) {
+        try {
+          const tenantRes = await api.get(`/tenants/${active.tenant_id}`);
+          active.tenant = tenantRes.data;
+        } catch (err) {
+          console.error("Không thể tải thông tin khách thuê", err);
+        }
+      }
+      
       setContract(active ?? null);
     } finally {
       setLoadingContract(false);
@@ -81,7 +103,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDeleted, onContrac
             </h3>
             <div className="space-y-2 text-sm">
               <Row label="Trạng thái" value={STATUS_LABEL[room.status] ?? room.status} />
-              <Row label="Giá thuê"   value={`${room.base_rent.toLocaleString("vi-VN")}đ/tháng`} />
+              <Row label="Giá thuê"   value={`${room.base_rent?.toLocaleString("vi-VN")}đ/tháng`} />
               {room.area_sqm && <Row label="Diện tích" value={`${room.area_sqm} m²`} />}
               <Row label="Đồng hồ nước" value={room.is_water_meter ? "✅ Có" : "❌ Không"} />
               
@@ -95,7 +117,11 @@ export default function RoomDrawer({ room, onClose, onEdit, onDeleted, onContrac
               <div className="flex gap-2 mt-4">
                 <button onClick={() => onEdit(room)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
-                  ✏️ Sửa phòng
+                  ✏️ Sửa
+                </button>
+                <button onClick={() => onDuplicate && onDuplicate(room)}
+                  className="flex-1 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm font-medium text-blue-700 hover:bg-blue-100 transition">
+                  📋 Sao chép
                 </button>
                 <button onClick={handleDeleteRoom}
                   className="px-3 py-2 border border-red-200 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition">
@@ -128,10 +154,10 @@ export default function RoomDrawer({ room, onClose, onEdit, onDeleted, onContrac
                 <Row label="Số người"    value={contract.num_tenants ?? "—"} />
                 <Row label="Số xe"       value={contract.num_vehicles ?? "—"} />
                 <Row label="Tạm trú"     value={contract.temp_residence_reg ? "✅ Có" : "❌ Không"} />
-                <Row label="Bắt đầu"     value={contract.start_date} />
+                <Row label="Bắt đầu"     value={formatDateVN(contract.start_date)} />
                 {contract.end_date &&
-                  <Row label="Kết thúc"  value={contract.end_date} />}
-
+                  <Row label="Kết thúc"  value={formatDateVN(contract.end_date)} />}
+                  
                 {contract.notes && (
                   <div className="pt-2 mt-2 border-t border-blue-100/60">
                     <span className="text-gray-500 block mb-1">Ghi chú / Nội thất:</span>

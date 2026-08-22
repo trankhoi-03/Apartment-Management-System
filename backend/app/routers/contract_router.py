@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_owner
+from app.core.dependencies import require_owner, get_current_user
 from app.core.database import get_db
 from app.models.user import User
 from app.models.contract import Contract
@@ -93,8 +93,17 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=list[ContractResponse])
-def list_contracts(db: Session = Depends(get_db)):
-    return db.query(Contract).all()
+def list_contracts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    
+    if not allowed_house_ids:
+        return []
+        
+    # Join với bảng Room để lọc theo house_id của Room đó
+    return db.query(Contract).join(Room).filter(Room.house_id.in_(allowed_house_ids)).all()
 
 
 @router.get("/{contract_id}", response_model=ContractResponse)

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 
-
 const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
                focus:outline-none focus:ring-2 focus:ring-blue-500`;
 
@@ -24,9 +23,23 @@ function getNextMonth(monthStr) {
   return `${year}-${String(m).padStart(2, "0")}`;
 }
 
+// Hàm tính ngày hết hạn (mặc định cộng thêm numberOfDays ngày)
+function calculateDueDate(fromDate = new Date(), numberOfDays = 5) {
+  const d = new Date(fromDate);
+  d.setDate(d.getDate() + numberOfDays);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return {
+    formattedVN: `${day}/${month}/${year}`,
+    isoDate: `${year}-${month}-${day}`
+  };
+}
+
 export default function GenerateBillModal({ room, contract, onClose, onGenerated }) {
   const [billingMonth, setBillingMonth] = useState(""); 
-  const [serviceFee, setServiceFee]     = useState("");
+  const [isFirstBill, setIsFirstBill]   = useState(false);
+  const [serviceFee, setServiceFee] = useState(contract?.service_fee || "");
   const [additionalFee, setAdditionalFee]             = useState("");
   const [additionalFeeReason, setAdditionalFeeReason] = useState("");
   const [electricOld, setElectricOld]   = useState("");
@@ -40,6 +53,8 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [sending, setSending]           = useState(false);
   const [error, setError]               = useState("");
 
+  const estimatedDueDate = calculateDueDate(new Date(), 5);
+
   useEffect(() => {
     if (!contract?.id) return;
     
@@ -48,8 +63,12 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     api.get(`/bills?contract_id=${contract.id}`)
       .then((res) => {
         if (res.data.length === 0) {
+          // Chưa có bill nào -> Đây là bill đầu tiên
           setBillingMonth(contractStartMonth);
+          setIsFirstBill(true); 
         } else {
+          // Đã có bill -> Khoá ô chọn tháng lại
+          setIsFirstBill(false); 
           const latest = res.data.sort((a, b) => b.billing_month.localeCompare(a.billing_month))[0];
           
           if (latest.status === "pending") {
@@ -60,7 +79,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
           }
         }
       })
-      .catch(() => setBillingMonth(contractStartMonth)); 
+      .catch(() => {
+         setBillingMonth(contractStartMonth);
+         setIsFirstBill(true); 
+      }); 
   }, [contract]);
 
   useEffect(() => {
@@ -75,12 +97,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
         const exactMatch = res.data.find((r) => r.billing_month === billingMonth);
 
         if (exactMatch) {
-          // Trường hợp 1: Đã có bản ghi (ví dụ: tạo tự động lúc ký HĐ dọn vào)
           setExistingUtilityId(exactMatch.id);
           setElectricOld(String(exactMatch.electric_old));
           if (room.is_water_meter) setWaterOld(String(exactMatch.water_old));
         } else {
-          // Trường hợp 2: Chưa có, tìm tháng liền trước để lấy số mới tháng đó làm số cũ tháng này
           const prev = res.data
             .filter((r) => r.billing_month < billingMonth)
             .sort((a, b) => b.billing_month.localeCompare(a.billing_month))[0];
@@ -94,6 +114,12 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
       .catch(() => {})
       .finally(() => setLoadingPrev(false));
   }, [billingMonth, room]);
+
+  useEffect(() => {
+    if (contract?.service_fee) {
+      setServiceFee(contract.service_fee);
+    }
+  }, [contract]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -111,7 +137,8 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     const confirmMessage = `XÁC NHẬN SỐ LIỆU THÁNG ${billingMonth}:\n\n`
                          + `- Số điện mới: ${electricNew}\n`
                          + (room?.is_water_meter ? `- Số nước mới: ${waterNew}\n` : "")
-                         + `- Phí dịch vụ: ${serviceFee ? serviceFee : "0"} đ\n\n`
+                         + `- Phí dịch vụ: ${serviceFee ? serviceFee : "0"} đ\n`
+                         + `- Hạn thanh toán dự kiến: ${estimatedDueDate.formattedVN} (5 ngày)\n\n`
                          + `Vui lòng kiểm tra kỹ. Bấm "OK" để tính tiền.`;
                          
     if (!window.confirm(confirmMessage)) {
@@ -132,20 +159,19 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
       };
 
       if (existingUtilityId) {
-        // Nếu đã có bản ghi gốc (như tháng đầu tiên), dùng phương thức PUT để cập nhật
         await api.put(`/utility/${existingUtilityId}`, utilityPayload); 
       } else {
-        // Nếu là tháng bình thường chưa có dữ liệu, dùng phương thức POST để tạo mới
         await api.post("/utility", utilityPayload);
       }
 
-      // Bước 2: Generate bill
+      // Bước 2: Generate bill (gửi kèm due_date nếu backend cần)
       const res = await api.post("/bills/generate", {
         contract_id:   contract.id,
         billing_month: billingMonth,
         service_fee:   serviceFee ? Number(serviceFee) : 0,
         additional_fee: additionalFee ? Number(additionalFee) : 0, 
-        additional_fee_reason: additionalFeeReason
+        additional_fee_reason: additionalFeeReason,
+        due_date: estimatedDueDate.isoDate
       });
       setPreview(res.data);
     } catch (err) {
@@ -170,6 +196,11 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     }
   }
 
+  // Format hạn thanh toán hiển thị cho màn hình preview
+  const displayDueDate = preview?.due_date 
+    ? new Date(preview.due_date).toLocaleDateString("vi-VN") 
+    : calculateDueDate(preview?.created_at ? new Date(preview.created_at) : new Date(), 5).formattedVN;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
@@ -185,14 +216,32 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
           {!preview ? (
             <form id="bill-form" onSubmit={handleSubmit} className="space-y-5">
 
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 flex items-center gap-2">
+                <span>⏰</span>
+                <span>Hạn thanh toán: <strong>5 ngày</strong> kể từ khi xuất bill (dự kiến đến <strong>{estimatedDueDate.formattedVN}</strong>).</span>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tháng xuất bill
                 </label>
-                <input type="month" value={billingMonth} required
-                  className={`${INPUT} bg-gray-100 cursor-not-allowed text-gray-600 font-medium`} 
-                  disabled />
-                <p className="text-xs text-gray-400 mt-1">Tháng đã được tính toán tự động.</p>
+                <input 
+                  type="month" 
+                  value={billingMonth} 
+                  onChange={(e) => setBillingMonth(e.target.value)}
+                  required
+                  disabled={!isFirstBill}
+                  className={`${INPUT} ${
+                    !isFirstBill 
+                      ? "bg-gray-100 cursor-not-allowed text-gray-600 font-medium" 
+                      : "bg-white hover:border-blue-400"
+                  }`} 
+                />
+                <p className={`text-xs mt-1 ${isFirstBill ? "text-blue-500 font-medium" : "text-gray-400"}`}>
+                  {isFirstBill 
+                    ? " Đây là hoá đơn đầu tiên, bạn có thể tuỳ chỉnh tháng." 
+                    : "Tháng đã được tính toán tự động."}
+                </p>
               </div>
 
               <div>
@@ -258,21 +307,22 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
               </div>
 
               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phí phát sinh (đ)
-                  </label>
-                  <input type="number" min="0" value={additionalFee}
-                    onChange={(e) => setAdditionalFee(e.target.value)}
-                    placeholder="vd: 150000" className={INPUT} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lý do phát sinh
-                  </label>
-                  <input type="text" value={additionalFeeReason}
-                    onChange={(e) => setAdditionalFeeReason(e.target.value)}
-                    placeholder="vd: Sửa ống nước" className={INPUT} />
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phí phát sinh (đ)
+                </label>
+                <input type="number" min="0" value={additionalFee}
+                  onChange={(e) => setAdditionalFee(e.target.value)}
+                  placeholder="vd: 150000" className={INPUT} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lý do phát sinh
+                </label>
+                <input type="text" value={additionalFeeReason}
+                  onChange={(e) => setAdditionalFeeReason(e.target.value)}
+                  placeholder="vd: Sửa ống nước" className={INPUT} />
+              </div>
 
               {error && (
                 <p className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl">
@@ -282,8 +332,17 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
             </form>
           ) : (
             <div className="space-y-4">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                <span className="text-base leading-none">⚠️</span>
+                <div>
+                  <p className="font-semibold">Hạn thanh toán: {displayDueDate}</p>
+                  <p className="text-amber-700 mt-0.5">Khách thuê cần thanh toán trong vòng 5 ngày kể từ ngày lập hoá đơn.</p>
+                </div>
+              </div>
+
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                 <Row label="Tháng" value={preview.billing_month} />
+                <Row label="Hạn thanh toán" value={<span className="text-red-600 font-semibold">{displayDueDate}</span>} />
                 <Row label="Tiền thuê"
                   value={`${Number(preview.rent_amount).toLocaleString("vi-VN")}đ`} />
                 <Row label={`Điện (${preview.electric_consumed} kWh)`}

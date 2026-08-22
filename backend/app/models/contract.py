@@ -30,6 +30,8 @@ class Contract(Base):
     # Giá thuê THỰC TẾ đã ký trong hợp đồng này - có thể khác base_rent của room
     # vì giá phòng niêm yết có thể đã thay đổi sau khi hợp đồng này được ký
 
+    service_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+
     deposit: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     status: Mapped[str] = mapped_column(String(20), default="active")
     # active = đang hiệu lực, ended = đã kết thúc, terminated = chấm dứt sớm
