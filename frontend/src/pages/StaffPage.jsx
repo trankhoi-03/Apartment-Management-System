@@ -56,7 +56,7 @@ export default function StaffPage() {
       });
       alert("Cập nhật phí quản lý thành công!");
       setEditingFeeHouse(null);
-      loadData(); // Tải lại danh sách để cập nhật số tiền mới
+      loadData(); 
     } catch (err) {
       alert(err.response?.data?.detail || "Có lỗi xảy ra khi cập nhật phí.");
     } finally {

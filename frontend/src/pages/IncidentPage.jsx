@@ -70,7 +70,6 @@ export default function IncidentsPage() {
       
       await api.patch(`/incidents/${editingIncident.id}`, payload);
       
-      // Cập nhật lại danh sách sự cố trên UI
       setIncidents((prev) =>
         prev.map((i) => (i.id === editingIncident.id ? { ...i, ...payload } : i))
       );
@@ -377,7 +376,6 @@ export default function IncidentsPage() {
               type="text"
               value={repairCost}
               onChange={(e) => {
-                // Tự động thêm dấu phẩy định dạng tiền tệ
                 const val = e.target.value.replace(/\D/g, "");
                 setRepairCost(val ? Number(val).toLocaleString("en-US") : "");
               }}

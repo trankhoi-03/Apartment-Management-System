@@ -82,7 +82,6 @@ export default function RoomsPage() {
       is_water_meter: room.is_water_meter,
       house_id: room.house_id,
       furnitures: room.furnitures,
-      // Không truyền 'id' để RoomFormModal hiểu là tạo mới (POST)
     };
     setEditingRoom(duplicatedData);
     setShowForm(true);

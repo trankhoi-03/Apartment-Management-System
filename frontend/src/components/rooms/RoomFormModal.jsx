@@ -43,7 +43,6 @@ const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
                focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white`;
 
 export default function RoomFormModal({ room, houses = [], selectedHouseId, onClose, onSaved }) {
-  // Nếu room có id -> Đang Sửa; Nếu room không có id (hoặc null) -> Đang Thêm mới / Sao chép
   const isEdit = Boolean(room && room.id);
   const isDuplicate = Boolean(room && !room.id);
 

@@ -59,18 +59,15 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
   const [submitStep, setSubmitStep] = useState("");
   const isWaterMeter = room?.is_water_meter ?? contract?.room?.is_water_meter;
 
-  // Tenant fields 
   const [tenant, setTenant] = useState({
     full_name: "", phone: "", email: "", id_card_number: "",
   });
 
-  // Contract fields
   const [contractForm, setContractForm] = useState({
     monthly_rent: "", service_fee: "", deposit: "", start_date: "", end_date: "", payment_day: "",
     num_tenants: 1, num_vehicles: 0, temp_residence_reg: false,
   });
 
-  // Đơn giá điện/nước (optional — chỉ tạo record mới nếu chủ trọ nhập) 
   const [rateForm, setRateForm] = useState({
     electric_price: "", water_price: "", default_water_amount: "",
     effective_from: new Date().toISOString().slice(0, 10), 

@@ -64,7 +64,6 @@ def send_bill_email(
 
     service = get_gmail_service()
 
-    # Nếu không truyền ngày hạn cụ thể, tự động tính 5 ngày kể từ hôm nay
     if not due_date:
         calculated_date = datetime.now() + timedelta(days=5)
         due_date = calculated_date.strftime("%d/%m/%Y")

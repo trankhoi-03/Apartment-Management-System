@@ -61,7 +61,6 @@ export default function FinancialPage() {
   const [savingOtherCost, setSavingOtherCost] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Fetch danh sách nhà để render filter dropdown
   const loadHouses = useCallback(async () => {
     try {
       const res = await api.get("/houses");
@@ -98,19 +97,10 @@ export default function FinancialPage() {
     }
   }, [selectedHouse, selectedMonth]);
 
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      loadHouses();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      loadReport();
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadHouses(); }, [loadHouses]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { loadReport(); }, [loadReport]);
 
   const handleSaveOtherCost = async () => {
     setSavingOtherCost(true);
@@ -156,16 +146,13 @@ export default function FinancialPage() {
     try {
       setIsExporting(true);
       
-      // Gọi API Export từ Backend mà chúng ta vừa tạo
       const endpoint = `/data/export-finance?month=${selectedMonth}&house_id=${selectedHouse}`;
       const res = await api.get(endpoint, { responseType: "blob" });
       
-      // Tạo link download ẩn và giả lập click để tải file về
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;
       
-      // Đặt tên file fallback (Backend đã set header Content-Disposition, nhưng làm thêm bước này cho chắc chắn trình duyệt nào cũng nhận)
       const houseName = selectedHouse === "all" 
         ? "Tất cả nhà trọ" 
         : houses.find((h) => h.id.toString() === selectedHouse)?.name || "Nha_Tro";
@@ -187,7 +174,6 @@ export default function FinancialPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 font-sans">
       
-      {/* HEADER & FILTER: Sử dụng style chuẩn từ BillsPage */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
           <h1 className="text-2xl font-bold text-gray-800">Báo cáo tài chính</h1>
@@ -291,7 +277,6 @@ export default function FinancialPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">Tổng Số Điện (kWh)</label>
-                      {/* Giữ nguyên input cho Số Điện vì nó là kWh, không phải tiền */}
                       <input type="number" name="total_electric_kwh" value={utilInputs.total_electric_kwh} onChange={handleUtilInputChange} className={inputStyle} />
                     </div>
                     <div>

@@ -79,7 +79,6 @@ export default function TenantsPage() {
     // 1. Kiểm tra Nhà trọ
     if (selectedHouse !== "all") {
       const hasContractInHouse = contracts.some((c) => {
-        // FIX 3: Dùng danh sách rooms để tìm house_id
         const matchedRoom = rooms.find(r => r.id === c.room_id);
         return c.tenant_id === tenant.id && matchedRoom?.house_id === Number(selectedHouse);
       });

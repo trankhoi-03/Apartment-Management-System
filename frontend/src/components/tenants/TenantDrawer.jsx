@@ -43,7 +43,6 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
             <div className="space-y-2 text-sm">
               <Row label="Số điện thoại" value={tenant.phone} />
               <Row label="Email" value={tenant.email ?? "Chưa có"} />
-              {/* <Row label="CCCD/CMND" value={tenant.id_card_number ?? "Chưa có"} /> */}
             </div>
             <div className="flex gap-2 mt-4">
               <button onClick={() => onEdit(tenant)}

@@ -56,7 +56,6 @@ function getNextMonth(monthStr) {
   return `${year}-${String(m).padStart(2, "0")}`;
 }
 
-// Hàm tính ngày hết hạn (mặc định cộng thêm numberOfDays ngày)
 function calculateDueDate(fromDate = new Date(), numberOfDays = 5) {
   const d = new Date(fromDate);
   d.setDate(d.getDate() + numberOfDays);
@@ -117,7 +116,6 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
       }); 
   }, [contract]);
 
-  // Đoạn 1: Xử lý logic tải dữ liệu điện nước tháng trước
   useEffect(() => {
     let isMounted = true;
 
@@ -163,7 +161,6 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     };
   }, [billingMonth, room?.id, room?.is_water_meter]);
 
-  // Đoạn 2: Đồng bộ phí dịch vụ từ hợp đồng
   useEffect(() => {
     const syncServiceFee = () => {
       if (contract?.service_fee) {
@@ -237,7 +234,6 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   }
 
 
-  // Format hạn thanh toán hiển thị cho màn hình preview
   const displayDueDate = preview?.due_date 
     ? new Date(preview.due_date).toLocaleDateString("vi-VN") 
     : calculateDueDate(preview?.created_at ? new Date(preview.created_at) : new Date(), 5).formattedVN;

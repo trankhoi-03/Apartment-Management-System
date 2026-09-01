@@ -124,14 +124,14 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
   const [loadingUtility, setLoadingUtility] = useState(false);
 
   useEffect(() => {
-    let isMounted = true; // Cờ kiểm soát trạng thái của component
+    let isMounted = true; 
 
     const fetchUtilityData = () => {
       setLoadingUtility(true);
       
       api.get(`/utility?room_id=${room.id}`)
         .then((res) => {
-          if (!isMounted) return; // Chặn update state nếu component đã unmount
+          if (!isMounted) return;
 
           if (res.data && res.data.length > 0) {
             const latestUtility = res.data.sort((a, b) =>
