@@ -21,8 +21,8 @@ class Room(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     room_number: Mapped[str] = mapped_column(String(20), nullable=False)
     area_sqm: Mapped[float | None] = mapped_column(Float, nullable=True)
-    base_rent: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    # base_rent: giá thuê niêm yết hiện tại, KHÔNG phải giá đã ký trong hợp đồng cụ thể
+    cost_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False) 
+    # cost_price: giá cost mà chủ trọ phải bỏ ra để tạo phòng, dùng để tính toán lợi nhuận
     is_water_meter: Mapped[bool] = mapped_column(default=True, nullable=False)
     # True: có đồng hồ nước, tính theo số đọc thực tế
     # False: tính theo default_water_amount trong UtilityRate

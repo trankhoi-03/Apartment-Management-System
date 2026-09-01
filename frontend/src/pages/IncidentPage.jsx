@@ -40,6 +40,48 @@ export default function IncidentsPage() {
   const [selectedHouse, setSelectedHouse] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
 
+  const [completingIncident, setCompletingIncident] = useState(null);
+  const [repairCost, setRepairCost] = useState("");
+  const [completingLoading, setCompletingLoading] = useState(false);
+
+  const [editingIncident, setEditingIncident] = useState(null);
+  const [editForm, setEditForm] = useState({ description: "", handler_info: "", repair_cost: "" });
+  const [editLoading, setEditLoading] = useState(false);
+
+  function handleOpenEdit(incident) {
+    setEditingIncident(incident);
+    setEditForm({
+      description: incident.description || "",
+      handler_info: incident.handler_info || "",
+      repair_cost: incident.repair_cost ? Number(incident.repair_cost).toLocaleString("en-US") : ""
+    });
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      const cost = editForm.repair_cost ? Number(editForm.repair_cost.replace(/\D/g, "")) : null;
+      const payload = {
+        description: editForm.description,
+        handler_info: editForm.handler_info,
+        repair_cost: cost
+      };
+      
+      await api.patch(`/incidents/${editingIncident.id}`, payload);
+      
+      // Cập nhật lại danh sách sự cố trên UI
+      setIncidents((prev) =>
+        prev.map((i) => (i.id === editingIncident.id ? { ...i, ...payload } : i))
+      );
+      setEditingIncident(null);
+    } catch {
+      alert("Có lỗi xảy ra khi cập nhật sự cố.");
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -56,7 +98,36 @@ export default function IncidentsPage() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadData();
+    });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleConfirmComplete() {
+    setCompletingLoading(true);
+    try {
+      const cost = repairCost ? Number(repairCost.replace(/\D/g, "")) : 0;
+      const currentTime = new Date().toISOString();
+      await api.patch(`/incidents/${completingIncident.id}`, { 
+        status: "completed",
+        repair_cost: cost,
+        completed_at: currentTime 
+      });
+      
+      setIncidents((prev) =>
+        prev.map((i) => (i.id === completingIncident.id ? { ...i, status: "completed", repair_cost: cost, completed_at: currentTime } : i))
+      );
+      setCompletingIncident(null);
+      setRepairCost("");
+    } catch {
+      alert("Có lỗi xảy ra khi cập nhật trạng thái.");
+    } finally {
+      setCompletingLoading(false);
+    }
+  }
 
   async function handleUpdateStatus(incident, newStatus) {
     try {
@@ -64,7 +135,7 @@ export default function IncidentsPage() {
       setIncidents((prev) =>
         prev.map((i) => (i.id === incident.id ? { ...i, status: newStatus } : i))
       );
-    } catch (err) {
+    } catch {
       alert("Có lỗi xảy ra khi cập nhật trạng thái.");
     }
   }
@@ -211,44 +282,196 @@ export default function IncidentsPage() {
                   </p>
                 )}
                 
-                <p className={`text-xs mt-1.5 mb-2 flex items-center gap-1.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                  🕒 <span>{formatDateTime(incident.created_at)}</span>
-                </p>
+                <div className="mt-1.5 mb-2 space-y-1">
+                  <p className={`text-xs flex items-center gap-1.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                    🕒 <span>{formatDateTime(incident.created_at)}</span>
+                  </p>
+                  
+                  {incident.completed_at && (
+                    <p className="text-xs flex items-center gap-1.5 text-green-600 font-medium">
+                      ✅ <span>Hoàn thành: {formatDateTime(incident.completed_at)}</span>
+                    </p>
+                  )}
+                </div>
                 
                 <div className={`p-3 rounded-xl mt-2 flex-1 ${isOverdue ? 'bg-white/70 text-red-900' : 'bg-gray-50 text-gray-700'}`}>
                   <p className="text-sm whitespace-pre-wrap">{incident.description}</p>
                 </div>
 
+                {incident.handler_info && (
+                  <div className="mt-3 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
+                    <p className="text-xs font-semibold text-blue-800 mb-0.5">👷 Bên xử lý:</p>
+                    <p className="text-sm text-blue-900 font-medium">{incident.handler_info}</p>
+                  </div>
+                )}
+
                 <div className={`mt-4 pt-4 border-t ${isOverdue ? 'border-red-200' : 'border-gray-100'}`}>
                   {incident.status === "received" && (
-                    <button
-                      onClick={() => handleUpdateStatus(incident, "processing")}
-                      className={`w-full px-4 py-2 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 
-                        ${isOverdue ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                    >
-                      ➡️ Bắt đầu xử lý
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleOpenEdit(incident)}
+                        className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition"
+                      >
+                        ✏️ Sửa
+                      </button>
+                      <button
+                        onClick={() => handleUpdateStatus(incident, "processing")}
+                        className={`flex-[2] px-4 py-2 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 
+                          ${isOverdue ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                      >
+                        ➡️ Xử lý
+                      </button>
+                    </div>
                   )}
                   
                   {incident.status === "processing" && (
-                    <button
-                      onClick={() => handleUpdateStatus(incident, "completed")}
-                      className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
-                    >
-                      ✅ Đánh dấu hoàn thành
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleOpenEdit(incident)}
+                        className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition"
+                      >
+                        ✏️ Sửa
+                      </button>
+                      <button
+                        onClick={() => setCompletingIncident(incident)}
+                        className="flex-[2] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
+                      >
+                        ✅ Hoàn thành
+                      </button>
+                    </div>
                   )}
                   
                   {incident.status === "completed" && (
-                    <div className="w-full px-4 py-2 bg-gray-50 text-gray-500 rounded-xl text-sm font-medium text-center">
-                      Sự cố đã được khắc phục
+                    <div className="space-y-2">
+                      <div className="w-full px-4 py-2 bg-gray-50 text-gray-500 rounded-xl text-sm font-medium text-center flex flex-col gap-1">
+                        <span>Sự cố đã được khắc phục</span>
+                        {incident.repair_cost > 0 && (
+                          <span className="text-gray-800 font-bold">
+                            Chi phí: {Number(incident.repair_cost).toLocaleString("vi-VN")}đ
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleOpenEdit(incident)}
+                        className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
+                      >
+                        ✏️ Sửa thông tin
+                      </button>
                     </div>
                   )}
                 </div>
-
               </div>
             );
           })}
+        </div>
+      )}
+      {completingIncident && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận hoàn thành</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Nhập chi phí sửa chữa cho sự cố phòng {completingIncident.computed_room?.room_number} (nếu có):
+            </p>
+            
+            <input
+              type="text"
+              value={repairCost}
+              onChange={(e) => {
+                // Tự động thêm dấu phẩy định dạng tiền tệ
+                const val = e.target.value.replace(/\D/g, "");
+                setRepairCost(val ? Number(val).toLocaleString("en-US") : "");
+              }}
+              placeholder="Ví dụ: 150,000"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-6"
+              inputMode="numeric"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setCompletingIncident(null);
+                  setRepairCost("");
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmComplete}
+                disabled={completingLoading}
+                className="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white rounded-xl text-sm font-medium transition"
+              >
+                {completingLoading ? "Đang lưu..." : "Xác nhận"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {editingIncident && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Sửa thông tin sự cố</h3>
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mô tả sự cố <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bên xử lý (Tên/SĐT thợ...)
+                </label>
+                <input
+                  type="text"
+                  value={editForm.handler_info}
+                  onChange={(e) => setEditForm({...editForm, handler_info: e.target.value})}
+                  placeholder="VD: Thợ điện bên B - 0901234567"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Chi phí sửa chữa (đ)
+                </label>
+                <input
+                  type="text"
+                  value={editForm.repair_cost}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setEditForm({...editForm, repair_cost: val ? Number(val).toLocaleString("en-US") : ""});
+                  }}
+                  placeholder="Ví dụ: 150,000"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div className="flex gap-3 mt-6 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingIncident(null)}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition"
+                >
+                  {editLoading ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

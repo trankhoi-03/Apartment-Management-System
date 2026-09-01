@@ -3,6 +3,7 @@ import api from "../../api/axios";
 
 export default function ReportIncidentModal({ room, onClose, onReported }) {
   const [description, setDescription] = useState("");
+  const [handlerInfo, setHandlerInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -20,6 +21,7 @@ export default function ReportIncidentModal({ room, onClose, onReported }) {
       await api.post("/incidents", {
         room_id: room.id,
         description: description,
+        handler_info: handlerInfo, 
         status: "received" 
       });
       onReported();
@@ -48,6 +50,19 @@ export default function ReportIncidentModal({ room, onClose, onReported }) {
               placeholder="Ví dụ: Vỡ ống nước nhà vệ sinh, hỏng bóng đèn..."
               rows={4}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Thông tin bên xử lý (Tuỳ chọn)
+            </label>
+            <input
+              type="text"
+              value={handlerInfo}
+              onChange={(e) => setHandlerInfo(e.target.value)}
+              placeholder="VD: Thợ điện bên A, Thợ nước bên B..."
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white"
             />
           </div>
 

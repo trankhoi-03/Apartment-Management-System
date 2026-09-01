@@ -25,6 +25,34 @@ function Section({ title, children }) {
   );
 }
 
+function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
+  const formatNumber = (val) => {
+    if (val === null || val === undefined || val === "") return "";
+    const numericValue = val.toString().replace(/\D/g, "");
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleInputChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    onChange({
+      target: { name, value: rawValue, type: "text" },
+    });
+  };
+
+  return (
+    <input
+      type="text"
+      name={name}
+      value={formatNumber(value)}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required={required}
+      className={className}
+      inputMode="numeric"
+    />
+  );
+}
+
 export default function EditContractModal({ contract, room, onClose, onSaved }) {
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState("");
@@ -38,7 +66,7 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
 
   // Contract fields
   const [contractForm, setContractForm] = useState({
-    monthly_rent: "", deposit: "", end_date: "",
+    monthly_rent: "", service_fee: "", deposit: "", start_date: "", end_date: "", payment_day: "",
     num_tenants: 1, num_vehicles: 0, temp_residence_reg: false,
   });
 
@@ -50,22 +78,33 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
   });
 
   useEffect(() => {
-    if (!contract) return;
-    setTenant({
-      full_name:      contract.tenant?.full_name      ?? "",
-      phone:          contract.tenant?.phone          ?? "",
-      email:          contract.tenant?.email          ?? "",
-      id_card_number: contract.tenant?.id_card_number ?? "",
-    });
-    setContractForm({
-      monthly_rent:       contract.monthly_rent       ?? "",
-      deposit:            contract.deposit            ?? "",
-      end_date:           contract.end_date           ?? "",
-      num_tenants:        contract.num_tenants        ?? 1,
-      num_vehicles:       contract.num_vehicles       ?? 0,
-      temp_residence_reg: contract.temp_residence_reg ?? false,
-    });
-  }, [contract]);
+    const syncContractData = () => {
+      if (!contract) return;
+      
+      setTenant({
+        full_name:      contract.tenant?.full_name      ?? "",
+        phone:          contract.tenant?.phone          ?? "",
+        email:          contract.tenant?.email          ?? "",
+        id_card_number: contract.tenant?.id_card_number ?? "",
+      });
+      
+      setContractForm({
+        monthly_rent:       contract.monthly_rent       ?? "",
+        service_fee:        contract.service_fee        ?? "",
+        deposit:            contract.deposit            ?? "",
+        start_date:         contract.start_date         ?? "",
+        end_date:           contract.end_date           ?? "",
+        payment_day:        contract.payment_day        ?? "",
+        num_tenants:        contract.num_tenants        ?? 1,
+        num_vehicles:       contract.num_vehicles       ?? 0,
+        temp_residence_reg: contract.temp_residence_reg ?? false,
+      });
+    };
+
+    Promise.resolve().then(syncContractData);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contract?.id]);
 
   function handleTenantChange(e) {
     const { name, value } = e.target;
@@ -100,8 +139,11 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
       // Bước 2: Cập nhật hợp đồng 
       setSubmitStep("Đang cập nhật hợp đồng...");
       await api.patch(`/contracts/${contract.id}`, {
+        start_date:         contractForm.start_date,
         monthly_rent:       Number(contractForm.monthly_rent),
+        service_fee:        Number(contractForm.service_fee) || 0,
         deposit:            Number(contractForm.deposit) || 0,
+        payment_day:        Number(contractForm.payment_day),
         num_tenants:        Number(contractForm.num_tenants),
         num_vehicles:       Number(contractForm.num_vehicles),
         temp_residence_reg: contractForm.temp_residence_reg,
@@ -158,35 +200,47 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
                 <input name="phone" value={tenant.phone}
                   onChange={handleTenantChange} className={INPUT} />
               </Field>
-              <Field label="CCCD/CMND">
-                <input name="id_card_number" value={tenant.id_card_number}
+              <Field label="Email">
+                <input name="email" type="email" value={tenant.email}
                   onChange={handleTenantChange} placeholder="—" className={INPUT} />
               </Field>
             </div>
-            <Field label="Email">
-              <input name="email" type="email" value={tenant.email}
-                onChange={handleTenantChange} placeholder="—" className={INPUT} />
-            </Field>
           </Section>
 
           {/* 2. Thông tin hợp đồng */}
           <Section title="Thông tin hợp đồng">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Tiền thuê (đ/tháng)">
-                <input name="monthly_rent" type="number" min="0"
-                  value={contractForm.monthly_rent}
-                  onChange={handleContractChange} className={INPUT} />
+              <Field label="Ngày bắt đầu" required>
+                <input name="start_date" type="date" value={contractForm.start_date}
+                  onChange={handleContractChange} required className={INPUT} />
               </Field>
-              <Field label="Tiền đặt cọc (đ)">
-                <input name="deposit" type="number" min="0"
-                  value={contractForm.deposit}
+              <Field label="Ngày kết thúc">
+                <input name="end_date" type="date" value={contractForm.end_date}
                   onChange={handleContractChange} className={INPUT} />
               </Field>
             </div>
-            <Field label="Ngày kết thúc">
-              <input name="end_date" type="date" value={contractForm.end_date}
-                onChange={handleContractChange} className={INPUT} />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tiền thuê (đ/tháng)">
+                <FormattedNumberInput name="monthly_rent"
+                  value={contractForm.monthly_rent}
+                  onChange={handleContractChange} className={INPUT} />
+              </Field>
+              <Field label="Phí dịch vụ (đ/tháng)">
+                <FormattedNumberInput name="service_fee"
+                  value={contractForm.service_fee}
+                  onChange={handleContractChange} placeholder="0" className={INPUT} />
+              </Field>
+              <Field label="Tiền đặt cọc (đ)">
+                <FormattedNumberInput name="deposit"
+                  value={contractForm.deposit}
+                  onChange={handleContractChange} className={INPUT} />
+              </Field>
+              <Field label="Hạn thanh toán (Ngày)" hint="Nhập ngày khách thuê phải đóng tiền hàng tháng (VD: 5 là ngày 5 hàng tháng)">
+                <input name="payment_day" type="number" min="1" max="31"
+                  value={contractForm.payment_day}
+                  onChange={handleContractChange} className={INPUT} />
+              </Field>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Số người thuê">
                 <input name="num_tenants" type="number" min="1"
@@ -233,20 +287,20 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
                 </Field>
 
                 <Field label="Giá điện (đ/kWh)">
-                  <input name="electric_price" type="number" min="0"
+                  <FormattedNumberInput name="electric_price"
                     value={rateForm.electric_price} onChange={handleRateChange}
-                    placeholder="vd: 3500" className={INPUT} />
+                    placeholder="vd: 3,500" className={INPUT} />
                 </Field>
 
                 {isWaterMeter ? (
                   <Field label="Giá nước (đ/m³)">
-                    <input name="water_price" type="number" min="0"
+                    <FormattedNumberInput name="water_price"
                       value={rateForm.water_price} onChange={handleRateChange}
                       placeholder="vd: 15000" className={INPUT} />
                   </Field>
                 ) : (
                   <Field label="Tiền nước cố định/tháng (đ)">
-                    <input name="default_water_amount" type="number" min="0"
+                    <FormattedNumberInput name="default_water_amount"
                       value={rateForm.default_water_amount} onChange={handleRateChange}
                       placeholder="vd: 20000" className={INPUT} />
                   </Field>

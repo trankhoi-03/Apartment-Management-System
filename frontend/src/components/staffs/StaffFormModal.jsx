@@ -12,10 +12,16 @@ export default function StaffFormModal({ houses = [], selectedHouseId, onClose, 
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!form.house_id && houses.length > 0) {
-      setForm(prev => ({ ...prev, house_id: houses[0].id.toString() }));
-    }
-  }, [houses]);
+    const setDefaultHouse = () => {
+      if (!form.house_id && houses.length > 0) {
+        setForm(prev => ({ ...prev, house_id: houses[0].id.toString() }));
+      }
+    };
+
+    Promise.resolve().then(setDefaultHouse);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [houses.length]);
 
   function handleChange(e) {
     const { name, value } = e.target;

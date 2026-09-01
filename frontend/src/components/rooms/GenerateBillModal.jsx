@@ -4,6 +4,39 @@ import api from "../../api/axios";
 const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
                focus:outline-none focus:ring-2 focus:ring-blue-500`;
 
+// Hàm hỗ trợ format tiền tệ
+function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
+  const formatNumber = (val) => {
+    if (val === null || val === undefined || val === "") return "";
+    const numericValue = val.toString().replace(/\D/g, "");
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleInputChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    onChange({
+      target: {
+        name,
+        value: rawValue,
+        type: "text",
+      },
+    });
+  };
+
+  return (
+    <input
+      type="text"
+      name={name}
+      value={formatNumber(value)}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required={required}
+      className={className}
+      inputMode="numeric"
+    />
+  );
+}
+
 function Row({ label, value }) {
   return (
     <div className="flex justify-between text-sm">
@@ -50,7 +83,6 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [loadingPrev, setLoadingPrev]   = useState(false);
   const [preview, setPreview]           = useState(null);
   const [loading, setLoading]           = useState(false);
-  const [sending, setSending]           = useState(false);
   const [error, setError]               = useState("");
 
   const estimatedDueDate = calculateDueDate(new Date(), 5);
@@ -85,41 +117,63 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
       }); 
   }, [contract]);
 
+  // Đoạn 1: Xử lý logic tải dữ liệu điện nước tháng trước
   useEffect(() => {
-    if (!billingMonth || !room?.id) return;
-    setLoadingPrev(true);
-    setElectricOld("");
-    setWaterOld("");
-    setExistingUtilityId(null);
+    let isMounted = true;
 
-    api.get(`/utility?room_id=${room.id}`)
-      .then((res) => {
-        const exactMatch = res.data.find((r) => r.billing_month === billingMonth);
+    const fetchPreviousUtility = () => {
+      if (!billingMonth || !room?.id) return;
+      
+      setLoadingPrev(true);
+      setElectricOld("");
+      setWaterOld("");
+      setExistingUtilityId(null);
 
-        if (exactMatch) {
-          setExistingUtilityId(exactMatch.id);
-          setElectricOld(String(exactMatch.electric_old));
-          if (room.is_water_meter) setWaterOld(String(exactMatch.water_old));
-        } else {
-          const prev = res.data
-            .filter((r) => r.billing_month < billingMonth)
-            .sort((a, b) => b.billing_month.localeCompare(a.billing_month))[0];
+      api.get(`/utility?room_id=${room.id}`)
+        .then((res) => {
+          if (!isMounted) return;
 
-          if (prev) {
-            setElectricOld(String(prev.electric_new));
-            if (room.is_water_meter) setWaterOld(String(prev.water_new));
+          const exactMatch = res.data.find((r) => r.billing_month === billingMonth);
+
+          if (exactMatch) {
+            setExistingUtilityId(exactMatch.id);
+            setElectricOld(String(exactMatch.electric_old));
+            if (room?.is_water_meter) setWaterOld(String(exactMatch.water_old));
+          } else {
+            const prev = res.data
+              .filter((r) => r.billing_month < billingMonth)
+              .sort((a, b) => b.billing_month.localeCompare(a.billing_month))[0];
+
+            if (prev) {
+              setElectricOld(String(prev.electric_new));
+              if (room?.is_water_meter) setWaterOld(String(prev.water_new));
+            }
           }
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoadingPrev(false));
-  }, [billingMonth, room]);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (isMounted) setLoadingPrev(false);
+        });
+    };
 
+    fetchPreviousUtility();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [billingMonth, room?.id, room?.is_water_meter]);
+
+  // Đoạn 2: Đồng bộ phí dịch vụ từ hợp đồng
   useEffect(() => {
-    if (contract?.service_fee) {
-      setServiceFee(contract.service_fee);
-    }
-  }, [contract]);
+    const syncServiceFee = () => {
+      if (contract?.service_fee) {
+        setServiceFee(contract.service_fee);
+      }
+    };
+
+    Promise.resolve().then(syncServiceFee);
+    
+  }, [contract?.id, contract?.service_fee]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -182,19 +236,6 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     }
   }
 
-  async function handleSendEmail() {
-    setSending(true);
-    setError("");
-    try {
-      await api.post(`/bills/${preview.id}/send`);
-      onGenerated();
-    } catch (err) {
-      const detail = err.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Gửi email thất bại.");
-    } finally {
-      setSending(false);
-    }
-  }
 
   // Format hạn thanh toán hiển thị cho màn hình preview
   const displayDueDate = preview?.due_date 
@@ -301,18 +342,26 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                   Phí dịch vụ (đ)
                   <span className="text-gray-400 font-normal ml-1">(tuỳ chọn)</span>
                 </label>
-                <input type="number" min="0" value={serviceFee}
+                <FormattedNumberInput 
+                  name="service_fee"
+                  value={serviceFee}
                   onChange={(e) => setServiceFee(e.target.value)}
-                  placeholder="vd: 50000" className={INPUT} />
+                  placeholder="vd: 50000" 
+                  className={INPUT} 
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phí phát sinh (đ)
                 </label>
-                <input type="number" min="0" value={additionalFee}
+                <FormattedNumberInput 
+                  name="additional_fee"
+                  value={additionalFee}
                   onChange={(e) => setAdditionalFee(e.target.value)}
-                  placeholder="vd: 150000" className={INPUT} />
+                  placeholder="vd: 150000" 
+                  className={INPUT} 
+                />
               </div>
 
               <div>

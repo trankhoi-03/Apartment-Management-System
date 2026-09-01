@@ -15,6 +15,7 @@ class HouseUpdate(BaseModel):
     name: str | None = Field(default=None, max_length=100)
     address: str | None = None
     contract_template: str | None = None
+    employee_fee: float | None = None
 
 
 class HouseResponse(HouseBase):

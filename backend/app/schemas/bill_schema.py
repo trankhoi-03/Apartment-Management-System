@@ -24,6 +24,7 @@ class BillUpdate(BaseModel):
 class BillEditRequest(BaseModel):
     electric_new: float
     water_new: float
+    default_water_amount: float
     service_fee: float
     additional_fee: float = 0.0
     additional_fee_reason: str | None = None

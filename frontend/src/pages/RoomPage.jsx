@@ -44,7 +44,11 @@ export default function RoomsPage() {
     }
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadData();
+    });
+  }, []);
 
   function handleCardClick(room) {
     setSelectedRoom((prev) => prev?.id === room.id ? null : room);
@@ -73,7 +77,7 @@ export default function RoomsPage() {
   function handleDuplicateRoom(room) {
     const duplicatedData = {
       room_number: `${room.room_number}_copy`,
-      base_rent: room.base_rent,
+      cost_price: room.cost_price,
       area_sqm: room.area_sqm,
       is_water_meter: room.is_water_meter,
       house_id: room.house_id,

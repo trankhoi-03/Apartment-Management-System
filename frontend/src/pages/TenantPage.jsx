@@ -34,7 +34,12 @@ export default function TenantsPage() {
     }
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadData();
+    });
+
+  }, []);
 
   function getActiveContract(tenantId) {
     return contracts.find((c) => c.tenant_id === tenantId && c.status === "active") ?? null;

@@ -75,8 +75,8 @@ export default function RoomCard({ room, onClick, isSelected, onDuplicate, isOwn
       </div>
       
       <div className="space-y-1 text-sm text-gray-600">
-        <p>Giá thuê: <span className="font-medium text-gray-800">
-          {room.base_rent?.toLocaleString("vi-VN")}đ
+        <p>Giá cost: <span className="font-medium text-gray-800">
+          {room.cost_price?.toLocaleString("vi-VN")}đ
         </span></p>
         {room.area_sqm && <p>Diện tích: {room.area_sqm} m²</p>}
         <p>Đồng hồ nước: {room.is_water_meter ? "✅ Có" : "❌ Không"}</p>

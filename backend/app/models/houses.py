@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, Column, ForeignKey, Table
+from sqlalchemy import String, Text, Column, ForeignKey, Table, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 from .base import Base
@@ -21,6 +21,7 @@ class House(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    employee_fee: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     contract_template: Mapped[str | None] = mapped_column(Text, nullable=True)
     theme_color: Mapped[str] = mapped_column(String(7), default="#3B82F6")
     

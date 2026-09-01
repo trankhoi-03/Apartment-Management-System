@@ -37,8 +37,8 @@ function RoomCard({ room, house }) {
       </div>
 
       <div className="space-y-1 text-sm text-gray-600">
-        <p>Giá thuê: <span className="font-medium text-gray-800">
-          {room.base_rent.toLocaleString("vi-VN")}đ
+        <p>Giá cost: <span className="font-medium text-gray-800">
+          {room.cost_price.toLocaleString("vi-VN")}đ
         </span></p>
         {room.area_sqm && <p>Diện tích: {room.area_sqm} m²</p>}
         <p>Đồng hồ nước: {room.is_water_meter ? "✅ Có" : "❌ Không"}</p>
@@ -82,7 +82,9 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    loadData();
+    Promise.resolve().then(() => {
+      loadData();
+    });
   }, []);
 
   const revenueStats = useMemo(() => {
@@ -178,7 +180,7 @@ export default function DashboardPage() {
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
-    } catch (err) {
+    } catch {
       alert("Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại.");
     } finally {
       setIsExporting(false);
@@ -195,7 +197,7 @@ export default function DashboardPage() {
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
-    } catch (err) {
+    } catch {
       alert("Không thể tải file mẫu. Vui lòng thử lại.");
     }
   }

@@ -15,6 +15,8 @@ const AVAILABLE_VARIABLES = [
   { key: "[NOI_THAT]",       label: "Danh sách nội thất" },
   { key: "[GIA_THUE]",       label: "Giá thuê/Tháng" },
   { key: "[TIEN_COC]",       label: "Tiền cọc" },
+  { key: "[PHI_DICH_VU]",    label: "Phí dịch vụ/Tháng" },
+  { key: "[HAN_THANH_TOAN]", label: "Hạn thanh toán tiền nhà" },
   { key: "[GIA_DIEN]",       label: "Đơn giá Điện" },
   { key: "[GIA_NUOC]",       label: "Đơn giá Nước" },
   { key: "[CHI_SO_DIEN]",    label: "Chỉ số Điện ban đầu" },
@@ -41,7 +43,7 @@ export default function ContractTemplateSettings({ houseId, onClose }) {
           setFileName("Mau_Hop_Dong_Hien_Tai.docx");
           setBase64File(templateData);
         }
-      } catch (err) {
+      } catch {
         setError("Không thể tải thông tin nhà trọ.");
       } finally {
         setLoading(false);
@@ -81,7 +83,7 @@ export default function ContractTemplateSettings({ houseId, onClose }) {
       await api.patch(`/houses/${houseId}`, { contract_template: base64File });
       alert("Đã lưu mẫu hợp đồng gốc thành công!");
       onClose();
-    } catch (err) {
+    } catch {
       setError("Lỗi khi lưu mẫu hợp đồng.");
     } finally {
       setSaving(false);

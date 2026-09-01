@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.models.room import Room
 from app.models.contract import Contract
 from app.models.houses import House
+from app.routers.report_router import get_house_financial_report, get_all_houses_financial_report
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -190,6 +191,85 @@ def download_template():
     output.seek(0)
     
     file_name = "Mẫu Nhập Liệu Phòng Trọ.xlsx"
+    encoded_file_name = quote(file_name)
+    headers = {
+        "Content-Disposition": f"attachment; filename*=utf-8''{encoded_file_name}"
+    }
+    
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers
+    )
+
+
+@router.get("/export-finance")
+def export_financial_excel(month: str, house_id: str = "all", db: Session = Depends(get_db)):
+    try:
+        if house_id == "all":
+            report_data = get_all_houses_financial_report(month=month, db=db)
+        else:
+            report_data = get_house_financial_report(house_id=int(house_id), month=month, db=db)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    def _g(obj, key, default=""):
+        if isinstance(obj, dict): return obj.get(key, default)
+        return getattr(obj, key, default)
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        
+        # 1. Sheet Tổng quan
+        summary_data = [
+            # {"Chỉ tiêu": "Khu vực", "Giá trị": report_data.house_name},
+            {"Chỉ tiêu": "Tháng", "Giá trị": month},
+            {"Chỉ tiêu": "Tổng doanh thu (VNĐ)", "Giá trị": float(report_data.total_revenue)},
+            {"Chỉ tiêu": "Tổng chi phí (VNĐ)", "Giá trị": float(report_data.total_cost)},
+            {"Chỉ tiêu": "Lợi nhuận ròng (VNĐ)", "Giá trị": float(report_data.net_profit)},
+        ]
+        pd.DataFrame(summary_data, columns=["Chỉ tiêu", "Giá trị"]).to_excel(writer, sheet_name="Tổng quan", index=False, header=False)
+
+        # 2. Sheet Tiền thuê nhà
+        rent_data = [{"Phòng": _g(d, "room_name"), "Số tiền (VNĐ)": _g(d, "revenue")} for d in report_data.rent_tab.details]
+        pd.DataFrame(rent_data, columns=["Phòng", "Số tiền (VNĐ)"]).to_excel(writer, sheet_name="Tiền thuê nhà", index=False)
+
+        # 3. Sheet Phí dịch vụ & Phát sinh
+        other_rev_data = [{"Phòng": _g(d, "room_name"), "Hạng mục": _g(d, "item"), "Số tiền (VNĐ)": _g(d, "amount")} for d in report_data.other_revenue_tab.details]
+        pd.DataFrame(other_rev_data, columns=["Phòng", "Hạng mục", "Số tiền (VNĐ)"]).to_excel(writer, sheet_name="Dịch vụ & Phát sinh", index=False)
+
+        # 4. Sheet Điện & Nước
+        util_data = [{"Phòng": _g(d, "room_name"), "Tiền điện (VNĐ)": _g(d, "electric_cost"), "Tiền nước (VNĐ)": _g(d, "water_cost")} for d in report_data.utilities_tab.details]
+        pd.DataFrame(util_data, columns=["Phòng", "Tiền điện (VNĐ)", "Tiền nước (VNĐ)"]).to_excel(writer, sheet_name="Điện & Nước", index=False)
+
+        # 5. Sheet Sửa chữa & Bảo trì
+        maint_data = [{"Phòng": _g(d, "room_name"), "Nội dung": _g(d, "description"), "Bên xử lý": _g(d, "handler_info") or "—", "Chi phí (VNĐ)": _g(d, "amount")} for d in report_data.maintenance_tab.details]
+        pd.DataFrame(maint_data, columns=["Phòng", "Nội dung", "Bên xử lý", "Chi phí (VNĐ)"]).to_excel(writer, sheet_name="Sửa chữa & Bảo trì", index=False)
+
+        # 6. Sheet Nhân viên quản lý
+        mgr_data = [{"Hạng mục": _g(d, "item"), "Số tiền (VNĐ)": _g(d, "amount")} for d in report_data.management_tab.details]
+        pd.DataFrame(mgr_data, columns=["Hạng mục", "Số tiền (VNĐ)"]).to_excel(writer, sheet_name="Nhân viên", index=False)
+
+        # 7. Sheet Giá Cost
+        cost_data = [{"Phòng": _g(d, "room_name"), "Số tiền (VNĐ)": _g(d, "amount")} for d in report_data.base_cost_tab.details]
+        pd.DataFrame(cost_data, columns=["Phòng", "Số tiền (VNĐ)"]).to_excel(writer, sheet_name="Giá Cost", index=False)
+
+        # 8. Sheet Chi phí khác
+        other_cost_data = [{"Nội dung chi": _g(d, "item"), "Số tiền (VNĐ)": _g(d, "amount")} for d in report_data.other_costs_tab.details]
+        pd.DataFrame(other_cost_data, columns=["Nội dung chi", "Số tiền (VNĐ)"]).to_excel(writer, sheet_name="Chi phí khác", index=False)
+
+        # Căn chỉnh độ rộng cột tự động cho tất cả các sheet
+        for sheet_name in writer.sheets:
+            worksheet = writer.sheets[sheet_name]
+            worksheet.column_dimensions['A'].width = 30
+            worksheet.column_dimensions['B'].width = 25
+            worksheet.column_dimensions['C'].width = 20
+            worksheet.column_dimensions['D'].width = 20
+    
+    output.seek(0)
+    
+    safe_house_name = report_data.house_name.replace(' ', '_')
+    file_name = f"Baó Cáo Tài Chính {safe_house_name} {month}.xlsx"
     encoded_file_name = quote(file_name)
     headers = {
         "Content-Disposition": f"attachment; filename*=utf-8''{encoded_file_name}"

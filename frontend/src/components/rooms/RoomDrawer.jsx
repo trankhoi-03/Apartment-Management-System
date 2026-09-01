@@ -69,7 +69,15 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
     }
   }
 
-  useEffect(() => { loadContract(); }, [room]);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      if (room?.id) {
+        loadContract();
+      }
+    });
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id]);
 
   async function handleDeleteRoom() {
     if (!confirm(`Xoá phòng ${room.room_number}? Hành động này không thể hoàn tác.`)) return;
@@ -103,7 +111,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
             </h3>
             <div className="space-y-2 text-sm">
               <Row label="Trạng thái" value={STATUS_LABEL[room.status] ?? room.status} />
-              <Row label="Giá thuê"   value={`${room.base_rent?.toLocaleString("vi-VN")}đ/tháng`} />
+              <Row label="Giá cost"   value={`${room.cost_price?.toLocaleString("vi-VN")}đ/tháng`} />
               {room.area_sqm && <Row label="Diện tích" value={`${room.area_sqm} m²`} />}
               <Row label="Đồng hồ nước" value={room.is_water_meter ? "✅ Có" : "❌ Không"} />
               

@@ -16,6 +16,7 @@ class StaffAssignRequest(BaseModel):
 class HouseMinimal(BaseModel):
     id: int
     name: str
+    employee_fee: float | None = None
 
 class StaffResponse(BaseModel):
     id: int
@@ -59,9 +60,13 @@ def list_staffs_of_owner(db: Session = Depends(get_db), current_user: User = Dep
             # Lọc các User có role là staff
             if getattr(manager, "role", "staff") == "staff" and manager.id not in seen_ids:
                 
-                # Lọc danh sách nhà trọ (Bỏ qua gán trực tiếp, tạo data dict thuần tuý)
+                # Lọc danh sách nhà trọ 
                 filtered_houses = [
-                    {"id": h.id, "name": h.name} 
+                    {
+                        "id": h.id, 
+                        "name": h.name,
+                        "employee_fee": h.employee_fee
+                    }
                     for h in manager.managed_houses if h.id in owner_house_ids
                 ]
                 

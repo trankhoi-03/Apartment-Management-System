@@ -10,17 +10,23 @@ export default function TenantFormModal({ tenant, onClose, onSaved }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (tenant) {
-      setForm({
-        full_name: tenant.full_name,
-        phone: tenant.phone,
-        email: tenant.email ?? "",
-        id_card_number: tenant.id_card_number ?? "",
-      });
-    } else {
-      setForm(EMPTY);
-    }
-  }, [tenant]);
+    const syncTenantData = () => {
+      if (tenant) {
+        setForm({
+          full_name: tenant.full_name,
+          phone: tenant.phone,
+          email: tenant.email ?? "",
+          id_card_number: tenant.id_card_number ?? "",
+        });
+      } else {
+        setForm(EMPTY); 
+      }
+    };
+
+    Promise.resolve().then(syncTenantData);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant?.id]);
 
   function handleChange(e) {
     const { name, value } = e.target;

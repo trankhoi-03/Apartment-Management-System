@@ -7,7 +7,8 @@ const NAV_ITEMS = [
   { to: "/tenants", label: "Người thuê", icon: "👥" },
   { to: "/bills",   label: "Hoá đơn",    icon: "🧾" },
   { to: "/incidents", label: "Sự cố",    icon: "⚠️" },
-  { to: "/staffs",  label: "Nhân viên",  icon: "👨‍💼", ownerOnly: true }
+  { to: "/staffs",  label: "Nhân viên",  icon: "👨‍💼", ownerOnly: true },
+  { to: "/finance", label: "Tài chính",  icon: "💰", ownerOnly: true }
 ];
 
 export default function Navbar() {

@@ -2,8 +2,45 @@ import { useState, useEffect } from "react";
 import api from "../../api/axios";
 
 const EMPTY = {
-  room_number: "", area_sqm: "", base_rent: "", is_water_meter: true, house_id: "", furnitures: ""
+  room_number: "", area_sqm: "", cost_price: "", is_water_meter: true, house_id: "", furnitures: ""
 };
+
+function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
+  const formatNumber = (val) => {
+    if (val === null || val === undefined || val === "") return "";
+    const numericValue = val.toString().replace(/\D/g, "");
+    // Thêm dấu phẩy phân cách hàng nghìn (VD: 3,000,000)
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleInputChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    
+    onChange({
+      target: {
+        name,
+        value: rawValue,
+        type: "text", 
+      },
+    });
+  };
+
+  return (
+    <input
+      type="text"
+      name={name}
+      value={formatNumber(value)}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required={required}
+      className={className}
+      inputMode="numeric" // Giúp hiển thị bàn phím số trên điện thoại
+    />
+  );
+}
+
+const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
+               focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white`;
 
 export default function RoomFormModal({ room, houses = [], selectedHouseId, onClose, onSaved }) {
   // Nếu room có id -> Đang Sửa; Nếu room không có id (hoặc null) -> Đang Thêm mới / Sao chép
@@ -15,24 +52,30 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (room) {
-      setForm({
-        room_number: room.room_number || "",
-        area_sqm: room.area_sqm ?? "",
-        base_rent: room.base_rent ?? "",
-        is_water_meter: room.is_water_meter ?? true,
-        house_id: room.house_id ?? (selectedHouseId || (houses.length > 0 ? houses[0].id : "")),
-        furnitures: room.furnitures?.length > 0 
-          ? (Array.isArray(room.furnitures) ? room.furnitures.join(", ") : room.furnitures)
-          : "",
-      });
-    } else {
-      setForm({
-        ...EMPTY,
-        house_id: selectedHouseId || (houses.length > 0 ? houses[0].id : ""),
-      });
-    }
-  }, [room, houses, selectedHouseId]);
+    const syncRoomData = () => {
+      if (room) {
+        setForm({
+          room_number: room.room_number || "",
+          area_sqm: room.area_sqm ?? "",
+          cost_price: room.cost_price ?? "",
+          is_water_meter: room.is_water_meter ?? true,
+          house_id: room.house_id ?? (selectedHouseId || (houses.length > 0 ? houses[0].id : "")),
+          furnitures: room.furnitures?.length > 0 
+            ? (Array.isArray(room.furnitures) ? room.furnitures.join(", ") : room.furnitures)
+            : "",
+        });
+      } else {
+        setForm({
+          ...EMPTY,
+          house_id: selectedHouseId || (houses.length > 0 ? houses[0].id : ""),
+        });
+      }
+    };
+
+    Promise.resolve().then(syncRoomData);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id, houses.length, selectedHouseId]);
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
@@ -50,7 +93,7 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
 
     const payload = {
       room_number: form.room_number,
-      base_rent: Number(form.base_rent),
+      cost_price: Number(form.cost_price),
       is_water_meter: form.is_water_meter,
       house_id: Number(form.house_id),
       furnitures: furnituresArray, 
@@ -121,17 +164,25 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Giá thuê (đ/tháng) *</label>
-            <input name="base_rent" value={form.base_rent} onChange={handleChange}
-              type="number" min="0" required placeholder="vd: 2500000"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Giá cost (đ/tháng) *</label>
+            <FormattedNumberInput 
+              name="cost_price" 
+              value={form.cost_price} 
+              onChange={handleChange}
+              required 
+              className={INPUT} 
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Diện tích (m²)</label>
-            <input name="area_sqm" value={form.area_sqm} onChange={handleChange}
-              type="number" min="0" placeholder="vd: 20"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <FormattedNumberInput 
+              name="area_sqm" 
+              value={form.area_sqm} 
+              onChange={handleChange}
+              required 
+              className={INPUT} 
+            />
           </div>
 
           <div>

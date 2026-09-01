@@ -11,9 +11,18 @@ export default function StaffPage() {
   const [selectedHouse, setSelectedHouse] = useState("all");
   
   const [showAddModal, setShowAddModal] = useState(false);
-  const [phoneInput, setPhoneInput] = useState("");
+  // const [phoneInput, setPhoneInput] = useState("");
+  // eslint-disable-next-line no-unused-vars
   const [houseSelect, setHouseSelect] = useState("");
-  const [submitError, setSubmitError] = useState("");
+  // const [submitError, setSubmitError] = useState("");
+
+  const [grantingStaff, setGrantingStaff] = useState(null);
+  const [grantHouseId, setGrantHouseId] = useState("");
+  const [grantingLoading, setGrantingLoading] = useState(false);
+
+  const [editingFeeHouse, setEditingFeeHouse] = useState(null);
+  const [feeInput, setFeeInput] = useState("");
+  const [feeLoading, setFeeLoading] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -32,29 +41,32 @@ export default function StaffPage() {
     }
   }
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadData();
+    });
+  }, []);
+
+  async function handleUpdate(e) {
+    e.preventDefault();
+    setFeeLoading(true);
+    try {
+      await api.patch(`/houses/${editingFeeHouse.id}`, { 
+        employee_fee: feeInput ? Number(feeInput) : 0 
+      });
+      alert("Cập nhật phí quản lý thành công!");
+      setEditingFeeHouse(null);
+      loadData(); // Tải lại danh sách để cập nhật số tiền mới
+    } catch (err) {
+      alert(err.response?.data?.detail || "Có lỗi xảy ra khi cập nhật phí.");
+    } finally {
+      setFeeLoading(false);
+    }
+  }
 
   function handleSaved() {
     setShowAddModal(false);
     loadData(); 
-  }
-
-  async function handleAddStaff(e) {
-    e.preventDefault();
-    setSubmitError("");
-    try {
-      await api.post(`/houses/${houseSelect}/add-staff?staff_phone=${phoneInput}`);
-      alert("Đã cấp quyền thành công! Bạn có thể gửi tài khoản cho nhân viên qua Zalo.");
-      setShowAddModal(false);
-      setPhoneInput("");
-      loadData();
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setSubmitError("Số điện thoại chưa được đăng ký. Vui lòng sang trang Đăng ký để tạo tài khoản trước.");
-      } else {
-        setSubmitError(err.response?.data?.detail || "Có lỗi xảy ra.");
-      }
-    }
   }
 
   async function handleRemoveAccess(staffId, houseId, houseName) {
@@ -62,8 +74,28 @@ export default function StaffPage() {
     try {
       await api.delete(`/staffs/${staffId}/houses/${houseId}`);
       loadData();
-    } catch (err) {
+    } catch {
       alert("Không thể thu hồi quyền.");
+    }
+  }
+
+  async function handleGrantAdditionalAccess() {
+    if (!grantHouseId) return alert("Vui lòng chọn nhà trọ để cấp quyền.");
+    setGrantingLoading(true);
+    try {
+      await api.post("/staffs", {
+        phone: grantingStaff.phone,
+        house_id: Number(grantHouseId)
+      });
+      
+      alert("Đã cấp quyền thêm thành công!");
+      setGrantingStaff(null);
+      setGrantHouseId("");
+      loadData();
+    } catch (err) {
+      alert(err.response?.data?.detail || "Có lỗi xảy ra khi cấp quyền.");
+    } finally {
+      setGrantingLoading(false);
     }
   }
 
@@ -147,10 +179,45 @@ export default function StaffPage() {
               </div>
               
               <div className="border-t border-gray-100 pt-3 space-y-2">
-                <p className="text-xs font-semibold text-gray-400 uppercase">Nhà đang quản lý</p>
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase">Nhà đang quản lý</p>
+                  <button 
+                    onClick={() => {
+                      setGrantingStaff(staff);
+                      setGrantHouseId(""); 
+                    }}
+                    className="text-blue-600 hover:text-blue-800 font-medium text-xs whitespace-nowrap transition"
+                  >
+                    + Cấp quyền thêm
+                  </button>
+                </div>
+
                 {staff.managed_houses?.map(h => (
                   <div key={h.id} className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg text-sm">
-                    <span className="font-medium text-gray-700 truncate mr-2">🏢 {h.name}</span>
+                    <div className="flex flex-col truncate mr-2">
+                        <span className="font-medium text-gray-700 truncate">🏢 {h.name}</span>
+                        {h.employee_fee ? (
+                           <span className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                             <span>Phí QL: <strong className="text-gray-800">{Number(h.employee_fee).toLocaleString("vi-VN")}đ</strong></span>
+                             <button 
+                               onClick={() => { setEditingFeeHouse(h); setFeeInput(h.employee_fee); }}
+                               className="text-blue-500 hover:text-blue-700 hover:underline"
+                             >
+                               Sửa
+                             </button>
+                           </span>
+                        ) : (
+                           <span className="text-xs text-gray-400 mt-0.5 italic flex items-center gap-2">
+                             Chưa thiết lập phí QL
+                             <button 
+                               onClick={() => { setEditingFeeHouse(h); setFeeInput(""); }}
+                               className="text-blue-500 hover:text-blue-700 hover:underline not-italic font-medium"
+                             >
+                               Thêm
+                             </button>
+                           </span>
+                        )}
+                    </div>
                     <button 
                       onClick={() => handleRemoveAccess(staff.id, h.id, h.name)}
                       className="text-red-500 hover:text-red-700 font-medium text-xs whitespace-nowrap"
@@ -165,7 +232,6 @@ export default function StaffPage() {
         </div>
       )}
 
-      {/* MODAL THÊM NHÂN VIÊN */}
       {showAddModal && (
         <StaffFormModal
             houses={houses}
@@ -173,6 +239,99 @@ export default function StaffPage() {
             onClose={() => setShowAddModal(false)}
             onSaved={handleSaved}
         />
+      )}
+
+      {grantingStaff && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Cấp quyền thêm</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Nhân viên: <span className="font-medium text-gray-800">{grantingStaff.full_name}</span> ({grantingStaff.phone})
+            </p>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Chọn nhà trọ muốn cấp quyền</label>
+              <select
+                value={grantHouseId}
+                onChange={(e) => setGrantHouseId(e.target.value)}
+                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Chọn nhà trọ --</option>
+                {houses
+                  .filter(h => !grantingStaff.managed_houses?.some(mh => mh.id === h.id))
+                  .map(h => (
+                    <option key={h.id} value={h.id}>{h.name}</option>
+                  ))}
+              </select>
+              
+              {houses.filter(h => !grantingStaff.managed_houses?.some(mh => mh.id === h.id)).length === 0 && (
+                <p className="text-xs text-orange-600 mt-2 bg-orange-50 p-2 rounded-lg">
+                  Nhân viên này đã được cấp quyền quản lý tất cả các nhà trọ hiện có.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setGrantingStaff(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleGrantAdditionalAccess}
+                disabled={grantingLoading || !grantHouseId}
+                className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition"
+              >
+                {grantingLoading ? "Đang xử lý..." : "Xác nhận"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SỬA PHÍ QUẢN LÝ */}
+      {editingFeeHouse && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Cập nhật phí quản lý</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Nhà trọ: <span className="font-medium text-gray-800">{editingFeeHouse.name}</span>
+            </p>
+            
+            <form onSubmit={handleUpdate}>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phí quản lý nhân viên (đ/tháng)</label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={feeInput}
+                  onChange={(e) => setFeeInput(e.target.value)}
+                  placeholder="Ví dụ: 3000000"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingFeeHouse(null)}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={feeLoading}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition"
+                >
+                  {feeLoading ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

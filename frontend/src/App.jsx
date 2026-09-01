@@ -9,6 +9,7 @@ import TenantsPage from "./pages/TenantPage";
 import BillsPage from "./pages/BillPage";
 import IncidentsPage from "./pages/IncidentPage";
 import StaffPage from "./pages/StaffPage";
+import FinancialPage from "./pages/FinancialPage";
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("access_token");
@@ -75,6 +76,12 @@ export default function App() {
         <Route path="/staffs" element={
           <ProtectedRoute>
             <AppLayout><StaffPage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/finance" element={
+          <ProtectedRoute>
+            <AppLayout><FinancialPage /></AppLayout>
           </ProtectedRoute>
         } />
 

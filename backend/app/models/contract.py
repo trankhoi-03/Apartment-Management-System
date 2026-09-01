@@ -27,12 +27,13 @@ class Contract(Base):
     # end_date nullable vì hợp đồng có thể chưa xác định ngày kết thúc (thuê tự do)
 
     monthly_rent: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    # Giá thuê THỰC TẾ đã ký trong hợp đồng này - có thể khác base_rent của room
-    # vì giá phòng niêm yết có thể đã thay đổi sau khi hợp đồng này được ký
+    # Giá thuê THỰC TẾ đã ký trong hợp đồng này 
 
     service_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
 
     deposit: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    payment_day: Mapped[int] = mapped_column(default=1, nullable=False)
+    # Hạn thanh toán tiền nhà
     status: Mapped[str] = mapped_column(String(20), default="active")
     # active = đang hiệu lực, ended = đã kết thúc, terminated = chấm dứt sớm
 

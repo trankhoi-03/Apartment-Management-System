@@ -238,7 +238,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
         water_amount = water_consumed * rate.water_price
     else:
         water_consumed = Decimal("0")
-        water_amount = Decimal(str(rate.default_water_amount))
+        water_amount = Decimal(str(payload.water_amount))
 
     total_amount = bill.rent_amount + electric_amount + water_amount + Decimal(str(payload.service_fee)) + Decimal(str(payload.additional_fee))
 

@@ -1,10 +1,46 @@
 import { useState, useEffect } from "react";
 import api from "../../api/axios";
 
+function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
+  const formatNumber = (val) => {
+    if (val === null || val === undefined || val === "") return "";
+    const numericValue = val.toString().replace(/\D/g, "");
+    // Thêm dấu phẩy phân cách hàng nghìn (VD: 3,000,000)
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleInputChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    
+    onChange({
+      target: {
+        name,
+        value: rawValue,
+        type: "text", 
+      },
+    });
+  };
+
+  return (
+    <input
+      type="text"
+      name={name}
+      value={formatNumber(value)}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required={required}
+      className={className}
+      inputMode="numeric" // Giúp hiển thị bàn phím số trên điện thoại
+    />
+  );
+}
+
+
 export default function EditBillModal({ bill, onClose, onSaved }) {
   const [form, setForm] = useState({
     electric_new: "",
     water_new: "",
+    default_water_amount: "",
     service_fee: "",
     additional_fee: "",          
     additional_fee_reason: ""    
@@ -13,14 +49,22 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (bill) {
-      setForm({
-        electric_new: bill.electric_new ?? "", 
-        water_new: bill.water_new ?? "",
-        service_fee: bill.service_fee ?? 0
-      });
-    }
-  }, [bill]);
+    const syncDataToForm = () => {
+      if (bill) {
+        setForm({
+          electric_new: bill.electric_new ?? "", 
+          water_new: bill.water_new ?? "",
+          default_water_amount: bill.default_water_amount ?? "",
+          service_fee: bill.service_fee ?? 0,
+          additional_fee: bill.additional_fee ?? 0,
+          additional_fee_reason: bill.additional_fee_reason ?? ""
+        });
+      }
+    };
+
+    Promise.resolve().then(syncDataToForm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bill?.id]);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,6 +79,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
       await api.patch(`/bills/${bill.id}/edit`, {
         electric_new: Number(form.electric_new),
         water_new: Number(form.water_new),
+        default_water_amount: Number(form.default_water_amount),
         service_fee: Number(form.service_fee),
         additional_fee: Number(form.additional_fee), 
         additional_fee_reason: form.additional_fee_reason
@@ -49,6 +94,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   }
 
   if (!bill) return null;
+
+  const isWaterMeter = bill.computed_room?.is_water_meter !== false;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
@@ -74,29 +121,41 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Số nước mới (m³)
-            </label>
-            <input 
-              name="water_new" 
-              type="number" 
-              min="0"
-              value={form.water_new} 
-              onChange={handleChange}
-              placeholder="Để trống nếu tính phí cố định"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
-            />
-          </div>
+          {isWaterMeter ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Số nước mới (m³)
+              </label>
+              <input 
+                name="water_new" 
+                type="number" 
+                min="0"
+                value={form.water_new} 
+                onChange={handleChange}
+                placeholder="Nhập số khối nước"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tiền nước cố định (đ)
+              </label>
+              <FormattedNumberInput 
+                name="water_amount" 
+                value={form.water_amount} 
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+              />
+            </div>
+          )}
           
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Phí dịch vụ (đ)
             </label>
-            <input 
+            <FormattedNumberInput 
               name="service_fee" 
-              type="number" 
-              min="0"
               value={form.service_fee} 
               onChange={handleChange}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
@@ -107,10 +166,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Phí phát sinh (đ)
               </label>
-              <input 
+              <FormattedNumberInput 
                 name="additional_fee" 
-                type="number" 
-                min="0"
                 value={form.additional_fee} 
                 onChange={handleChange}
                 placeholder="vd: 150000"

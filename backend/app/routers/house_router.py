@@ -32,6 +32,7 @@ def list_houses(
 
 @router.patch("/{house_id}", response_model=HouseResponse)
 def update_house(
+    house_id: int,
     payload: HouseUpdate, 
     db: Session = Depends(get_db),
     house: House = Depends(verify_house_access) 
@@ -44,6 +45,7 @@ def update_house(
 
 @router.delete("/{house_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_house(
+    house_id: int,
     db: Session = Depends(get_db),
     house: House = Depends(verify_house_access) 
 ):

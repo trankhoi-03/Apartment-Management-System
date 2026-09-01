@@ -20,7 +20,7 @@ function matches(bill, filter) {
   return true;
 }
 
-function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit }) {
+function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }) {
   const cfg = STATUS_CONFIG[bill.status] ?? STATUS_CONFIG.pending;
 
   const roomNumber = bill.computed_room?.room_number;
@@ -95,17 +95,19 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit }) {
       <div className="mt-4 pt-4 border-t border-gray-100">
         {bill.status === "pending" && (
           <div className="flex gap-2">
-            <button
-              onClick={() => onEdit(bill)}
-              className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition"
-            >
-              ✏️ Sửa
-            </button>
+            {userRole === "owner" && 
+              <button
+                onClick={() => onEdit(bill)}
+                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition"
+              >
+                ✏️ Sửa
+              </button>
+            }
             
             <button
               onClick={() => onSendEmail(bill)}
               disabled={sendingId === bill.id}
-              className="flex-[2] px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
+              className={`${userRole === "owner" ? "flex-[2]" : "w-full"} px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2`}
             >
               {sendingId === bill.id ? "Đang gửi..." : "📧 Gửi Email"}
             </button>
@@ -144,6 +146,8 @@ export default function BillsPage() {
 
   const [isSendingBulk, setIsSendingBulk] = useState(false);
 
+  const userRole = localStorage.getItem("user_role");
+  
   const loadBills = useCallback(async () => {
     setLoading(true);
     try {
@@ -164,7 +168,13 @@ export default function BillsPage() {
     }
   }, []);
 
-  useEffect(() => { loadBills(); }, [loadBills]);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadBills();
+    });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const enrichedBills = bills.map(bill => {
     const contract = contracts.find(c => c.id === bill.contract_id) || bill.contract;
@@ -333,6 +343,7 @@ export default function BillsPage() {
               onSendEmail={handleSendEmail} 
               sendingId={sendingId} 
               onEdit={setEditingBill} 
+              userRole={userRole}
             />
           ))}
         </div>

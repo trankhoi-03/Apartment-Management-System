@@ -46,9 +46,44 @@ function VNDateInput({ name, value, onChange, required }) {
   );
 }
 
+function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
+  const formatNumber = (val) => {
+    if (val === null || val === undefined || val === "") return "";
+    const numericValue = val.toString().replace(/\D/g, "");
+    // Thêm dấu phẩy phân cách hàng nghìn (VD: 3,000,000)
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleInputChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    
+    onChange({
+      target: {
+        name,
+        value: rawValue,
+        type: "text", 
+      },
+    });
+  };
+
+  return (
+    <input
+      type="text"
+      name={name}
+      value={formatNumber(value)}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required={required}
+      className={className}
+      inputMode="numeric" // Giúp hiển thị bàn phím số trên điện thoại
+    />
+  );
+}
+
 const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
                focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white`;
 
+// eslint-disable-next-line no-unused-vars
 const INIT = (room) => ({
   // Thông tin người thuê (tạo mới) 
   full_name: "",
@@ -59,9 +94,10 @@ const INIT = (room) => ({
   // Hợp đồng 
   start_date: "",
   end_date: "",
-  monthly_rent: room?.base_rent ?? "",
+  monthly_rent: "",
   service_fee: "",
   deposit: "",
+  payment_day: 5,
   num_tenants: 1,
   num_vehicles: 0,
   temp_residence_reg: false,
@@ -88,10 +124,15 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
   const [loadingUtility, setLoadingUtility] = useState(false);
 
   useEffect(() => {
-    if (room?.id) {
+    let isMounted = true; // Cờ kiểm soát trạng thái của component
+
+    const fetchUtilityData = () => {
       setLoadingUtility(true);
+      
       api.get(`/utility?room_id=${room.id}`)
         .then((res) => {
+          if (!isMounted) return; // Chặn update state nếu component đã unmount
+
           if (res.data && res.data.length > 0) {
             const latestUtility = res.data.sort((a, b) =>
               b.billing_month.localeCompare(a.billing_month)
@@ -110,10 +151,22 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
             }));
           }
         })
-        .catch(() => console.error("Không thể tải lịch sử điện nước"))
-        .finally(() => setLoadingUtility(false));
+        .catch(() => {
+          if (isMounted) console.error("Không thể tải lịch sử điện nước");
+        })
+        .finally(() => {
+          if (isMounted) setLoadingUtility(false);
+        });
+    };
+
+    if (room?.id) {
+      fetchUtilityData();
     }
-  }, [room]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [room?.id]); 
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
@@ -170,6 +223,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
         deposit:            form.deposit ? Number(form.deposit) : 0,
         num_tenants:        Number(form.num_tenants),
         num_vehicles:       Number(form.num_vehicles),
+        payment_day:        Number(form.payment_day),
         temp_residence_reg: form.temp_residence_reg,
         notes:              form.notes, // Gửi dữ liệu ghi chú xuống Backend
         ...(form.end_date && { end_date: form.end_date }),
@@ -224,7 +278,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
           document.body.appendChild(link);
           link.click();
           link.parentNode.removeChild(link);
-        } catch (exportErr) {
+        } catch {
           alert("Không thể tải file hợp đồng. Bạn có thể xuất lại sau ở mục Quản lý phòng.");
         }
       }
@@ -293,19 +347,47 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Tiền thuê (đ/tháng)" required>
-                <input name="monthly_rent" type="number" min="0"
-                  value={form.monthly_rent} onChange={handleChange}
-                  required className={INPUT} />
+                <FormattedNumberInput 
+                  name="monthly_rent" 
+                  value={form.monthly_rent} 
+                  onChange={handleChange}
+                  required 
+                  className={INPUT} 
+                />
               </Field>
               <Field label="Phí dịch vụ (đ/tháng)">
-                <input name="service_fee" type="number" min="0"
-                  value={form.service_fee} onChange={handleChange}
-                  placeholder="0" className={INPUT} />
+                <FormattedNumberInput 
+                  name="service_fee" 
+                  value={form.service_fee} 
+                  onChange={handleChange}
+                  placeholder="0" 
+                  className={INPUT} 
+                />
               </Field>
               <Field label="Tiền đặt cọc (đ)">
-                <input name="deposit" type="number" min="0"
-                  value={form.deposit} onChange={handleChange}
-                  placeholder="0" className={INPUT} />
+                <FormattedNumberInput 
+                  name="deposit" 
+                  value={form.deposit} 
+                  onChange={handleChange}
+                  placeholder="0" 
+                  className={INPUT} 
+                />
+              </Field>
+              <Field 
+                label="Hạn thanh toán (Ngày)" 
+                required
+                hint="Nhập ngày khách thuê phải đóng tiền hàng tháng (VD: 5 là ngày 5 hàng tháng)"
+              >
+                <input 
+                  name="payment_deadline" 
+                  type="number" 
+                  min="1" 
+                  max="31"
+                  value={form.payment_deadline} 
+                  onChange={handleChange}
+                  required
+                  className={INPUT} 
+                />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -333,28 +415,48 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
             {room?.is_water_meter ? (
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Giá điện (đ/kWh)" required>
-                  <input name="electric_price" type="number" min="0"
-                    value={form.electric_price} onChange={handleChange}
-                    placeholder="vd: 3500" required className={INPUT} />
+                  <FormattedNumberInput 
+                    name="electric_price" 
+                    value={form.electric_price} 
+                    onChange={handleChange}
+                    placeholder="vd: 3,500" 
+                    required 
+                    className={INPUT} 
+                  />
                 </Field>
                 <Field label="Giá nước (đ/m³)" required>
-                  <input name="water_price" type="number" min="0"
-                    value={form.water_price} onChange={handleChange}
-                    placeholder="vd: 15000" required className={INPUT} />
+                  <FormattedNumberInput 
+                    name="water_price" 
+                    value={form.water_price} 
+                    onChange={handleChange}
+                    placeholder="vd: 15,000" 
+                    required 
+                    className={INPUT} 
+                  />
                 </Field>
               </div>
             ) : (
               <>
                 <Field label="Giá điện (đ/kWh)" required>
-                  <input name="electric_price" type="number" min="0"
-                    value={form.electric_price} onChange={handleChange}
-                    placeholder="vd: 3500" required className={INPUT} />
+                  <FormattedNumberInput 
+                    name="electric_price" 
+                    value={form.electric_price} 
+                    onChange={handleChange}
+                    placeholder="vd: 3,500" 
+                    required 
+                    className={INPUT} 
+                  />
                 </Field>
                 <Field label="Tiền nước cố định/tháng (đ)" required
                   hint="Phòng không có đồng hồ nước — nhập số tiền cố định tính mỗi tháng">
-                  <input name="default_water_amount" type="number" min="0"
-                    value={form.default_water_amount} onChange={handleChange}
-                    placeholder="vd: 20000" required className={INPUT} />
+                  <FormattedNumberInput 
+                    name="default_water_amount" 
+                    value={form.default_water_amount} 
+                    onChange={handleChange}
+                    placeholder="vd: 20,000" 
+                    required 
+                    className={INPUT} 
+                  />
                 </Field>
               </>
             )}
