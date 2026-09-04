@@ -3,6 +3,40 @@ import { Link } from "react-router-dom";
 import api from "../api/axios";
 import StaffFormModal from "../components/staffs/StaffFormModal"; 
 
+function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
+  const formatNumber = (val) => {
+    if (val === null || val === undefined || val === "") return "";
+    const numericValue = val.toString().replace(/\D/g, "");
+    // Thêm dấu phẩy phân cách hàng nghìn (VD: 3,000,000)
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleInputChange = (e) => {
+    const rawValue = e.target.value.replace(/\D/g, "");
+    
+    onChange({
+      target: {
+        name,
+        value: rawValue,
+        type: "text", 
+      },
+    });
+  };
+
+  return (
+    <input
+      type="text"
+      name={name}
+      value={formatNumber(value)}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required={required}
+      className={className}
+      inputMode="numeric" // Giúp hiển thị bàn phím số trên điện thoại
+    />
+  );
+}
+
 export default function StaffPage() {
   const [staffs, setStaffs] = useState([]);
   const [houses, setHouses] = useState([]);
@@ -99,6 +133,17 @@ export default function StaffPage() {
     }
   }
 
+  async function handleDeleteStaff(staffId, staffName) {
+    if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn cho thôi việc và xóa tài khoản của nhân viên "${staffName}"? Hành động này sẽ xóa vĩnh viễn quyền truy cập của nhân viên này khỏi hệ thống.`)) return;
+    try {
+      await api.delete(`/staffs/${staffId}`);
+      alert("Đã xóa nhân viên thành công.");
+      loadData(); // Tải lại danh sách sau khi xóa
+    } catch (err) {
+      alert(err.response?.data?.detail || "Không thể xóa nhân viên.");
+    }
+  }
+
   const filteredStaffs = staffs.filter((staff) => {
     if (selectedHouse !== "all") {
       const managesHouse = staff.managed_houses?.some(h => h.id.toString() === selectedHouse);
@@ -168,14 +213,26 @@ export default function StaffPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredStaffs.map((staff) => (
             <div key={staff.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg">
-                  {staff.full_name.charAt(0).toUpperCase()}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
+                    {staff.full_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-800">{staff.full_name}</h3>
+                    <p className="text-sm text-gray-500">{staff.phone}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-800">{staff.full_name}</h3>
-                  <p className="text-sm text-gray-500">{staff.phone}</p>
-                </div>
+                
+                <button 
+                  onClick={() => handleDeleteStaff(staff.id, staff.full_name)}
+                  className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded-xl transition ml-2"
+                  title="Cho thôi việc (Xóa tài khoản)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
               </div>
               
               <div className="border-t border-gray-100 pt-3 space-y-2">
@@ -302,7 +359,7 @@ export default function StaffPage() {
             <form onSubmit={handleUpdate}>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phí quản lý nhân viên (đ/tháng)</label>
-                <input
+                {/* <input
                   type="number"
                   min="0"
                   required
@@ -310,6 +367,14 @@ export default function StaffPage() {
                   onChange={(e) => setFeeInput(e.target.value)}
                   placeholder="Ví dụ: 3000000"
                   className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                /> */}
+                <FormattedNumberInput 
+                  name="employee_fee"
+                  value={feeInput}
+                  onChange={(e) => setFeeInput(e.target.value)}
+                  placeholder="Ví dụ: 3,000,000"
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
 

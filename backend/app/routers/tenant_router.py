@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException,  status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
@@ -62,7 +64,9 @@ def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Depends(g
         )
     
     update_data = payload.model_dump(exclude_unset=True)
-    if "phone" in update_data:
+    
+    # Chỉ kiểm tra khi có 'phone' trong payload VÀ số mới KHÁC số hiện tại trong database
+    if "phone" in update_data and update_data["phone"] != tenant.phone:
         has_active_contract = (
             db.query(Contract)
             .filter(Contract.tenant_id == tenant_id, Contract.status == "active")
@@ -73,16 +77,36 @@ def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Depends(g
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
-                    "Không thể đổi số điện thoại vì tenant đang có hợp đồng "
-                    "active. Chỉ đổi số khi tenant đã mất quyền truy cập "
+                    "Không thể đổi số điện thoại vì khách thuê đang có hợp đồng."
+                    "Chỉ đổi số khi khách thuê đã mất quyền truy cập"
                     "số cũ và cần xác nhận đặc biệt."
                 )
+            )
+        
+        # Kiểm tra xem số điện thoại mới đã tồn tại ở tenant khác chưa
+        existing_phone = (
+            db.query(Tenant)
+            .filter(Tenant.phone == update_data["phone"], Tenant.id != tenant_id)
+            .first()
+        )
+        if existing_phone:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Số điện thoại '{update_data['phone']}' đã được sử dụng bởi khách thuê khác."
             )
 
     for field, value in update_data.items():
         setattr(tenant, field, value)
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cập nhật thất bại do dữ liệu bị trùng lặp (SĐT hoặc CCCD đã tồn tại)."
+        )
+
     db.refresh(tenant)
     return tenant
 

@@ -61,8 +61,29 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
         } catch (err) {
           console.error("Không thể tải thông tin khách thuê", err);
         }
+
+        try {
+          const ratesRes = await api.get(`/utility-rates?room_id=${room.id}`);
+          if (ratesRes.data && ratesRes.data.length > 0) {
+            // Lấy bảng giá mới nhất
+            const sortedRates = ratesRes.data.sort((a,b) => new Date(b.effective_from) - new Date(a.effective_from));
+            active.current_rate = sortedRates[0];
+          }
+        } catch (err) {
+          console.error("Không thể tải bảng giá", err);
+        }
+
+        try {
+          const startMonth = active.start_date.substring(0, 7);
+          const utilRes = await api.get(`/utility?room_id=${room.id}`);
+          if (utilRes.data && utilRes.data.length > 0) {
+            active.initial_utility = utilRes.data.find(u => u.billing_month === startMonth);
+          }
+        } catch (err) {
+          console.error("Không thể tải số điện/nước", err);
+        }
       }
-      
+
       setContract(active ?? null);
     } finally {
       setLoadingContract(false);
@@ -165,6 +186,29 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                 <Row label="Bắt đầu"     value={formatDateVN(contract.start_date)} />
                 {contract.end_date &&
                   <Row label="Kết thúc"  value={formatDateVN(contract.end_date)} />}
+
+
+                {contract.current_rate && (
+                  <>
+                    <div className="border-t border-blue-100/60 my-2 pt-2"></div>
+                    <Row label="Giá điện" value={`${Number(contract.current_rate.electric_price).toLocaleString("vi-VN")}đ/kWh`} />
+                    {room.is_water_meter ? (
+                      <Row label="Giá nước" value={`${Number(contract.current_rate.water_price).toLocaleString("vi-VN")}đ/m³`} />
+                    ) : (
+                      <Row label="Nước cố định" value={`${Number(contract.current_rate.default_water_amount).toLocaleString("vi-VN")}đ/tháng`} />
+                    )}
+                  </>
+                )}
+
+                {contract.initial_utility && (
+                  <>
+                    <div className="border-t border-blue-100/60 my-2 pt-2"></div>
+                    <Row label="Số điện ban đầu" value={`${contract.initial_utility.electric_old} kWh`} />
+                    {room.is_water_meter && (
+                      <Row label="Số nước ban đầu" value={`${contract.initial_utility.water_old} m³`} />
+                    )}
+                  </>
+                )}
                   
                 {contract.notes && (
                   <div className="pt-2 mt-2 border-t border-blue-100/60">

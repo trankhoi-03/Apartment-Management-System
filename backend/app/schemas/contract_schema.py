@@ -30,11 +30,15 @@ class ContractCreate(ContractBase):
 
 
 class ContractUpdate(BaseModel):
+    start_date: date | None = None
     end_date: date | None = None
     monthly_rent: float | None = Field(default=None, gt=0)
     service_fee: float | None = Field(default=None, ge=0)
     payment_day: int | None = Field(default=None, ge=1, le=31)
     deposit: float | None = Field(default=None, ge=0)
+    num_tenants: int | None = Field(default=None, ge=1)       
+    num_vehicles: int | None = Field(default=None, ge=0)      
+    temp_residence_reg: bool | None = None
     status: str | None = None
     end_reason: str | None = None
     notes: str | None = None

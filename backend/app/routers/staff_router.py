@@ -100,3 +100,28 @@ def remove_staff_from_house(
         house.managers.remove(staff)
         db.commit()
     return None
+
+
+@router.delete("/{staff_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_staff(
+    staff_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(require_owner)
+):
+    """Xóa hoàn toàn tài khoản nhân viên khỏi hệ thống (Cho thôi việc)"""
+    staff = db.query(User).filter(User.id == staff_id).first()
+    
+    if not staff:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhân viên.")
+        
+    # Chặn việc vô tình xóa nhầm tài khoản owner
+    if getattr(staff, "role", "staff") == "owner":
+        raise HTTPException(status_code=403, detail="Không thể xóa tài khoản Chủ trọ.")
+        
+    # Xóa tất cả các liên kết nhà trọ của nhân viên này trước khi xóa tài khoản 
+    staff.managed_houses.clear()
+    
+    db.delete(staff)
+    db.commit()
+    
+    return None

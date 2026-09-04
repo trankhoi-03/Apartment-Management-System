@@ -56,17 +56,18 @@ function getNextMonth(monthStr) {
   return `${year}-${String(m).padStart(2, "0")}`;
 }
 
+
 function calculateDueDate(fromDate = new Date(), numberOfDays = 5) {
-  const d = new Date(fromDate);
-  d.setDate(d.getDate() + numberOfDays);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return {
-    formattedVN: `${day}/${month}/${year}`,
-    isoDate: `${year}-${month}-${day}`
-  };
-}
+    const d = new Date(fromDate);
+    d.setDate(d.getDate() + numberOfDays);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return {
+      formattedVN: `${day}/${month}/${year}`,
+      isoDate: `${year}-${month}-${day}`
+    };
+  }
 
 export default function GenerateBillModal({ room, contract, onClose, onGenerated }) {
   const [billingMonth, setBillingMonth] = useState(""); 
@@ -84,7 +85,9 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState("");
 
-  const estimatedDueDate = calculateDueDate(new Date(), 5);
+  const paymentDaysLimit = contract?.payment_day || 5;
+
+  const estimatedDueDate = calculateDueDate(new Date(), paymentDaysLimit);
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -186,11 +189,13 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     }
 
     const confirmMessage = `XÁC NHẬN SỐ LIỆU THÁNG ${billingMonth}:\n\n`
-                         + `- Số điện mới: ${electricNew}\n`
-                         + (room?.is_water_meter ? `- Số nước mới: ${waterNew}\n` : "")
-                         + `- Phí dịch vụ: ${serviceFee ? serviceFee : "0"} đ\n`
-                         + `- Hạn thanh toán dự kiến: ${estimatedDueDate.formattedVN} (5 ngày)\n\n`
-                         + `Vui lòng kiểm tra kỹ. Bấm "OK" để tính tiền.`;
+                       + `- Số điện mới: ${electricNew}\n`
+                       + (room?.is_water_meter ? `- Số nước mới: ${waterNew}\n` : "")
+                       + `- Phí dịch vụ: ${serviceFee ? serviceFee : "0"} đ\n`
+                       + `- Phí phát sinh: ${additionalFee ? additionalFee : "0"} đ\n`
+                       + (additionalFeeReason ? `- Lý do phát sinh: ${additionalFeeReason}\n` : "")
+                       + `- Hạn thanh toán dự kiến: ${estimatedDueDate.formattedVN} (${paymentDaysLimit} ngày)\n\n`
+                       + `Vui lòng kiểm tra kỹ. Bấm "OK" để tính tiền.`;
                          
     if (!window.confirm(confirmMessage)) {
       return; 
@@ -236,7 +241,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
 
   const displayDueDate = preview?.due_date 
     ? new Date(preview.due_date).toLocaleDateString("vi-VN") 
-    : calculateDueDate(preview?.created_at ? new Date(preview.created_at) : new Date(), 5).formattedVN;
+    : calculateDueDate(preview?.created_at ? new Date(preview.created_at) : new Date(), paymentDaysLimit).formattedVN;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
@@ -255,7 +260,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
 
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700 flex items-center gap-2">
                 <span>⏰</span>
-                <span>Hạn thanh toán: <strong>5 ngày</strong> kể từ khi xuất bill (dự kiến đến <strong>{estimatedDueDate.formattedVN}</strong>).</span>
+                <span>Hạn thanh toán: <strong>{paymentDaysLimit} ngày</strong> kể từ khi xuất bill (dự kiến đến <strong>{estimatedDueDate.formattedVN}</strong>).</span>
               </div>
 
               <div>
@@ -381,7 +386,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                 <span className="text-base leading-none">⚠️</span>
                 <div>
                   <p className="font-semibold">Hạn thanh toán: {displayDueDate}</p>
-                  <p className="text-amber-700 mt-0.5">Khách thuê cần thanh toán trong vòng 5 ngày kể từ ngày lập hoá đơn.</p>
+                  <p className="text-amber-700 mt-0.5">Khách thuê cần thanh toán trong vòng {paymentDaysLimit} ngày kể từ ngày lập hoá đơn.</p>
                 </div>
               </div>
 

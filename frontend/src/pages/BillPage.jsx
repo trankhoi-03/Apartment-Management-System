@@ -20,6 +20,18 @@ function matches(bill, filter) {
   return true;
 }
 
+function formatBillingMonth(monthStr) {
+  if (!monthStr) return "";
+  // Nếu dữ liệu trả về dạng "YYYY-MM" (VD: "2026-09")
+  if (monthStr.includes("-")) {
+    const parts = monthStr.split("-");
+    if (parts.length >= 2) {
+      return `${parts[1]}/${parts[0]}`; // Chuyển thành "09/2026"
+    }
+  }
+  return monthStr;
+}
+
 function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }) {
   const cfg = STATUS_CONFIG[bill.status] ?? STATUS_CONFIG.pending;
 
@@ -32,7 +44,7 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
       <div className="flex justify-between items-start mb-3">
         <div>
           <p className="text-xs text-gray-400 mb-0.5">
-            Tháng {bill.billing_month}
+            Tháng {formatBillingMonth(bill.billing_month)}
           </p>
           <h3 className="font-bold text-gray-800">
             {roomNumber ? `Phòng ${roomNumber}` : `HĐ #${bill.contract_id}`}
@@ -192,7 +204,7 @@ export default function BillsPage() {
   });
 
   async function handleSendEmail(bill) {
-    if (!confirm(`Bạn muốn gửi bill tháng ${bill.billing_month} qua email cho phòng ${bill.computed_room?.room_number ?? bill.contract_id}?`)) return;
+    if (!confirm(`Bạn muốn gửi bill tháng ${formatBillingMonth(bill.billing_month)} qua email cho phòng ${bill.computed_room?.room_number ?? bill.contract_id}?`)) return;
     setSendingId(bill.id);
     try {
       await api.post(`/bills/${bill.id}/send`);
@@ -235,7 +247,7 @@ export default function BillsPage() {
   }
 
   async function handleMarkPaid(bill) {
-    if (!confirm(`Xác nhận đã nhận tiền cho phòng ${bill.computed_room?.room_number ?? bill.contract_id} tháng ${bill.billing_month}?`)) return;
+    if (!confirm(`Xác nhận đã nhận tiền cho phòng ${bill.computed_room?.room_number ?? bill.contract_id} tháng ${formatBillingMonth(bill.billing_month)}?`)) return;
     try {
       await api.patch(`/bills/${bill.id}`, { status: "paid" });
       setBills((prev) => prev.map((b) => b.id === bill.id ? { ...b, status: "paid" } : b));

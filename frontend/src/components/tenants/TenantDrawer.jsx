@@ -1,6 +1,28 @@
 import api from "../../api/axios";
 
+function Row({ label, value }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-gray-500">{label}</span>
+      <span className="font-medium text-gray-800 text-right max-w-[60%]">{value}</span>
+    </div>
+  );
+}
+
 export default function TenantDrawer({ tenant, activeContract, pastContracts, houses = [], rooms = [], onClose, onEdit, onDeleted }) {
+
+  function formatDateVN(dateString) {
+    if (!dateString) return "—";
+    
+    if (dateString.includes("-")) {
+      const [year, month, day] = dateString.split("-");
+      const cleanDay = day.split("T")[0]; 
+      return `${cleanDay}/${month}/${year}`;
+    }
+    
+    return dateString;
+  }
+
   async function handleDelete() {
     if (!confirm(`Xoá người thuê "${tenant.full_name}"?`)) return;
     try {
@@ -70,14 +92,14 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
                   value={`${Number(activeContract.monthly_rent).toLocaleString("vi-VN")}đ/tháng`} />
                 <Row label="Đặt cọc"
                   value={`${Number(activeContract.deposit).toLocaleString("vi-VN")}đ`} />
-                <Row label="Bắt đầu" value={activeContract.start_date} />
+                <Row label="Bắt đầu" value={formatDateVN(activeContract.start_date)} />
                 {activeContract.end_date &&
-                  <Row label="Kết thúc" value={activeContract.end_date} />}
+                  <Row label="Kết thúc" value={formatDateVN(activeContract.end_date)} />}
               </div>
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-400 italic">
-                  Người thuê này hiện không có hợp đồng active.
+                  Người thuê này hiện đang không có hợp đồng.
                 </p>
                 
                 {pastContracts && pastContracts.length > 0 && (
@@ -89,7 +111,7 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
                       {pastContracts.map((contract) => (
                         <div key={contract.id} className="bg-gray-50 border border-gray-100 rounded-xl p-4 space-y-2 text-sm">
                           <Row label="Phòng" value={formatRoomDisplay(contract)} />
-                          <Row label="Thời gian" value={`${contract.start_date} → ${contract.end_date || 'Nay'}`} />
+                          <Row label="Thời gian" value={`${formatDateVN(contract.start_date)} → ${formatDateVN(contract.end_date) || 'Nay'}`} />
                           <Row label="Lý do kết thúc" value={
                             <span className="text-orange-600 font-medium">
                               {contract.end_reason || "Không rõ lý do"}
@@ -107,14 +129,5 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
         </div>
       </div>
     </>
-  );
-}
-
-function Row({ label, value }) {
-  return (
-    <div className="flex justify-between">
-      <span className="text-gray-500">{label}</span>
-      <span className="font-medium text-gray-800 text-right max-w-[60%]">{value}</span>
-    </div>
   );
 }

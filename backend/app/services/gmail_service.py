@@ -68,10 +68,16 @@ def send_bill_email(
         calculated_date = datetime.now() + timedelta(days=5)
         due_date = calculated_date.strftime("%d/%m/%Y")
 
+    formatted_month = billing_month
+    if billing_month and "-" in billing_month:
+        parts = billing_month.split("-")
+        if len(parts) == 2:
+            formatted_month = f"{parts[1]}/{parts[0]}"
+
     # Tạo email 
     msg = MIMEMultipart()
     msg["To"] = to_email
-    msg["Subject"] = f"[Thông Báo] Hoá đơn tiền phòng tháng {billing_month} - Hạn đóng {due_date}"
+    msg["Subject"] = f"[Thông Báo] Hoá đơn tiền phòng tháng {formatted_month} - Hạn đóng {due_date}"
 
     body_html = f"""
     <!DOCTYPE html>
@@ -82,7 +88,7 @@ def send_bill_email(
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #2563eb; margin-bottom: 8px;">Thông báo hoá đơn tiền phòng</h2>
       <p>Xin chào <strong>{tenant_name}</strong>,</p>
-      <p>Hệ thống gửi đến bạn hoá đơn tiền phòng tháng <strong>{billing_month}</strong>.</p>
+      <p>Hệ thống gửi đến bạn hoá đơn tiền phòng tháng <strong>{formatted_month}</strong>.</p>
       
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 20px 0;">
         <p style="margin: 6px 0; font-size: 15px;">
@@ -111,7 +117,8 @@ def send_bill_email(
         attachment.set_payload(f.read())
 
     encoders.encode_base64(attachment)
-    pdf_filename = f"hoa-don-{billing_month}.pdf"
+    safe_month_filename = formatted_month.replace("/", "-")
+    pdf_filename = f"hoa-don-{safe_month_filename}.pdf"
     attachment.add_header(
         "Content-Disposition",
         f'attachment; filename="{pdf_filename}"',

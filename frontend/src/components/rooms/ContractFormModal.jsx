@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../../api/axios";
 
 
@@ -26,23 +26,124 @@ function Field({ label, required, hint, children }) {
 }
 
 
-function VNDateInput({ name, value, onChange, required }) {
-  const [inputType, setInputType] = useState("text");
+// eslint-disable-next-line no-unused-vars
+function VNDateInput({ name, value, onChange, required, className }) {
+  const hiddenDateInputRef = useRef(null);
 
-  const displayValue = value ? value.split("-").reverse().join("/") : "";
+  // Chuyển YYYY-MM-DD sang DD/MM/YYYY để hiển thị
+  const toDisplay = (val) => {
+    if (!val) return "";
+    if (val.includes("-")) {
+      const parts = val.split("-");
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return val;
+  };
+
+  // Chuyển DD/MM/YYYY sang YYYY-MM-DD để lưu vào state form
+  const toStandard = (val) => {
+    if (!val) return "";
+    const parts = val.split("/");
+    if (parts.length === 3 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    return val;
+  };
+
+  // Xử lý khi người dùng tự gõ bàn phím (tự thêm dấu /)
+  const handleTextChange = (e) => {
+    let raw = e.target.value.replace(/\D/g, ""); // Chỉ lấy số
+    if (raw.length > 8) raw = raw.slice(0, 8);
+
+    let formatted = raw;
+    if (raw.length > 4) {
+      formatted = `${raw.slice(0, 2)}/${raw.slice(2, 4)}/${raw.slice(4)}`;
+    } else if (raw.length > 2) {
+      formatted = `${raw.slice(0, 2)}/${raw.slice(2)}`;
+    }
+
+    // Nếu gõ đủ 10 ký tự (dd/mm/yyyy) thì trigger onChange lưu dạng yyyy-mm-dd
+    const standardValue = formatted.length === 10 ? toStandard(formatted) : formatted;
+
+    onChange({
+      target: {
+        name,
+        value: standardValue,
+      },
+    });
+  };
+
+  // Xử lý khi người dùng chọn ngày từ popup lịch
+  const handleCalendarPick = (e) => {
+    const selectedDate = e.target.value; // YYYY-MM-DD
+    if (selectedDate) {
+      onChange({
+        target: {
+          name,
+          value: selectedDate,
+        },
+      });
+    }
+  };
+
+  const openCalendar = () => {
+    if (hiddenDateInputRef.current) {
+      if (typeof hiddenDateInputRef.current.showPicker === "function") {
+        hiddenDateInputRef.current.showPicker();
+      } else {
+        hiddenDateInputRef.current.focus();
+      }
+    }
+  };
 
   return (
-    <input
-      name={name}
-      type={inputType}
-      value={inputType === "date" ? value : displayValue}
-      onChange={onChange}
-      onFocus={() => setInputType("date")}
-      onBlur={() => setInputType("text")}
-      placeholder="dd/mm/yyyy"
-      required={required}
-      className={INPUT}
-    />
+    <div className="relative flex items-center">
+      {/* Input chính luôn hiển thị định dạng dd/mm/yyyy */}
+      <input
+        type="text"
+        name={name}
+        value={toDisplay(value)}
+        onChange={handleTextChange}
+        placeholder="dd/mm/yyyy"
+        maxLength={10}
+        required={required}
+        className={`${INPUT} pr-10`}
+      />
+
+      {/* Nút icon lịch để kích hoạt datepicker native */}
+      <button
+        type="button"
+        onClick={openCalendar}
+        className="absolute right-2.5 text-gray-400 hover:text-blue-600 focus:outline-none p-1"
+        tabIndex={-1}
+        title="Chọn ngày"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-5 h-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.7}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      </button>
+
+      {/* Input ẩn chỉ dùng để mở widget lịch của trình duyệt */}
+      <input
+        ref={hiddenDateInputRef}
+        type="date"
+        value={value && value.includes("-") ? value : ""}
+        onChange={handleCalendarPick}
+        tabIndex={-1}
+        className="absolute opacity-0 pointer-events-none w-0 h-0 bottom-0 right-0"
+      />
+    </div>
   );
 }
 
@@ -76,6 +177,39 @@ function FormattedNumberInput({ name, value, onChange, placeholder, required, cl
       required={required}
       className={className}
       inputMode="numeric" // Giúp hiển thị bàn phím số trên điện thoại
+    />
+  );
+}
+
+
+function NumericInput({ name, value, onChange, min, placeholder, required, className }) {
+  const handleInputChange = (e) => {
+    let cleanValue = e.target.value.replace(/\D/g, "");
+
+    if (min !== undefined && cleanValue !== "" && Number(cleanValue) < min) {
+      cleanValue = String(min);
+    }
+
+    onChange({
+      target: {
+        name,
+        value: cleanValue,
+        type: "text",
+      },
+    });
+  };
+
+  return (
+    <input
+      type="text"
+      name={name}
+      value={value ?? ""}
+      onChange={handleInputChange}
+      placeholder={placeholder}
+      required={required}
+      className={className}
+      inputMode="numeric" // Mở bàn phím số khi dùng trên smartphone
+      autoComplete="off"
     />
   );
 }
@@ -376,30 +510,38 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
               <Field 
                 label="Hạn thanh toán (Ngày)" 
                 required
-                hint="Nhập ngày khách thuê phải đóng tiền hàng tháng (VD: 5 là ngày 5 hàng tháng)"
+                hint="Nhập ngày khách thuê phải đóng tiền hàng tháng (VD: 1 là ngày đầu tiên kể từ ngày xuất bill)"
               >
-                <input 
-                  name="payment_deadline" 
-                  type="number" 
-                  min="1" 
-                  max="31"
-                  value={form.payment_deadline} 
+                <NumericInput 
+                  name="payment_deadline"
+                  min={1}
+                  max={31}
+                  value={form.payment_deadline}
                   onChange={handleChange}
                   required
-                  className={INPUT} 
+                  className={INPUT}
                 />
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Số người thuê" required>
-                <input name="num_tenants" type="number" min="1"
-                  value={form.num_tenants} onChange={handleChange}
-                  required className={INPUT} />
+                <NumericInput 
+                  name="num_tenants"
+                  min={1}
+                  value={form.num_tenants}
+                  onChange={handleChange}
+                  required
+                  className={INPUT}
+                />
               </Field>
               <Field label="Số lượng xe">
-                <input name="num_vehicles" type="number" min="0"
-                  value={form.num_vehicles} onChange={handleChange}
-                  className={INPUT} />
+                <NumericInput 
+                  name="num_vehicles"
+                  min={0}
+                  value={form.num_vehicles}
+                  onChange={handleChange}
+                  className={INPUT}
+                />
               </Field>
             </div>
             <label className="flex items-center gap-3 cursor-pointer">
@@ -474,13 +616,13 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
               required
               hint="Số chốt cuối cùng đã được điền tự động, có thể chỉnh sửa nếu có sai lệch."
             >
-              <input 
-                name="electric_reading" 
-                type="number" 
-                min="0"
-                value={form.electric_reading} 
+              <NumericInput 
+                name="electric_reading"
+                min={0}
+                value={form.electric_reading}
                 onChange={handleChange}
-                className={INPUT} 
+                required
+                className={INPUT}
               />
             </Field>
             {room?.is_water_meter && (
@@ -494,13 +636,13 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
                 required
                 hint="Số chốt cuối cùng đã được điền tự động, có thể chỉnh sửa nếu có sai lệch."
               >
-                <input 
-                  name="water_reading" 
-                  type="number" 
-                  min="0"
-                  value={form.water_reading} 
+                <NumericInput 
+                  name="water_reading"
+                  min={0}
+                  value={form.water_reading}
                   onChange={handleChange}
-                  className={INPUT} 
+                  required
+                  className={INPUT}
                 />
               </Field>
             )}

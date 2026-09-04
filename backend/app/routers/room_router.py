@@ -2,9 +2,10 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 
 from app.core.database import get_db
-from app.core.dependencies import require_owner, get_current_user
+from app.core.dependencies import require_owner, get_current_user, verify_house_access
 from app.models.user import User
 from app.models.room import Room
 from app.models.contract import Contract
@@ -19,9 +20,22 @@ router = APIRouter(prefix="/rooms", tags=["rooms"])
 
 
 @router.post("", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
-def create_room(payload: RoomCreate, db: Session = Depends(get_db), current_user: User = Depends(require_owner)):
-    # 1. Kiểm tra hạn mức phòng theo gói tài khoản
-    total_rooms = db.query(Room).count()
+def create_room(
+    payload: RoomCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(require_owner)
+):
+    # 0. Xác thực người dùng có quyền quản lý nhà trọ này không
+    verify_house_access(house_id=payload.house_id, db=db, current_user=current_user)
+
+    # 1. Lấy danh sách ID các nhà trọ mà user hiện tại quản lý
+    user_house_ids = [h.id for h in current_user.managed_houses]
+
+    # Đếm CHỈ các phòng thuộc nhà của user hiện tại
+    if user_house_ids:
+        total_rooms = db.query(func.count(Room.id)).filter(Room.house_id.in_(user_house_ids)).scalar() or 0
+    else:
+        total_rooms = 0
     
     is_premium = (
         current_user.subscription_plan != "free"
