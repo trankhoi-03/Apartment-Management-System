@@ -295,15 +295,18 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                     <label className="block text-xs text-gray-500 mb-1">
                       Số cũ {loadingPrev && <span className="text-blue-400">(đang tải...)</span>}
                     </label>
-                    <input type="number" min="0" required
+                    <FormattedNumberInput 
+                      name="electric_old"
                       value={electricOld}
                       onChange={(e) => setElectricOld(e.target.value)}
                       placeholder="vd: 100"
-                      className={INPUT} />
+                      className={INPUT}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Số mới</label>
-                    <input type="number" min="0" required
+                    <FormattedNumberInput 
+                      name="electric_new"
                       value={electricNew}
                       onChange={(e) => setElectricNew(e.target.value)}
                       placeholder="vd: 150"
@@ -320,15 +323,18 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Số cũ</label>
-                      <input type="number" min="0" required
+                      <FormattedNumberInput 
+                        name="water_old"
                         value={waterOld}
                         onChange={(e) => setWaterOld(e.target.value)}
                         placeholder="vd: 20"
-                        className={INPUT} />
+                        className={INPUT}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Số mới</label>
-                      <input type="number" min="0" required
+                      <FormattedNumberInput 
+                        name="water_new"
                         value={waterNew}
                         onChange={(e) => setWaterNew(e.target.value)}
                         placeholder="vd: 25"
