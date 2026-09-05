@@ -43,7 +43,7 @@ app.include_router(house_router.router, **_protected)
 app.include_router(incident_router.router, **_protected)
 app.include_router(staff_router.router, **_protected)
 app.include_router(data_router.router, **_protected)
-app.include_router(subscription_router.router, **_protected)
+# app.include_router(subscription_router.router, **_protected)
 app.include_router(report_router.router, **_protected)
 
 @app.get("/")

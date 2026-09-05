@@ -37,17 +37,17 @@ def create_room(
     else:
         total_rooms = 0
     
-    is_premium = (
-        current_user.subscription_plan != "free"
-        and current_user.subscription_expires_at is not None
-        and current_user.subscription_expires_at > datetime.utcnow()
-    )
+    # is_premium = (
+    #     current_user.subscription_plan != "free"
+    #     and current_user.subscription_expires_at is not None
+    #     and current_user.subscription_expires_at > datetime.utcnow()
+    # )
 
-    if not is_premium and total_rooms >= current_user.max_rooms:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Gói miễn phí giới hạn tối đa {current_user.max_rooms} phòng. Bạn đã tạo {total_rooms}/{current_user.max_rooms} phòng. Vui lòng nâng cấp lên Premium để tạo thêm phòng mới."
-        )
+    # if not is_premium and total_rooms >= current_user.max_rooms:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail=f"Gói miễn phí giới hạn tối đa {current_user.max_rooms} phòng. Bạn đã tạo {total_rooms}/{current_user.max_rooms} phòng. Vui lòng nâng cấp lên Premium để tạo thêm phòng mới."
+    #     )
 
     # 2. Kiểm tra trùng số phòng trong cùng một nhà
     existing_room = db.query(Room).filter(

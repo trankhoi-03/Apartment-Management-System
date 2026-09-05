@@ -13,6 +13,7 @@ from app.models.user import User
 from app.models.contract import Contract
 from app.models.room import Room
 from app.models.tenant import Tenant
+from app.models.bill import Bill
 from app.schemas.contract_schema import ContractCreate, ContractUpdate, ContractResponse
 
 
@@ -150,7 +151,6 @@ def delete_contract(contract_id: int, db: Session = Depends(get_db)):
             detail=f"Không tìm thấy hợp đồng có id={contract_id}"
         )
     
-    from app.models.bill import Bill
     has_bill = db.query(Bill).filter(Bill.contract_id == contract_id).first() is not None
     if has_bill:
         raise HTTPException(

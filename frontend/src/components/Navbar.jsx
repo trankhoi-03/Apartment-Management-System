@@ -91,12 +91,12 @@ export default function Navbar() {
             </span>
 
             <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-              <button
+              {/* <button
                 onClick={() => setShowModal(true)}
                 className="flex items-center gap-1 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition whitespace-nowrap shadow-sm"
               >
                 ⭐ Gia hạn / Nâng cấp
-              </button>
+              </button> */}
 
               <button
                 onClick={handleLogout}
@@ -123,12 +123,12 @@ export default function Navbar() {
         </div>
         
         <div className="flex items-center gap-1">
-          <button
+          {/* <button
             onClick={() => setShowModal(true)}
             className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg whitespace-nowrap"
           >
             ⭐ Gia hạn
-          </button>
+          </button> */}
           <button
             onClick={handleLogout}
             className="text-sm text-gray-500 hover:text-red-500 px-2.5 py-1.5 rounded-lg transition whitespace-nowrap"
