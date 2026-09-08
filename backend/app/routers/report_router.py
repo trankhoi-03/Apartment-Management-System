@@ -4,6 +4,8 @@ from decimal import Decimal
 import calendar
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.models.houses import House
 from app.models.room import Room
 from app.models.bill import Bill
@@ -16,8 +18,14 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 
 @router.get("/financial/all", response_model=HouseFinancialReport)
-def get_all_houses_financial_report(month: str, db: Session = Depends(get_db)):
-    houses = db.query(House).all()
+def get_all_houses_financial_report(
+    month: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # LỌC BẢO MẬT: Chỉ lấy những nhà mà User hiện tại quản lý
+    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    houses = db.query(House).filter(House.id.in_(allowed_house_ids)).all()
     
     rent_details = []
     other_revenue_details = [] 
@@ -82,6 +90,9 @@ def get_all_houses_financial_report(month: str, db: Session = Depends(get_db)):
         active_contracts = db.query(Contract).join(Room).filter(Room.house_id == house.id, Contract.status == "active").all()
         total_tenants_in_house = sum(c.num_tenants for c in active_contracts) or 1 
 
+        allocated_house_elec_cost = Decimal("0")
+        allocated_house_water_cost = Decimal("0")
+
         for room in house.rooms:
             bill = db.query(Bill).join(Contract).filter(Contract.room_id == room.id, Bill.billing_month == month).first()
             if bill:
@@ -113,10 +124,14 @@ def get_all_houses_financial_report(month: str, db: Session = Depends(get_db)):
                 water_cost = (room_water_consumed / calc_water_cube) * calc_water_bill
             else:
                 contract = db.query(Contract).filter(Contract.room_id == room.id, Contract.status == "active").first()
-                r_tenants = Decimal(str(contract.num_tenants)) if contract else Decimal("0") 
-                water_cost = (r_tenants / Decimal(str(total_tenants_in_house))) * calc_water_bill
+                if contract:
+                    r_tenants = Decimal(str(contract.num_tenants))
+                    water_cost = (r_tenants / Decimal(str(total_tenants_in_house))) * calc_water_bill
 
+            allocated_house_elec_cost += elec_cost
+            allocated_house_water_cost += water_cost
             total_utilities_cost += (elec_cost + water_cost)
+            
             if elec_cost > 0 or water_cost > 0:
                 util_details.append({"room_name": f"P.{room.room_number} - {house.name}", "electric_cost": float(elec_cost), "water_cost": float(water_cost)})
 
@@ -129,6 +144,18 @@ def get_all_houses_financial_report(month: str, db: Session = Depends(get_db)):
             r_base_cost = Decimal(str(room.cost_price)) 
             total_base_cost += r_base_cost
             base_cost_details.append({"room_name": f"P.{room.room_number} - {house.name}", "amount": float(r_base_cost)})
+
+        # BÙ TRỪ HAO HỤT ĐIỆN NƯỚC (Điện hành lang, bơm nước, phòng trống...)
+        unallocated_elec = calc_elec_bill - allocated_house_elec_cost
+        unallocated_water = calc_water_bill - allocated_house_water_cost
+        
+        if unallocated_elec > 0:
+            util_details.append({"room_name": f"[{house.name}] Hao hụt điện", "electric_cost": float(unallocated_elec), "water_cost": 0.0})
+            total_utilities_cost += unallocated_elec
+        
+        if unallocated_water > 0:
+            util_details.append({"room_name": f"[{house.name}] Hao hụt nước", "electric_cost": 0.0, "water_cost": float(unallocated_water)})
+            total_utilities_cost += unallocated_water
 
     total_cost = total_utilities_cost + total_maintenance_cost + total_base_cost + total_management_cost + total_hc_other
     net_profit = total_revenue - total_cost
@@ -149,7 +176,15 @@ def get_all_houses_financial_report(month: str, db: Session = Depends(get_db)):
 
 
 @router.post("/financial/{house_id}/other-cost")
-def update_other_cost(house_id: int, month: str, payload: OtherCostUpdate, db: Session = Depends(get_db)):
+def update_other_cost(
+    house_id: int, month: str, payload: OtherCostUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # LỌC BẢO MẬT
+    if house_id not in [h.id for h in current_user.managed_houses]:
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập nhà này")
+
     cost = db.query(MonthlyHouseCost).filter(
         MonthlyHouseCost.house_id == house_id, 
         MonthlyHouseCost.month == month
@@ -167,7 +202,15 @@ def update_other_cost(house_id: int, month: str, payload: OtherCostUpdate, db: S
 
 
 @router.post("/financial/{house_id}/monthly-cost")
-def update_monthly_cost(house_id: int, month: str, payload: MonthlyCostUpdate, db: Session = Depends(get_db)):
+def update_monthly_cost(
+    house_id: int, month: str, payload: MonthlyCostUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # LỌC BẢO MẬT
+    if house_id not in [h.id for h in current_user.managed_houses]:
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập nhà này")
+
     cost = db.query(MonthlyHouseCost).filter(
         MonthlyHouseCost.house_id == house_id, 
         MonthlyHouseCost.month == month
@@ -185,8 +228,17 @@ def update_monthly_cost(house_id: int, month: str, payload: MonthlyCostUpdate, d
     db.commit()
     return {"message": "Cập nhật thành công"}
 
+
 @router.get("/financial/{house_id}", response_model=HouseFinancialReport)
-def get_house_financial_report(house_id: int, month: str, db: Session = Depends(get_db)):
+def get_house_financial_report(
+    house_id: int, month: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # LỌC BẢO MẬT
+    if house_id not in [h.id for h in current_user.managed_houses]:
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập báo cáo của nhà này")
+
     house = db.query(House).filter(House.id == house_id).first()
     if not house:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhà")
@@ -237,10 +289,8 @@ def get_house_financial_report(house_id: int, month: str, db: Session = Depends(
     total_base_cost = Decimal("0")
     total_management_cost = Decimal("0")
 
-    # total_employee_fee = Decimal(str(house.employee_fee)) if house.employee_fee else Decimal("0")
-
-    total_rooms_count = len(rooms) if len(rooms) > 0 else 1
-    # fee_per_room = total_employee_fee / Decimal(str(total_rooms_count))
+    allocated_house_elec_cost = Decimal("0")
+    allocated_house_water_cost = Decimal("0")
 
     try:
         year, m = map(int, month.split('-'))
@@ -315,7 +365,7 @@ def get_house_financial_report(house_id: int, month: str, db: Session = Depends(
                         "amount": float(b_additional)
                     })
 
-        # --- TAB 2: ĐIỆN NƯỚC (CHI) ---
+        # --- TAB 2: ĐIỆN NƯỚC PHÂN BỔ(CHI) ---
         room_elec_kwh = Decimal(str(bill.electric_consumed)) if bill else Decimal("0") 
         room_water_consumed = Decimal(str(bill.water_consumed)) if bill else Decimal("0") 
         
@@ -328,13 +378,17 @@ def get_house_financial_report(house_id: int, month: str, db: Session = Depends(
             water_cost = (room_water_consumed / calc_water_cube) * calc_water_bill
         else:
             contract = db.query(Contract).filter(Contract.room_id == room.id, Contract.status == "active").first()
-            r_tenants = Decimal(str(contract.num_tenants)) if contract else Decimal("0") 
-            water_cost = (r_tenants / Decimal(str(total_tenants_in_house))) * calc_water_bill
+            if contract:
+                r_tenants = Decimal(str(contract.num_tenants)) 
+                water_cost = (r_tenants / Decimal(str(total_tenants_in_house))) * calc_water_bill
 
+        allocated_house_elec_cost += elec_cost
+        allocated_house_water_cost += water_cost
         total_utilities_cost += (elec_cost + water_cost)
+        
         if elec_cost > 0 or water_cost > 0:
             util_details.append({
-                "room_name": f"Phòng {room.room_number} - {house.name}",
+                "room_name": f"Phòng {room.room_number}",
                 "electric_cost": float(elec_cost),
                 "water_cost": float(water_cost)
             })
@@ -351,7 +405,7 @@ def get_house_financial_report(house_id: int, month: str, db: Session = Depends(
             r_cost = Decimal(str(inc.repair_cost)) 
             total_maintenance_cost += r_cost
             maint_details.append({
-                "room_name": f"Phòng {room.room_number} - {house.name}",
+                "room_name": f"Phòng {room.room_number}",
                 "description": inc.description, 
                 "handler_info": inc.handler_info,
                 "amount": float(r_cost)
@@ -362,11 +416,32 @@ def get_house_financial_report(house_id: int, month: str, db: Session = Depends(
         r_base_cost = Decimal(str(room.cost_price)) 
         total_base_cost += r_base_cost
         base_cost_details.append({
-            "room_name": f"Phòng {room.room_number} - {house.name}",
+            "room_name": f"Phòng {room.room_number}",
             "amount": float(r_base_cost)
         })
 
-    # --- TAB 4 & 6: QUẢN LÝ & KHÁC (CHI) ---
+    # --- BÙ TRỪ HAO HỤT ĐIỆN NƯỚC VÀO CHI PHÍ NHÀ ---
+    unallocated_elec = calc_elec_bill - allocated_house_elec_cost
+    unallocated_water = calc_water_bill - allocated_house_water_cost
+    
+    if unallocated_elec > 0:
+        util_details.append({
+            "room_name": f"Hao hụt điện",
+            "electric_cost": float(unallocated_elec),
+            "water_cost": 0.0
+        })
+        total_utilities_cost += unallocated_elec
+    
+    if unallocated_water > 0:
+        util_details.append({
+            "room_name": f"Hao hụt nước",
+            "electric_cost": 0.0,
+            "water_cost": float(unallocated_water)
+        })
+        total_utilities_cost += unallocated_water
+
+
+    # --- TAB 6: CHI PHÍ KHÁC (CHI) ---
     hc_other = Decimal(str(house_cost.other_house_cost)) if house_cost and house_cost.other_house_cost else Decimal("0")
     hc_other_reason = house_cost.other_house_cost_reason if house_cost and house_cost.other_house_cost_reason else "Chi phí phát sinh khác"
     
