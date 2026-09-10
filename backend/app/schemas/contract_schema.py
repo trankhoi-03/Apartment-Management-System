@@ -10,6 +10,8 @@ class ContractBase(BaseModel):
     end_date: date | None = None
     monthly_rent: float = Field(gt=0)
     service_fee: float = Field(ge=0, default=0)
+    cleaning_fee: float = Field(ge=0, default=0)
+    internet_fee: float = Field(ge=0, default=0)
     payment_day: int = Field(default=1, ge=1, le=31)
     deposit: float = Field(ge=0, default=0)
     num_tenants: int = Field(default=1, ge=1)
@@ -34,6 +36,8 @@ class ContractUpdate(BaseModel):
     end_date: date | None = None
     monthly_rent: float | None = Field(default=None, gt=0)
     service_fee: float | None = Field(default=None, ge=0)
+    cleaning_fee: float | None = Field(default=None, ge=0)
+    internet_fee: float | None = Field(default=None, ge=0)
     payment_day: int | None = Field(default=None, ge=1, le=31)
     deposit: float | None = Field(default=None, ge=0)
     num_tenants: int | None = Field(default=None, ge=1)       

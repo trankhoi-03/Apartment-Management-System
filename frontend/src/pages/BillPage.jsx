@@ -80,12 +80,30 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
           </span>
           <span>{Number(bill.water_amount).toLocaleString("vi-VN")}đ</span>
         </div>
+        
         {Number(bill.service_fee) > 0 && (
           <div className="flex justify-between">
             <span>Phí dịch vụ</span>
             <span>{Number(bill.service_fee).toLocaleString("vi-VN")}đ</span>
           </div>
         )}
+        
+        {/* ĐÃ BỔ SUNG: Hiển thị Phí vệ sinh nếu có */}
+        {Number(bill.cleaning_fee) > 0 && (
+          <div className="flex justify-between">
+            <span>Phí vệ sinh</span>
+            <span>{Number(bill.cleaning_fee).toLocaleString("vi-VN")}đ</span>
+          </div>
+        )}
+
+        {/* ĐÃ BỔ SUNG: Hiển thị Phí internet nếu có */}
+        {Number(bill.internet_fee) > 0 && (
+          <div className="flex justify-between">
+            <span>Phí internet</span>
+            <span>{Number(bill.internet_fee).toLocaleString("vi-VN")}đ</span>
+          </div>
+        )}
+
         {Number(bill.additional_fee) > 0 && (
           <div className="flex justify-between items-start text-red-600">
             <span className="pr-4">

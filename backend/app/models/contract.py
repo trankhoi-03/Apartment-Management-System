@@ -30,6 +30,8 @@ class Contract(Base):
     # Giá thuê THỰC TẾ đã ký trong hợp đồng này 
 
     service_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    cleaning_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    internet_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
 
     deposit: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     payment_day: Mapped[int] = mapped_column(default=1, nullable=False)

@@ -25,6 +25,8 @@ class Bill(Base):
     electric_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     water_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     service_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
+    cleaning_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0) 
+    internet_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     additional_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     additional_fee_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     total_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)

@@ -13,6 +13,8 @@ class BillGenerateRequest(BaseModel):
     service_fee: float = Field(ge=0, default=0)
     # service_fee (phí dịch vụ/vệ sinh...) cho phép chủ trọ nhập tay ở đây,
     # vì đây không phải số tính từ công thức cố định như tiền điện/nước
+    cleaning_fee: float = Field(ge=0, default=0)
+    internet_fee: float = Field(ge=0, default=0)
     additional_fee: float = 0.0
     additional_fee_reason: str | None = None
 
@@ -26,6 +28,8 @@ class BillEditRequest(BaseModel):
     water_new: float
     default_water_amount: float
     service_fee: float
+    cleaning_fee: float
+    internet_fee: float
     additional_fee: float = 0.0
     additional_fee_reason: str | None = None
 
@@ -40,6 +44,8 @@ class BillResponse(BaseModel):
     water_amount: float
     water_consumed: float          # m³ tiêu thụ tháng này
     service_fee: float
+    cleaning_fee: float
+    internet_fee: float
     additional_fee: float = 0.0
     additional_fee_reason: str | None = None
     total_amount: float

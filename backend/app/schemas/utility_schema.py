@@ -25,6 +25,22 @@ class UtilityReadingCreate(UtilityReadingBase):
     pass
 
 
+class UtilityUpdate(BaseModel):
+    electric_old: float = Field(ge=0)
+    electric_new: float = Field(ge=0)
+    water_old: float = Field(ge=0, default=0.0)
+    water_new: float = Field(ge=0, default=0.0)
+
+    @model_validator(mode="after")
+    def check_readings_increase(self) -> "UtilityUpdate":
+        if self.electric_new < self.electric_old:
+            raise ValueError("electric_new không được nhỏ hơn electric_old")
+        if not (self.water_old == 0 and self.water_new == 0):
+            if self.water_new < self.water_old:
+                raise ValueError("water_new không được nhỏ hơn water_old")
+        return self
+
+
 class UtilityReadingResponse(UtilityReadingBase):
     id: int
     

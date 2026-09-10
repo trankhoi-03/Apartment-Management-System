@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.database import get_db
 from app.models.room import Room
 from app.models.utility_reading import UtilityReading
-from app.schemas.utility_schema import UtilityReadingCreate, UtilityReadingResponse
+from app.schemas.utility_schema import UtilityReadingCreate, UtilityUpdate, UtilityReadingResponse
 
 
 router = APIRouter(prefix="/utility", tags=["utility"])
@@ -92,7 +92,7 @@ def get_utility_reading(reading_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{utility_id}", response_model=UtilityReadingResponse)
-def update_utility_reading(utility_id: int, payload: UtilityReadingCreate, db: Session = Depends(get_db)):
+def update_utility_reading(utility_id: int, payload: UtilityUpdate, db: Session = Depends(get_db)):
     # 1. Tìm bản ghi trong Database
     db_utility = db.query(UtilityReading).filter(UtilityReading.id == utility_id).first()
     

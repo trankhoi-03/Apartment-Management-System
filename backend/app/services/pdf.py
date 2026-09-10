@@ -1,4 +1,5 @@
 import os
+import calendar
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 
@@ -17,8 +18,24 @@ def generate_bill_pdf(bill: Bill, contract: Contract) -> str:
 
     template = _jinja_env.get_template("bill_template.html")
 
+    # 1. Format lại tháng từ YYYY-MM sang MM/YYYY
+    year_str, month_str = bill.billing_month.split('-')
+    formatted_month = f"{month_str}/{year_str}"
+
+    # 2. Tính toán hạn thanh toán an toàn
+    payment_day = contract.payment_day
+    year, month = int(year_str), int(month_str)
+    last_day_of_month = calendar.monthrange(year, month)[1]
+    
+    actual_day = payment_day if payment_day <= last_day_of_month else last_day_of_month
+    due_date = f"{actual_day:02d}/{month:02d}/{year}"
+
+    # 3. Truyền dữ liệu vào template
     html_content = template.render(
-        billing_month=bill.billing_month,
+        formatted_month=formatted_month,
+        due_date=due_date,
+        payment_day=payment_day,
+        house_name=contract.room.house.name, 
         room_number=contract.room.room_number,
         tenant_name=contract.tenant.full_name,
         tenant_phone=contract.tenant.phone,
@@ -28,6 +45,8 @@ def generate_bill_pdf(bill: Bill, contract: Contract) -> str:
         water_amount=float(bill.water_amount),
         water_consumed=float(bill.water_consumed),
         service_fee=float(bill.service_fee),
+        additional_fee=float(bill.additional_fee) if bill.additional_fee else 0.0,
+        additional_fee_reason=bill.additional_fee_reason,
         total_amount=float(bill.total_amount),
     )
 

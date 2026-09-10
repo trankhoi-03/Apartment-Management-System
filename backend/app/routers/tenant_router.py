@@ -64,6 +64,7 @@ def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Depends(g
         )
     
     update_data = payload.model_dump(exclude_unset=True)
+    force_update = update_data.pop("force_update_phone", False)
     
     # Chỉ kiểm tra khi có 'phone' trong payload VÀ số mới KHÁC số hiện tại trong database
     if "phone" in update_data and update_data["phone"] != tenant.phone:
@@ -73,14 +74,10 @@ def update_tenant(tenant_id: int, payload: TenantUpdate, db: Session = Depends(g
             .first()
             is not None
         )
-        if has_active_contract:
+        if has_active_contract and not force_update:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Không thể đổi số điện thoại vì khách thuê đang có hợp đồng."
-                    "Chỉ đổi số khi khách thuê đã mất quyền truy cập"
-                    "số cũ và cần xác nhận đặc biệt."
-                )
+                detail="PHONE_UPDATE_CONFIRM_REQUIRED"
             )
         
         # Kiểm tra xem số điện thoại mới đã tồn tại ở tenant khác chưa

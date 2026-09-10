@@ -45,4 +45,3 @@ export default function TabSection({ icon, title, colorTheme, summaryAmount, chi
     </div>
   );
 };
-

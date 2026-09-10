@@ -7,18 +7,18 @@
     body { font-family: 'DejaVu Sans', sans-serif; font-size: 13px; color: #1a1a1a; }
     .header { text-align: center; margin-bottom: 20px; }
     .header h1 { font-size: 20px; margin: 0; }
-    .header p { color: #666; margin: 4px 0 0; }
+    .header p { color: #666; margin: 4px 0 0; font-size: 14px; font-weight: bold;}
     .due-alert {
         background-color: #fef2f2;
         border-left: 4px solid #ef4444;
         padding: 10px 14px;
         margin-bottom: 18px;
-        font-size: 12px;
+        font-size: 13px;
         color: #991b1b;
         border-radius: 4px;
     }
     .info-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
-    .info-table td { padding: 4px 0; }
+    .info-table td { padding: 5px 0; }
     .info-table td.label { color: #666; width: 140px; }
     table.items { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
     table.items th, table.items td {
@@ -33,17 +33,21 @@
 <body>
     <div class="header">
         <h1>HOÁ ĐƠN TIỀN PHÒNG</h1>
-        <p>Tháng {{ billing_month }}</p>
+        <p>Tháng {{ formatted_month }}</p>
     </div>
 
     <div class="due-alert">
-        <strong>⏰ Hạn thanh toán:</strong> Vui lòng thanh toán trước ngày <strong>{{ due_date }}</strong> (trong vòng 5 ngày kể từ ngày nhận hoá đơn).
+        <strong>⏰ Hạn thanh toán:</strong> Khách thuê cần thanh toán trước <strong>ngày {{ payment_day }} hàng tháng</strong> (Hạn chót kỳ này: <strong>{{ due_date }}</strong>).
     </div>
 
     <table class="info-table">
         <tr>
+            <td class="label">Nhà:</td>
+            <td><strong>{{ house_name }}</strong></td>
+        </tr>
+        <tr>
             <td class="label">Phòng:</td>
-            <td>{{ room_number }}</td>
+            <td><strong>{{ room_number }}</strong></td>
         </tr>
         <tr>
             <td class="label">Người thuê:</td>
@@ -80,7 +84,13 @@
             </tr>
             <tr>
                 <td>Tiền nước</td>
-                <td>{{ "{:,.1f}".format(water_consumed) }} m³</td>
+                <td>
+                    {% if water_consumed > 0 %}
+                        {{ "{:,.1f}".format(water_consumed) }} m³
+                    {% else %}
+                        Cố định
+                    {% endif %}
+                </td>
                 <td class="amount">{{ "{:,.0f}".format(water_amount) }}</td>
             </tr>
             <tr>
@@ -88,6 +98,13 @@
                 <td>—</td>
                 <td class="amount">{{ "{:,.0f}".format(service_fee) }}</td>
             </tr>
+            {% if additional_fee and additional_fee > 0 %}
+            <tr>
+                <td>Phí phát sinh</td>
+                <td>{{ additional_fee_reason if additional_fee_reason else "—" }}</td>
+                <td class="amount">{{ "{:,.0f}".format(additional_fee) }}</td>
+            </tr>
+            {% endif %}
             <tr class="total-row">
                 <td colspan="2">TỔNG CỘNG</td>
                 <td class="amount">{{ "{:,.0f}".format(total_amount) }}</td>

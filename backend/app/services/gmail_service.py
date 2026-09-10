@@ -58,6 +58,8 @@ def send_bill_email(
     billing_month: str,
     total_amount: float,
     pdf_path: str,
+    room_number: str,    
+    house_name: str,     
     due_date: Optional[str] = None
 ) -> None:
     """Gửi email kèm PDF và thông báo hạn thanh toán qua Gmail API"""
@@ -74,10 +76,10 @@ def send_bill_email(
         if len(parts) == 2:
             formatted_month = f"{parts[1]}/{parts[0]}"
 
-    # Tạo email 
+    # Cập nhật tiêu đề email cho rõ ràng hơn
     msg = MIMEMultipart()
     msg["To"] = to_email
-    msg["Subject"] = f"[Thông Báo] Hoá đơn tiền phòng tháng {formatted_month} - Hạn đóng {due_date}"
+    msg["Subject"] = f"[Thông Báo] Hoá đơn tiền phòng {room_number} tháng {formatted_month} - Hạn đóng {due_date}"
 
     body_html = f"""
     <!DOCTYPE html>
@@ -88,7 +90,7 @@ def send_bill_email(
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
       <h2 style="color: #2563eb; margin-bottom: 8px;">Thông báo hoá đơn tiền phòng</h2>
       <p>Xin chào <strong>{tenant_name}</strong>,</p>
-      <p>Hệ thống gửi đến bạn hoá đơn tiền phòng tháng <strong>{formatted_month}</strong>.</p>
+      <p>Hệ thống gửi đến bạn hoá đơn tiền phòng tháng <strong>{formatted_month}</strong> cho <strong>Phòng {room_number}</strong> tại khu vực <strong>{house_name}</strong>.</p>
       
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin: 20px 0;">
         <p style="margin: 6px 0; font-size: 15px;">
@@ -97,7 +99,7 @@ def send_bill_email(
         </p>
         <p style="margin: 6px 0; font-size: 15px; color: #dc2626;">
           ⏰ Hạn thanh toán: 
-          <strong>{due_date}</strong> (trong vòng 5 ngày kể từ ngày xuất bill)
+          <strong>{due_date}</strong> (Vui lòng đóng đúng hạn theo hợp đồng)
         </p>
       </div>
 
@@ -118,7 +120,7 @@ def send_bill_email(
 
     encoders.encode_base64(attachment)
     safe_month_filename = formatted_month.replace("/", "-")
-    pdf_filename = f"hoa-don-{safe_month_filename}.pdf"
+    pdf_filename = f"hoa-don-P{room_number}-{safe_month_filename}.pdf" # Cập nhật tên file PDF đính kèm
     attachment.add_header(
         "Content-Disposition",
         f'attachment; filename="{pdf_filename}"',

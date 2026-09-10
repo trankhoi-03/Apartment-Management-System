@@ -64,13 +64,12 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
             ),
         )
 
-    # Bước 3: Lấy UtilityRate đúng thời điểm (point-in-time lookup) ---
+    # Bước 3: Lấy UtilityRate đúng thời điểm (point-in-time lookup)
     billing_month_end = _billing_month_to_last_date(payload.billing_month)
     rate = (
         db.query(UtilityRate)
         .filter(
             UtilityRate.room_id == contract.room_id,
-            # Dùng ngày cuối tháng làm chốt chặn
             UtilityRate.effective_from <= billing_month_end,
         )
         .order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc())
@@ -87,19 +86,15 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         )
 
     # Bước 4: Tính toán 
-    
-    # Lấy room để check is_water_meter
     room = contract.room
 
     electric_consumed = Decimal(str(reading.electric_new)) - Decimal(str(reading.electric_old))
     electric_amount = electric_consumed * rate.electric_price
 
     if room.is_water_meter:
-        # Có đồng hồ nước -> tính theo số đọc thực tế
         water_consumed = Decimal(str(reading.water_new)) - Decimal(str(reading.water_old))
         water_amount = water_consumed * rate.water_price
     else:
-        # Không có đồng hồ nước -> dùng giá cố định
         if rate.default_water_amount is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -113,7 +108,16 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         water_amount = Decimal(str(rate.default_water_amount))
 
     rent_amount = contract.monthly_rent
-    total_amount = rent_amount + electric_amount + water_amount + Decimal(str(payload.service_fee)) + Decimal(str(payload.additional_fee))
+    
+    total_amount = (
+        rent_amount 
+        + electric_amount 
+        + water_amount 
+        + Decimal(str(payload.service_fee)) 
+        + Decimal(str(payload.cleaning_fee)) 
+        + Decimal(str(payload.internet_fee)) 
+        + Decimal(str(payload.additional_fee))
+    )
 
     # Bước 5: Insert Bill 
     new_bill = Bill(
@@ -123,6 +127,8 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         electric_amount=electric_amount,
         water_amount=water_amount,
         service_fee=payload.service_fee,
+        cleaning_fee=payload.cleaning_fee,
+        internet_fee=payload.internet_fee, 
         additional_fee=payload.additional_fee,
         additional_fee_reason=payload.additional_fee_reason,
         total_amount=total_amount,
@@ -195,7 +201,6 @@ def update_bill_status(bill_id: int, payload: BillUpdate, db: Session = Depends(
 
 @router.patch("/{bill_id}/edit", response_model=BillResponse)
 def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session = Depends(get_db)):
-    # 1. Tìm Bill và kiểm tra trạng thái
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
     if bill is None:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy bill id={bill_id}")
@@ -209,7 +214,6 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     contract = db.query(Contract).filter(Contract.id == bill.contract_id).first()
     room = contract.room
 
-    # 2. Tìm UtilityReading của tháng đó để sửa
     reading = db.query(UtilityReading).filter(
         UtilityReading.room_id == contract.room_id,
         UtilityReading.billing_month == bill.billing_month
@@ -218,14 +222,12 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     if not reading:
         raise HTTPException(status_code=404, detail="Không tìm thấy số điện nước gốc của bill này.")
 
-    # 3. Lấy lại đơn giá (UtilityRate)
     billing_month_end = _billing_month_to_last_date(bill.billing_month)
     rate = db.query(UtilityRate).filter(
         UtilityRate.room_id == contract.room_id,
         UtilityRate.effective_from <= billing_month_end
     ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
 
-    # 4. Tính toán lại y hệt hàm generate_bill
     electric_consumed = Decimal(str(payload.electric_new)) - Decimal(str(reading.electric_old))
     if electric_consumed < 0:
         raise HTTPException(status_code=400, detail="Số điện mới không được nhỏ hơn số điện cũ.")
@@ -240,24 +242,31 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
         water_consumed = Decimal("0")
         water_amount = Decimal(str(payload.water_amount))
 
-    total_amount = bill.rent_amount + electric_amount + water_amount + Decimal(str(payload.service_fee)) + Decimal(str(payload.additional_fee))
+    total_amount = (
+        bill.rent_amount 
+        + electric_amount 
+        + water_amount 
+        + Decimal(str(payload.service_fee))
+        + Decimal(str(payload.cleaning_fee)) 
+        + Decimal(str(payload.internet_fee)) 
+        + Decimal(str(payload.additional_fee))
+    )
 
-    # 5. Cập nhật UtilityReading
     reading.electric_new = payload.electric_new
     if room.is_water_meter:
         reading.water_new = payload.water_new
 
-    # 6. Cập nhật Bill
     bill.electric_consumed = float(electric_consumed)
     bill.water_consumed = float(water_consumed)
     bill.electric_amount = electric_amount
     bill.water_amount = water_amount
     bill.service_fee = payload.service_fee
+    bill.cleaning_fee = payload.cleaning_fee 
+    bill.internet_fee = payload.internet_fee 
     bill.additional_fee = payload.additional_fee
     bill.additional_fee_reason = payload.additional_fee_reason  
     bill.total_amount = total_amount
 
-    # 7. Commit cả 2 thay đổi
     try:
         db.commit()
     except Exception as e:
@@ -272,10 +281,8 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
     bill = (
         db.query(Bill)
         .options(
-            joinedload(Bill.contract)
-            .joinedload(Contract.room),
-            joinedload(Bill.contract)
-            .joinedload(Contract.tenant),
+            joinedload(Bill.contract).joinedload(Contract.room).joinedload(Room.house),
+            joinedload(Bill.contract).joinedload(Contract.tenant),
         )
         .filter(Bill.id == bill_id)
         .first()
@@ -313,7 +320,7 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
             detail=f"Lỗi khi sinh PDF: {str(e)}",
         )
 
-    # Gửi email
+    # Gửi email kèm thông tin phòng và nhà
     try:
         send_bill_email(
             to_email=tenant.email,
@@ -321,6 +328,8 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
             billing_month=bill.billing_month,
             total_amount=float(bill.total_amount),
             pdf_path=pdf_path,
+            room_number=bill.contract.room.room_number,
+            house_name=bill.contract.room.house.name
         )
     except Exception as e:
         raise HTTPException(
