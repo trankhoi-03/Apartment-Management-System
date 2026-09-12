@@ -1,27 +1,26 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from "../api/axios";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie } from 'recharts';
 
 const formatYAxis = (tickItem) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(tickItem);
 
-// ĐÃ CẬP NHẬT: Bộ từ điển màu sắc CỐ ĐỊNH cho tất cả các loại danh mục
 const CATEGORY_COLORS = {
-  // --- CHI PHÍ (COST) ---
-  'Tiền điện (Chi)': '#0805b4', // Xanh lơ
-  'Tiền nước (Chi)': '#3b82f6', // Xanh dương
-  'Sửa chữa': '#ef4444',        // Đỏ
-  'Vốn phòng': '#f59e0b',       // Cam
-  'Quản lý': '#64748b',         // Xám Slate
-  'Chi phí khác': '#a855f7',    // Tím
+  //  CHI PHÍ (COST) 
+  'Tiền điện (Chi)': '#0805b4', 
+  'Tiền nước (Chi)': '#3b82f6', 
+  'Sửa chữa': '#ef4444',        
+  'Vốn phòng': '#f59e0b',       
+  'Quản lý': '#64748b',         
+  'Chi phí khác': '#a855f7',    
 
-  // --- DOANH THU (REVENUE) ---
-  'Tiền thuê': '#10b981',       // Xanh ngọc (Emerald)
-  'Tiền điện (Thu)': '#0ea5e9', // Xanh lơ
-  'Tiền nước (Thu)': '#3b82f6', // Xanh dương
-  'Phí dịch vụ': '#84cc16',     // Xanh mạ (Lime)
-  'Phí phát sinh': '#f43f5e',   // Hồng đỏ (Rose)
-  'Phí vệ sinh': '#14b8a6',     // Xanh ngọc bích (Teal)
-  'Phí internet': '#8b5cf6',    // Tím nhạt (Violet)
+  //  DOANH THU (REVENUE)
+  'Tiền thuê': '#10b981',       
+  'Tiền điện (Thu)': '#0ea5e9', 
+  'Tiền nước (Thu)': '#3b82f6', 
+  'Phí dịch vụ': '#84cc16',     
+  'Phí phát sinh': '#f43f5e',   
+  'Phí vệ sinh': '#14b8a6',     
+  'Phí internet': '#8b5cf6',    
 };
 
 function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
@@ -106,7 +105,6 @@ export default function FinancialPage() {
   
   const [viewMode, setViewMode] = useState('overview');
 
-  // ĐÃ CẬP NHẬT: Thêm các tab mới được tách lẻ
   const [openTabs, setOpenTabs] = useState({
     rent: true, electric_rev: false, water_rev: false, service_rev: false, additional_rev: false, cleaning_rev: false, internet_rev: false,
     electric_cost: true, water_cost: true, maintenance: false, base_cost: false, management: false, other_costs: false
@@ -155,11 +153,9 @@ export default function FinancialPage() {
 
     let rentDetails = reportData.rent_tab.details;
     
-    // ĐÃ CẬP NHẬT: Tách riêng Tiền điện và Tiền nước (CHI)
     let electricCostDetails = reportData.utilities_tab.details.filter(d => d.electric_cost > 0).map(d => ({ room_name: d.room_name, amount: d.electric_cost }));
     let waterCostDetails    = reportData.utilities_tab.details.filter(d => d.water_cost > 0).map(d => ({ room_name: d.room_name, amount: d.water_cost }));
 
-    // ĐÃ CẬP NHẬT: Tách riêng Phí dịch vụ và Phí phát sinh (THU)
     let serviceRevDetails    = reportData.other_revenue_tab.details.filter(d => d.item === 'Phí dịch vụ');
     let additionalRevDetails = reportData.other_revenue_tab.details.filter(d => d.item !== 'Phí dịch vụ');
 
@@ -208,7 +204,6 @@ export default function FinancialPage() {
       return true;
     });
 
-    // ĐÃ CẬP NHẬT: Tách riêng Tiền điện (Thu) và Tiền nước (Thu)
     const electricRevDetails = filteredBills.filter(b => Number(b.electric_amount) > 0).map(bill => {
       const contract = contracts.find(c => c.id === bill.contract_id);
       const room = rooms.find(r => r.id === contract?.room_id);
@@ -294,7 +289,6 @@ export default function FinancialPage() {
       ...reportData,
       total_revenue: totalRev, total_cost: totalCost, net_profit: totalRev - totalCost,
       
-      // Khởi tạo data phân mảnh cho UI
       rent_tab: { total: rentTotal, details: rentDetails, paid: paidRent, unpaid: unpaidRent },
       electric_rev_tab: { total: electricRevTotal, details: electricRevDetails },
       water_rev_tab: { total: waterRevTotal, details: waterRevDetails },
@@ -358,7 +352,6 @@ export default function FinancialPage() {
   const tableRowStyle = "py-3 text-sm text-gray-700 border-b border-dashed border-gray-200/50";
 
 
-  // ========================== CÁC RENDERER DOANH THU ==========================
 
   const renderRentContent = () => {
     const chartData = [{ name: `Tháng ${selectedMonth.split('-')[1]}`, "Đã thu": displayData.rent_tab.paid || 0, "Cần thu": displayData.rent_tab.unpaid || 0 }];
@@ -454,8 +447,6 @@ export default function FinancialPage() {
     </DetailPanel>
   );
 
-
-  // ========================== CÁC RENDERER CHI PHÍ ==========================
 
   const renderElectricCostContent = () => (
     <DetailPanel title="Chi tiết Tiền điện (Thanh toán nhà mạng)" colorTheme="blue">
