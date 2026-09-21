@@ -111,6 +111,7 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
     
     total_amount = (
         rent_amount 
+        - Decimal(str(payload.discount_amount))
         + electric_amount 
         + water_amount 
         + Decimal(str(payload.service_fee)) 
@@ -119,11 +120,15 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         + Decimal(str(payload.additional_fee))
     )
 
+    if total_amount < 0:
+        total_amount = Decimal("0")
+
     # Bước 5: Insert Bill 
     new_bill = Bill(
         contract_id=payload.contract_id,
         billing_month=payload.billing_month,
         rent_amount=rent_amount,
+        discount_amount=payload.discount_amount,
         electric_amount=electric_amount,
         water_amount=water_amount,
         service_fee=payload.service_fee,
@@ -199,6 +204,28 @@ def update_bill_status(bill_id: int, payload: BillUpdate, db: Session = Depends(
     return bill
 
 
+@router.get("/{bill_id}/utility-reading")
+def get_bill_utility_reading(bill_id: int, db: Session = Depends(get_db)):
+    bill = db.query(Bill).filter(Bill.id == bill_id).first()
+    if not bill:
+        raise HTTPException(status_code=404, detail="Không tìm thấy bill.")
+    
+    contract = db.query(Contract).filter(Contract.id == bill.contract_id).first()
+    
+    reading = db.query(UtilityReading).filter(
+        UtilityReading.room_id == contract.room_id,
+        UtilityReading.billing_month == bill.billing_month
+    ).first()
+    
+    if not reading:
+        return {"electric_new": 0, "water_new": 0}
+        
+    return {
+        "electric_new": reading.electric_new,
+        "water_new": reading.water_new
+    }
+
+
 @router.patch("/{bill_id}/edit", response_model=BillResponse)
 def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session = Depends(get_db)):
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
@@ -228,44 +255,58 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
         UtilityRate.effective_from <= billing_month_end
     ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
 
-    electric_consumed = Decimal(str(payload.electric_new)) - Decimal(str(reading.electric_old))
+    electric_new_val = payload.electric_new if payload.electric_new is not None else reading.electric_new
+    electric_consumed = Decimal(str(electric_new_val)) - Decimal(str(reading.electric_old))
     if electric_consumed < 0:
         raise HTTPException(status_code=400, detail="Số điện mới không được nhỏ hơn số điện cũ.")
     electric_amount = electric_consumed * rate.electric_price
 
     if room.is_water_meter:
-        water_consumed = Decimal(str(payload.water_new)) - Decimal(str(reading.water_old))
+        water_new_val = payload.water_new if payload.water_new is not None else reading.water_new
+        water_consumed = Decimal(str(water_new_val)) - Decimal(str(reading.water_old))
         if water_consumed < 0:
             raise HTTPException(status_code=400, detail="Số nước mới không được nhỏ hơn số nước cũ.")
         water_amount = water_consumed * rate.water_price
     else:
         water_consumed = Decimal("0")
-        water_amount = Decimal(str(payload.water_amount))
+        if payload.default_water_amount is not None:
+            water_amount = Decimal(str(payload.default_water_amount))
+        else:
+            water_amount = Decimal(str(bill.water_amount))
+
+
+    svc_fee = Decimal(str(payload.service_fee)) if payload.service_fee is not None else Decimal(str(bill.service_fee))
+    cln_fee = Decimal(str(payload.cleaning_fee)) if payload.cleaning_fee is not None else Decimal(str(bill.cleaning_fee))
+    net_fee = Decimal(str(payload.internet_fee)) if payload.internet_fee is not None else Decimal(str(bill.internet_fee))
+    add_fee = Decimal(str(payload.additional_fee)) if payload.additional_fee is not None else Decimal(str(bill.additional_fee))
+    add_reason = payload.additional_fee_reason if payload.additional_fee_reason is not None else bill.additional_fee_reason
+    dsc_amt = Decimal(str(payload.discount_amount)) if payload.discount_amount is not None else Decimal(str(bill.discount_amount))
 
     total_amount = (
-        bill.rent_amount 
+        Decimal(str(bill.rent_amount)) 
+        - dsc_amt
         + electric_amount 
         + water_amount 
-        + Decimal(str(payload.service_fee))
-        + Decimal(str(payload.cleaning_fee)) 
-        + Decimal(str(payload.internet_fee)) 
-        + Decimal(str(payload.additional_fee))
+        + svc_fee + cln_fee + net_fee + add_fee
     )
+    if total_amount < 0:
+        total_amount = Decimal("0")
 
-    reading.electric_new = payload.electric_new
+    reading.electric_new = electric_new_val
     if room.is_water_meter:
-        reading.water_new = payload.water_new
+        reading.water_new = water_new_val
 
     bill.electric_consumed = float(electric_consumed)
     bill.water_consumed = float(water_consumed)
-    bill.electric_amount = electric_amount
-    bill.water_amount = water_amount
-    bill.service_fee = payload.service_fee
-    bill.cleaning_fee = payload.cleaning_fee 
-    bill.internet_fee = payload.internet_fee 
-    bill.additional_fee = payload.additional_fee
-    bill.additional_fee_reason = payload.additional_fee_reason  
-    bill.total_amount = total_amount
+    bill.electric_amount = float(electric_amount)
+    bill.water_amount = float(water_amount)
+    bill.service_fee = float(svc_fee)
+    bill.cleaning_fee = float(cln_fee)
+    bill.internet_fee = float(net_fee)
+    bill.additional_fee = float(add_fee)
+    bill.additional_fee_reason = add_reason  
+    bill.discount_amount = float(dsc_amt)
+    bill.total_amount = float(total_amount)
 
     try:
         db.commit()

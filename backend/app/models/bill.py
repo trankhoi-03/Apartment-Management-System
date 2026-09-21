@@ -22,6 +22,7 @@ class Bill(Base):
     billing_month: Mapped[str] = mapped_column(String(7), nullable=False)
 
     rent_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    discount_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     electric_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     water_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     service_fee: Mapped[float] = mapped_column(Numeric(12, 2), default=0)

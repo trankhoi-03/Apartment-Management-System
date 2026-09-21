@@ -33,7 +33,7 @@ class Room(Base):
         ForeignKey("houses.id", ondelete="RESTRICT"), nullable=False
     )
 
-    furnitures: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=list)
+    feature_and_furniture: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True, default=list)
 
     contracts: Mapped[list["Contract"]] = relationship(back_populates="room")
     utility_readings: Mapped[list["UtilityReading"]] = relationship(back_populates="room")

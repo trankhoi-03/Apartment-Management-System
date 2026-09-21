@@ -303,64 +303,67 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-700">Tài chính tháng {revenueStats.currentMonthStr.slice(-2)}/{revenueStats.currentMonthStr.slice(0,4)}</h2>
-          <Link to="/bills" className="text-sm font-medium text-blue-600 hover:underline">Quản lý hoá đơn &rarr;</Link>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      {isOwner && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-700">Tài chính tháng {revenueStats.currentMonthStr.slice(-2)}/{revenueStats.currentMonthStr.slice(0,4)}</h2>
+            <Link to="/bills" className="text-sm font-medium text-blue-600 hover:underline">Quản lý hoá đơn &rarr;</Link>
+          </div>
           
-          <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="text-emerald-700 text-sm font-semibold mb-1 flex items-center gap-1.5">
-                  💰 Doanh thu
-                </p>
-                <h3 className="text-3xl font-extrabold text-emerald-900 tracking-tight">
-                  {revenueStats.collectedThisMonth.toLocaleString("vi-VN")}đ
-                </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            
+            <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <p className="text-emerald-700 text-sm font-semibold mb-1 flex items-center gap-1.5">
+                    💰 Doanh thu
+                  </p>
+                  <h3 className="text-3xl font-extrabold text-emerald-900 tracking-tight">
+                    {revenueStats.collectedThisMonth.toLocaleString("vi-VN")}đ
+                  </h3>
+                </div>
+                {revenueStats.growthLabel && (
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap
+                    ${revenueStats.isUp ? 'bg-emerald-200 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
+                    {revenueStats.growthLabel}
+                  </span>
+                )}
               </div>
-              {revenueStats.growthLabel && (
-                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm whitespace-nowrap
-                  ${revenueStats.isUp ? 'bg-emerald-200 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
-                  {revenueStats.growthLabel}
-                </span>
-              )}
             </div>
+
+            <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-100 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <p className="text-rose-700 text-sm font-semibold mb-1 flex items-center gap-1.5">
+                    ⏳ Cần thu (Tổng nợ)
+                  </p>
+                  <h3 className="text-3xl font-extrabold text-rose-900 tracking-tight">
+                    {revenueStats.uncollectedTotal.toLocaleString("vi-VN")}đ
+                  </h3>
+                </div>
+                {revenueStats.unpaidCountTotal > 0 && (
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-200 text-rose-800 shadow-sm whitespace-nowrap">
+                    ⚠️ {revenueStats.unpaidCountTotal} hoá đơn nợ
+                  </span>
+                )}
+              </div>
+            </div>
+
           </div>
 
-          <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-100 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
-            <div className="flex justify-between items-start relative z-10">
-              <div>
-                <p className="text-rose-700 text-sm font-semibold mb-1 flex items-center gap-1.5">
-                  ⏳ Cần thu (Tổng nợ)
-                </p>
-                <h3 className="text-3xl font-extrabold text-rose-900 tracking-tight">
-                  {revenueStats.uncollectedTotal.toLocaleString("vi-VN")}đ
-                </h3>
-              </div>
-              {revenueStats.unpaidCountTotal > 0 && (
-                <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-200 text-rose-800 shadow-sm whitespace-nowrap">
-                  ⚠️ {revenueStats.unpaidCountTotal} hoá đơn nợ
-                </span>
-              )}
-            </div>
+          <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3.5 flex justify-between items-center text-sm shadow-sm transition hover:bg-blue-50">
+            <span className="font-medium text-blue-800 flex items-center gap-2">
+              <span>🗓️</span> Tổng doanh thu tháng trước ({revenueStats.lastMonthStr?.slice(-2) || ""}/{revenueStats.lastMonthStr?.slice(0,4) || ""}):
+            </span>
+            <span className="font-extrabold text-blue-900 text-base">
+              {revenueStats.collectedLastMonth.toLocaleString("vi-VN")}đ
+            </span>
           </div>
-
         </div>
-
-        <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3.5 flex justify-between items-center text-sm shadow-sm transition hover:bg-blue-50">
-           <span className="font-medium text-blue-800 flex items-center gap-2">
-             <span>🗓️</span> Tổng doanh thu tháng trước ({revenueStats.lastMonthStr?.slice(-2) || ""}/{revenueStats.lastMonthStr?.slice(0,4) || ""}):
-           </span>
-           <span className="font-extrabold text-blue-900 text-base">
-             {revenueStats.collectedLastMonth.toLocaleString("vi-VN")}đ
-           </span>
-        </div>
-      </div>
+      )}
+      
 
 
       {expiringContracts.length > 0 && (

@@ -2,12 +2,14 @@ from datetime import date
 from sqlalchemy import ForeignKey, String, Numeric, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
+
 from .base import Base
 
 if TYPE_CHECKING:
     from .room import Room
     from .tenant import Tenant
     from .bill import Bill
+    from .co_tenant import CoTenant
 
 
 class Contract(Base):
@@ -44,9 +46,11 @@ class Contract(Base):
     num_tenants: Mapped[int] = mapped_column(default=1, nullable=False)
     num_vehicles: Mapped[int] = mapped_column(default=0, nullable=False)
     temp_residence_reg: Mapped[bool] = mapped_column(default=False, nullable=False)
+    temp_residence_dec: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     room: Mapped["Room | None"] = relationship(back_populates="contracts")
     tenant: Mapped["Tenant"] = relationship(back_populates="contracts")
     bills: Mapped[list["Bill"]] = relationship(back_populates="contract")
+    co_tenants: Mapped[list["CoTenant"]] = relationship(back_populates="contract", cascade="all, delete-orphan")

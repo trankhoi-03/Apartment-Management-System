@@ -51,7 +51,8 @@ export default function StaffPage() {
   // const [submitError, setSubmitError] = useState("");
 
   const [grantingStaff, setGrantingStaff] = useState(null);
-  const [grantHouseId, setGrantHouseId] = useState("");
+  const [grantHouseIds, setGrantHouseIds] = useState([]);
+  const [grantFee, setGrantFee] = useState("");
   const [grantingLoading, setGrantingLoading] = useState(false);
 
   const [editingFeeHouse, setEditingFeeHouse] = useState(null);
@@ -114,17 +115,26 @@ export default function StaffPage() {
   }
 
   async function handleGrantAdditionalAccess() {
-    if (!grantHouseId) return alert("Vui lòng chọn nhà trọ để cấp quyền.");
+    if (grantHouseIds.length === 0) return alert("Vui lòng chọn ít nhất một nhà trọ để cấp quyền.");
     setGrantingLoading(true);
     try {
-      await api.post("/staffs", {
-        phone: grantingStaff.phone,
-        house_id: Number(grantHouseId)
-      });
+      for (const id of grantHouseIds) {
+        await api.post("/staffs", {
+          phone: grantingStaff.phone,
+          house_id: Number(id)
+        });
+        
+        if (grantFee !== undefined && grantFee !== "") {
+          await api.patch(`/houses/${id}`, {
+            employee_fee: Number(grantFee)
+          });
+        }
+      }
       
-      alert("Đã cấp quyền thêm thành công!");
+      alert("Đã cấp quyền thêm và thiết lập phí thành công!");
       setGrantingStaff(null);
-      setGrantHouseId("");
+      setGrantHouseIds([]);
+      setGrantFee(""); 
       loadData();
     } catch (err) {
       alert(err.response?.data?.detail || "Có lỗi xảy ra khi cấp quyền.");
@@ -138,7 +148,7 @@ export default function StaffPage() {
     try {
       await api.delete(`/staffs/${staffId}`);
       alert("Đã xóa nhân viên thành công.");
-      loadData(); // Tải lại danh sách sau khi xóa
+      loadData(); 
     } catch (err) {
       alert(err.response?.data?.detail || "Không thể xóa nhân viên.");
     }
@@ -241,7 +251,8 @@ export default function StaffPage() {
                   <button 
                     onClick={() => {
                       setGrantingStaff(staff);
-                      setGrantHouseId(""); 
+                      setGrantHouseIds([]); 
+                      setGrantFee(""); 
                     }}
                     className="text-blue-600 hover:text-blue-800 font-medium text-xs whitespace-nowrap transition"
                   >
@@ -307,25 +318,61 @@ export default function StaffPage() {
             </p>
             
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Chọn nhà trọ muốn cấp quyền</label>
-              <select
-                value={grantHouseId}
-                onChange={(e) => setGrantHouseId(e.target.value)}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Chọn nhà trọ --</option>
-                {houses
-                  .filter(h => !grantingStaff.managed_houses?.some(mh => mh.id === h.id))
-                  .map(h => (
-                    <option key={h.id} value={h.id}>{h.name}</option>
-                  ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Chọn các nhà trọ muốn cấp quyền</label>
               
-              {houses.filter(h => !grantingStaff.managed_houses?.some(mh => mh.id === h.id)).length === 0 && (
-                <p className="text-xs text-orange-600 mt-2 bg-orange-50 p-2 rounded-lg">
-                  Nhân viên này đã được cấp quyền quản lý tất cả các nhà trọ hiện có.
-                </p>
-              )}
+              {(() => {
+                const availableHouses = houses.filter(h => !grantingStaff.managed_houses?.some(mh => mh.id === h.id));
+                
+                if (availableHouses.length === 0) {
+                  return (
+                    <p className="text-xs text-orange-600 mt-2 bg-orange-50 p-2 rounded-lg">
+                      Nhân viên này đã được cấp quyền quản lý tất cả các nhà trọ hiện có.
+                    </p>
+                  );
+                }
+
+                return (
+                  <>
+                    <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-xl divide-y divide-gray-100 bg-white mb-4">
+                      {availableHouses.map(h => (
+                        <label key={h.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer transition">
+                          <input
+                            type="checkbox"
+                            checked={grantHouseIds.includes(h.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setGrantHouseIds(prev => [...prev, h.id]);
+                              } else {
+                                setGrantHouseIds(prev => prev.filter(id => id !== h.id));
+                              }
+                            }}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span className="text-sm font-medium text-gray-700 truncate">🏢 {h.name}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {grantHouseIds.length > 0 && (
+                      <div className="animate-fade-in">
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          Phí quản lý áp dụng chung
+                        </label>
+                        <FormattedNumberInput
+                          name="global_fee"
+                          value={grantFee}
+                          onChange={(e) => setGrantFee(e.target.value)}
+                          placeholder="Ví dụ: 3,000,000"
+                          className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1.5">
+                          Mức phí (đ/tháng) này sẽ được áp dụng cho {grantHouseIds.length} nhà trọ bạn vừa chọn. Có thể bỏ trống nếu chưa muốn thiết lập.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
 
             <div className="flex gap-3">
@@ -337,7 +384,7 @@ export default function StaffPage() {
               </button>
               <button
                 onClick={handleGrantAdditionalAccess}
-                disabled={grantingLoading || !grantHouseId}
+                disabled={grantingLoading || grantHouseIds.length === 0}
                 className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition"
               >
                 {grantingLoading ? "Đang xử lý..." : "Xác nhận"}
@@ -359,15 +406,6 @@ export default function StaffPage() {
             <form onSubmit={handleUpdate}>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phí quản lý nhân viên (đ/tháng)</label>
-                {/* <input
-                  type="number"
-                  min="0"
-                  required
-                  value={feeInput}
-                  onChange={(e) => setFeeInput(e.target.value)}
-                  placeholder="Ví dụ: 3000000"
-                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                /> */}
                 <FormattedNumberInput 
                   name="employee_fee"
                   value={feeInput}

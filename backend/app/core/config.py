@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DATABASE_URL: str
+    ENCRYPTION_KEY: str  # 32 bytes, base64 encoded (Fernet key)
 
     # JWT
     SECRET_KEY: str

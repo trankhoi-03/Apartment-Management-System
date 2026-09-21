@@ -6,24 +6,28 @@ import RoomFormModal from "../components/rooms/RoomFormModal";
 import HouseFormModal from "../components/houses/HouseFormModal";
 import ContractTemplateSettings from "../components/houses/ContractTemplateSettings";
 
-const STATUS_FILTERS = [
-  { key: "all",      label: "Tất cả" },
-  { key: "vacant",   label: "Trống" },
-  { key: "occupied", label: "Đang thuê" },
+
+const STATUS_TAGS = [
+  { id: "status_vacant", label: "Trống" },
+  { id: "status_occupied", label: "Đang thuê" },
 ];
 
 export default function RoomsPage() {
   const userRole = localStorage.getItem("user_role") || "staff";
   const isOwner = userRole === "owner";
+  
   const [rooms, setRooms] = useState([]);
   const [houses, setHouses] = useState([]);
   const [contracts, setContracts] = useState([]); 
   const [selectedHouse, setSelectedHouse] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all"); 
   const [loading, setLoading] = useState(true);
+  
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState("");
+
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
-  
   const [showForm, setShowForm] = useState(false);
   const [showHouseForm, setShowHouseForm] = useState(false);
   const [showTemplateSettings, setShowTemplateSettings] = useState(false);
@@ -81,7 +85,7 @@ export default function RoomsPage() {
       area_sqm: room.area_sqm,
       is_water_meter: room.is_water_meter,
       house_id: room.house_id,
-      furnitures: room.furnitures,
+      feature_and_furniture: room.feature_and_furniture || room.furnitures,
     };
     setEditingRoom(duplicatedData);
     setShowForm(true);
@@ -94,13 +98,9 @@ export default function RoomsPage() {
 
   async function handleDeleteHouse() {
     if (selectedHouse === "all") return;
-
     const houseToDelete = houses.find(h => h.id === Number(selectedHouse));
     if (!houseToDelete) return;
-
-    if (!confirm(`Bạn có chắc chắn muốn xóa "${houseToDelete.name}"?\nLưu ý: Bạn phải xóa hết tất cả các phòng trong nhà này trước khi xóa nhà.`)) {
-      return;
-    }
+    if (!confirm(`Bạn có chắc chắn muốn xóa "${houseToDelete.name}"?\nLưu ý: Bạn phải xóa hết tất cả các phòng trong nhà này trước khi xóa nhà.`)) return;
 
     try {
       await api.delete(`/houses/${selectedHouse}`);
@@ -115,46 +115,81 @@ export default function RoomsPage() {
   const enrichedRooms = rooms.map(room => {
     const house = houses.find(h => h.id === room.house_id);
     const activeContract = contracts.find(c => c.room_id === room.id && c.status === "active");
-    
-    return {
-      ...room,
-      computed_house: house,
-      computed_active_contract: activeContract
-    };
+    return { ...room, computed_house: house, computed_active_contract: activeContract };
   });
 
   const houseFilteredRooms = selectedHouse === "all"
     ? enrichedRooms
     : enrichedRooms.filter((r) => r.house_id === Number(selectedHouse));
 
-  const finalDisplayedRooms = houseFilteredRooms.filter((r) => {
-    if (statusFilter === "all") return true;
-    return r.status === statusFilter;
-  });
+  const uniqueAmenities = Array.from(
+    new Set(
+      houseFilteredRooms.flatMap(r => {
+        const tags = Array.isArray(r.feature_and_furniture) 
+          ? r.feature_and_furniture 
+          : (r.furnitures || []);
+        return tags.map(t => typeof t === 'string' ? t.trim() : "").filter(Boolean);
+      })
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const toggleTag = (tagId) => {
+    setSelectedTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
+  };
+
+  const finalDisplayedRooms = houseFilteredRooms
+    .filter((r) => {
+      if (selectedTags.length === 0) return true;
+
+      const selectedStatusIds = selectedTags.filter(tag => tag.startsWith('status_'));
+      const selectedFurnitureTags = selectedTags.filter(tag => !tag.startsWith('status_'));
+
+      let isStatusMatch = true;
+      if (selectedStatusIds.length > 0) {
+        const roomStatusId = `status_${r.status}`;
+        isStatusMatch = selectedStatusIds.includes(roomStatusId);
+      }
+
+      let isFurnitureMatch = true;
+      if (selectedFurnitureTags.length > 0) {
+        const roomTags = Array.isArray(r.feature_and_furniture) ? r.feature_and_furniture : (r.furnitures || []);
+        const normalizedRoomTags = roomTags.map(t => typeof t === 'string' ? t.trim() : "");
+        isFurnitureMatch = selectedFurnitureTags.every(tag => normalizedRoomTags.includes(tag));
+      }
+
+      return isStatusMatch && isFurnitureMatch;
+    })
+    .sort((a, b) => a.room_number.toString().localeCompare(b.room_number.toString(), undefined, { numeric: true, sensitivity: 'base' }));
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div className="flex flex-wrap items-center gap-3 flex-1">
-          <h1 className="text-2xl font-bold text-gray-800 mr-2 whitespace-nowrap">Phòng & Hợp đồng</h1>
+      <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 mb-4">
+        
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0 pr-2">
+          <h1 className="text-2xl font-bold text-gray-800 whitespace-nowrap shrink-0">Phòng & Hợp đồng</h1>
           
           {houses.length > 0 && (
-            <select
-              value={selectedHouse}
-              onChange={(e) => setSelectedHouse(e.target.value)}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700 max-w-[200px] sm:max-w-xs md:max-w-md truncate"
-            >
-              <option value="all">🏢 Tất cả nhà trọ</option>
-              {houses.map((h) => (
-                <option key={h.id} value={h.id}>
-                  🏠 {h.name} {h.address ? `- ${h.address}` : ""}
-                </option>
-              ))}
-            </select>
+            <div className="w-full sm:flex-1 min-w-0 max-w-[450px]">
+              <select
+                value={selectedHouse}
+                onChange={(e) => setSelectedHouse(e.target.value)}
+                className="w-full block px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700 truncate"
+              >
+                <option value="all">🏢 Tất cả nhà trọ</option>
+                {houses.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    🏠 {h.name} {h.address ? `- ${h.address}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
+        </div>
 
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+          
           {isOwner && (
-            <div className="flex items-center gap-2 bg-gray-100/70 p-1 rounded-xl">
+            <div className="flex items-center gap-1.5 bg-gray-100/70 p-1 rounded-xl border border-gray-100">
               <button 
                 onClick={() => setShowHouseForm(true)}
                 className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200"
@@ -172,57 +207,150 @@ export default function RoomsPage() {
               )}
             </div>
           )}
-        </div>
 
-        {isOwner && (
-          <div className="flex-shrink-0 mt-2 xl:mt-0">
-            <button onClick={handleAddRoom}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition whitespace-nowrap w-full sm:w-auto shadow-sm">
-              + Thêm phòng
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">        
-        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
-          {STATUS_FILTERS.map((f) => {
-            const count = houseFilteredRooms.filter(r => f.key === "all" ? true : r.status === f.key).length;
-            
-            return (
-              <button
-                key={f.key}
-                onClick={() => setStatusFilter(f.key)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap
-                  ${statusFilter === f.key 
-                    ? "bg-blue-600 text-white shadow-sm" 
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-blue-300"}`}
-              >
-                {f.label}
-                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${statusFilter === f.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {isOwner && houses.length > 0 && (
-          <div className="flex-shrink-0">
+          {isOwner && houses.length > 0 && (
             <button
               disabled={selectedHouse === "all"}
               onClick={() => setShowTemplateSettings(true)}
               title={selectedHouse === "all" ? "Vui lòng chọn một nhà cụ thể để cài đặt mẫu HĐ" : "Cài đặt mẫu hợp đồng cho nhà này"}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap w-full sm:w-auto shadow-sm border ${
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap shadow-sm border ${
                 selectedHouse === "all" 
                   ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" 
                   : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-100"
               }`}
             >
-              📝 Mẫu hợp đồng
+              📝 Mẫu HĐ
             </button>
+          )}
+          
+          {isOwner && (
+            <button onClick={handleAddRoom}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition whitespace-nowrap shadow-sm">
+              + Thêm phòng
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col relative z-30">
+        
+        <div className="flex border-b border-gray-100 overflow-x-auto scrollbar-hide">
+          <button
+            onClick={() => setSelectedTags([])}
+            className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              selectedTags.length === 0
+                ? "border-blue-600 text-blue-700 bg-blue-50/40"
+                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+            }`}
+          >
+            Tất cả phòng
+          </button>
+
+          {STATUS_TAGS.map((tag) => {
+            const isSelected = selectedTags.includes(tag.id);
+            return (
+              <button
+                key={tag.id}
+                onClick={() => toggleTag(tag.id)}
+                className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
+                  isSelected
+                    ? "border-blue-600 text-blue-700 bg-blue-50/40"
+                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                }`}
+              >
+                {tag.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-blue-200/70 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
+                  {houseFilteredRooms.filter(r => r.status === tag.id.replace('status_', '')).length}
+                </span>
+              </button>
+            );
+          })}
+
+          {uniqueAmenities.slice(0, 4).map((tag) => {
+            const isSelected = selectedTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  isSelected
+                    ? "border-blue-600 text-blue-700 bg-blue-50/40"
+                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                }`}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center gap-3">
+          
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+              Bộ lọc
+              <span className="text-gray-400 ml-1">+</span>
+            </button>
+
+            {isFilterDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsFilterDropdownOpen(false)}></div>
+                <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
+                  <div className="p-2 border-b border-gray-100 bg-gray-50">
+                    <input 
+                      type="text" 
+                      placeholder="Tìm đặc điểm, nội thất..." 
+                      value={tagSearch}
+                      onChange={(e) => setTagSearch(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto p-2 flex flex-col gap-1">
+                    {uniqueAmenities
+                      .filter(t => t.toLowerCase().includes(tagSearch.toLowerCase()))
+                      .map(tag => (
+                        <label key={tag} className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors group">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedTags.includes(tag)}
+                            onChange={() => toggleTag(tag)}
+                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700 group-hover:text-blue-700">{tag}</span>
+                        </label>
+                    ))}
+                    {uniqueAmenities.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">Chưa có đặc điểm/nội thất nào.</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        )}
+
+          {selectedTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 sm:border-l sm:border-gray-300 sm:pl-3">
+              <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider hidden sm:block">Lọc theo:</span>
+              {selectedTags.map(tagId => {
+                const isStatus = tagId.startsWith('status_');
+                const label = isStatus ? STATUS_TAGS.find(t => t.id === tagId)?.label : tagId;
+                return (
+                  <span key={tagId} className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg border border-blue-200">
+                    {label}
+                    <button onClick={() => toggleTag(tagId)} className="text-blue-400 hover:text-red-500 font-bold leading-none mb-0.5">×</button>
+                  </span>
+                );
+              })}
+              <button onClick={() => setSelectedTags([])} className="text-xs font-medium text-gray-500 hover:text-red-600 hover:underline ml-1">
+                Xóa lọc
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -233,13 +361,6 @@ export default function RoomsPage() {
         <div className="text-center py-20 text-gray-400">
           <p className="text-4xl mb-3">🏠</p>
           <p>Không có phòng nào phù hợp với bộ lọc.</p>
-          
-          {statusFilter === "all" && isOwner && (
-            <button onClick={handleAddRoom}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium">
-              + Thêm phòng đầu tiên
-            </button>
-          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

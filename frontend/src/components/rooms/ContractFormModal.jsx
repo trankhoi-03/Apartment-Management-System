@@ -24,6 +24,7 @@ function Field({ label, required, hint, children }) {
   );
 }
 
+// eslint-disable-next-line no-unused-vars
 function VNDateInput({ name, value, onChange, required, className }) {
   const hiddenDateInputRef = useRef(null);
 
@@ -122,11 +123,13 @@ function NumericInput({ name, value, onChange, min, placeholder, required, class
 const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
                focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white`;
 
+// eslint-disable-next-line no-unused-vars
 const INIT = (room) => ({
   full_name: "", phone: "", email: "", id_card_number: "",
   start_date: "", end_date: "",
   monthly_rent: "", service_fee: "", cleaning_fee: "", internet_fee: "", deposit: "",
-  payment_day: 5, num_tenants: 1, num_vehicles: 0, temp_residence_reg: false,
+  payment_day: 5, num_tenants: 1, num_vehicles: 0, 
+  temp_residence_reg: false, temp_residence_dec: false, co_tenants: [],
   electric_price: "", water_price: "", default_water_amount: "",
   electric_reading: "", water_reading: "",
   notes: "",
@@ -139,6 +142,36 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
   const [submitStep, setSubmitStep] = useState("");
 
   const [loadingUtility, setLoadingUtility] = useState(false);
+
+  useEffect(() => {
+    // Nếu số người thuê > 1 thì tính số người ở cùng (VD: 3 người thuê => 2 người ở cùng)
+    const extraTenants = Math.max(0, (Number(form.num_tenants) || 1) - 1);
+    
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm(prev => {
+      const currentCoTenants = prev.co_tenants || [];
+      if (currentCoTenants.length === extraTenants) return prev;
+      
+      const newCoTenants = [...currentCoTenants];
+      // Thêm object trống nếu tăng số người
+      while (newCoTenants.length < extraTenants) {
+        newCoTenants.push({ full_name: "", id_card_number: "" });
+      }
+      // Cắt bớt nếu giảm số người
+      if (newCoTenants.length > extraTenants) {
+        newCoTenants.length = extraTenants;
+      }
+      return { ...prev, co_tenants: newCoTenants };
+    });
+  }, [form.num_tenants]);
+
+  function handleCoTenantChange(index, field, value) {
+    setForm(prev => {
+      const newCoTenants = [...prev.co_tenants];
+      newCoTenants[index] = { ...newCoTenants[index], [field]: value };
+      return { ...prev, co_tenants: newCoTenants };
+    });
+  }
 
   useEffect(() => {
     let isMounted = true; 
@@ -213,6 +246,8 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
         num_vehicles:       Number(form.num_vehicles),
         payment_day:        Number(form.payment_day),
         temp_residence_reg: form.temp_residence_reg,
+        temp_residence_dec: form.temp_residence_dec, 
+        co_tenants:         form.co_tenants.filter(ct => ct.full_name.trim() !== ""),
         notes:              form.notes, 
         ...(form.end_date && { end_date: form.end_date }),
       });
@@ -295,6 +330,13 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
                 <input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="example@gmail.com" className={INPUT} />
               </Field>
             </div>
+
+            <Field 
+              label="Căn cước công dân (CCCD)" 
+              hint="Bắt buộc nhập chính xác. Thông tin này được bảo mật mã hóa và chỉ dùng để tạo file hợp đồng."
+            >
+              <input name="id_card_number" value={form.id_card_number} onChange={handleChange} placeholder="Nhập 12 số CCCD..." maxLength={12} className={INPUT} />
+            </Field>
           </Section>
 
           {/* 2. Thông tin hợp đồng */}
@@ -336,10 +378,36 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
               <Field label="Số lượng xe"><NumericInput name="num_vehicles" min={0} value={form.num_vehicles} onChange={handleChange} className={INPUT} /></Field>
             </div>
 
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input name="temp_residence_reg" type="checkbox" checked={form.temp_residence_reg} onChange={handleChange} className="w-4 h-4 rounded accent-blue-600" />
-              <span className="text-sm text-gray-700">Đăng ký tạm trú</span>
-            </label>
+            {form.num_tenants > 1 && form.co_tenants?.length > 0 && (
+              <div className="mt-4 p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4 animate-fade-in">
+                <h4 className="text-sm font-bold text-blue-800">Thông tin người ở cùng</h4>
+                {form.co_tenants.map((ct, idx) => (
+                  <div key={idx} className="space-y-3">
+                    <p className="text-xs font-semibold text-blue-600 uppercase">Người thứ {idx + 2}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Field label="Họ tên" required>
+                        <input value={ct.full_name} onChange={(e) => handleCoTenantChange(idx, 'full_name', e.target.value)} required placeholder="Nguyễn Văn B" className={INPUT} />
+                      </Field>
+                      <Field label="CCCD">
+                        <input value={ct.id_card_number} onChange={(e) => handleCoTenantChange(idx, 'id_card_number', e.target.value)} placeholder="Nhập 12 số..." maxLength={12} className={INPUT} />
+                      </Field>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input name="temp_residence_reg" type="checkbox" checked={form.temp_residence_reg} onChange={handleChange} className="w-4 h-4 rounded accent-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Đăng ký tạm trú</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input name="temp_residence_dec" type="checkbox" checked={form.temp_residence_dec} onChange={handleChange} className="w-4 h-4 rounded accent-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Đăng ký lưu trú</span>
+              </label>
+            </div>
           </Section>
 
           {/* 3. Đơn giá điện/nước */}

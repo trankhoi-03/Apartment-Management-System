@@ -8,7 +8,10 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import require_owner, get_current_user
+from app.core.security import decrypt_cccd
 from app.core.database import get_db
+from app.core.security import encrypt_cccd
+from app.models.co_tenant import CoTenant
 from app.models.user import User
 from app.models.contract import Contract
 from app.models.room import Room
@@ -82,8 +85,19 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db)):
             )
         )
     
-    new_contract = Contract(**payload.model_dump(), status="active")
+    new_contract = Contract(**payload.model_dump(exclude={"co_tenants"}), status="active")
     db.add(new_contract)
+    db.flush()
+
+    if payload.num_tenants > 1 and payload.co_tenants:
+        for ct in payload.co_tenants:
+            enc_cccd = encrypt_cccd(ct.id_card_number) if ct.id_card_number else None
+            new_ct = CoTenant(
+                contract_id=new_contract.id,
+                full_name=ct.full_name,
+                id_card_number=enc_cccd
+            )
+            db.add(new_ct)
 
     # Đồng bộ trạng thái phòng - tránh chủ trọ quên đổi status tay
     room.status = "occupied"
@@ -128,14 +142,47 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
         )
     
     update_data = payload.model_dump(exclude_unset=True)
+    
+    # 1. Tách mảng co_tenants ra khỏi payload
+    co_tenants_data = update_data.pop("co_tenants", None)
     new_status = update_data.get("status")
 
+    # 2. Cập nhật các trường cơ bản của hợp đồng
     for field, value in update_data.items():
         setattr(contract, field, value)
 
+    # 3. Xử lý mã hóa CCCD cho Người ở cùng (Cho cả thêm mới và sửa)
+    if co_tenants_data is not None:
+        # Lấy danh sách cũ để dự phòng trường hợp không sửa CCCD
+        old_co_tenants = db.query(CoTenant).filter(CoTenant.contract_id == contract_id).all()
+        old_cccd_map = {ct.full_name: ct.id_card_number for ct in old_co_tenants}
+
+        # Xóa toàn bộ danh sách cũ
+        db.query(CoTenant).filter(CoTenant.contract_id == contract_id).delete()
+        
+        # Thêm danh sách mới
+        for ct in co_tenants_data:
+            cccd_input = ct.get("id_card_number")
+            final_cccd_enc = None
+            
+            # TRƯỜNG HỢP CỦA BẠN: Nhập người mới (Karik) có kèm CCCD -> Tiến hành mã hóa
+            if cccd_input and cccd_input.strip():
+                final_cccd_enc = encrypt_cccd(cccd_input)
+            else:
+                # Nếu không nhập CCCD -> Lấy lại chuỗi mã hóa cũ đã lưu (nếu có)
+                final_cccd_enc = old_cccd_map.get(ct["full_name"])
+
+            new_ct = CoTenant(
+                contract_id=contract.id,
+                full_name=ct["full_name"],
+                id_card_number=final_cccd_enc
+            )
+            db.add(new_ct)
+
     if new_status in ("ended", "terminated"):
         room = db.query(Room).filter(Room.id == contract.room_id).first()
-        room.status = "vacant"
+        if room:
+            room.status = "vacant"
 
     db.commit()
     db.refresh(contract)
@@ -179,6 +226,28 @@ def export_contract_word(
     house = room.house
     tenant = contract.tenant
 
+    cccd_plain_text = ""
+    if tenant and getattr(tenant, "id_card_number", None):
+        try:
+            cccd_plain_text = decrypt_cccd(tenant.id_card_number)
+        except Exception:
+            cccd_plain_text = "*** Lỗi giải mã ***"
+
+    co_tenants_text = ""
+    if contract.num_tenants > 1 and contract.co_tenants:
+        lines = []
+        for i, ct in enumerate(contract.co_tenants, 1):
+            ct_cccd = "Không có"
+            if ct.id_card_number:
+                try:
+                    ct_cccd = decrypt_cccd(ct.id_card_number)
+                except Exception:
+                    ct_cccd = "*** Lỗi ***"
+            lines.append(f"{i}. Ông/Bà: {ct.full_name} - CCCD: {ct_cccd}")
+        co_tenants_text = "\n".join(lines)
+    else:
+        co_tenants_text = "Không có"
+
     # Tạo từ điển dữ liệu thay thế an toàn
     replacements = {
         "[NGAY_TAO]": datetime.now().strftime("%d/%m/%Y"),
@@ -190,7 +259,7 @@ def export_contract_word(
         "[SDT_KHACH]": getattr(tenant, "phone", ""),
         
         # Sửa thành id_card_number theo đúng data của frontend
-        "[CCCD_KHACH]": getattr(tenant, "id_card_number", ""), 
+        "[CCCD_KHACH]": cccd_plain_text, 
         
         "[GIA_THUE]": f"{int(contract.monthly_rent):,} VNĐ" if contract.monthly_rent else "0 VNĐ",
         "[TIEN_COC]": f"{int(contract.deposit):,} VNĐ" if contract.deposit else "0 VNĐ",
@@ -204,8 +273,9 @@ def export_contract_word(
         "[NGAY_BAT_DAU]": contract.start_date.strftime("%d/%m/%Y") if contract.start_date else "...",
         "[NGAY_KET_THUC]": contract.end_date.strftime("%d/%m/%Y") if contract.end_date else "...",
         "[SO_NGUOI]": str(contract.num_tenants) if contract.num_tenants else "...",
+        "[DANH_SACH_NGUOI_O_CUNG]": co_tenants_text,
         "[SO_XE]": str(contract.num_vehicles) if contract.num_vehicles else "...",
-        "[NOI_THAT]": ", ".join(getattr(room, "furnitures", [])) if room and getattr(room, "furnitures", None) else "Không có",
+        "[DAC_DIEM/NOI THAT]": ", ".join(getattr(room, "feature_and_furniture", [])) if room and getattr(room, "feature_and_furniture", None) else "Không có",
     }
 
     template_data = getattr(house, 'contract_template', None)

@@ -70,6 +70,12 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
           <span>Tiền thuê</span>
           <span>{Number(bill.rent_amount).toLocaleString("vi-VN")}đ</span>
         </div>
+        {Number(bill.discount_amount) > 0 && (
+          <div className="flex justify-between text-green-600 font-medium">
+            <span>Giảm trừ</span>
+            <span>-{Number(bill.discount_amount).toLocaleString("vi-VN")}đ</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span>Điện ({bill.electric_consumed} kWh)</span>
           <span>{Number(bill.electric_amount).toLocaleString("vi-VN")}đ</span>
@@ -88,7 +94,6 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
           </div>
         )}
         
-        {/* ĐÃ BỔ SUNG: Hiển thị Phí vệ sinh nếu có */}
         {Number(bill.cleaning_fee) > 0 && (
           <div className="flex justify-between">
             <span>Phí vệ sinh</span>
@@ -96,7 +101,6 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
           </div>
         )}
 
-        {/* ĐÃ BỔ SUNG: Hiển thị Phí internet nếu có */}
         {Number(bill.internet_fee) > 0 && (
           <div className="flex justify-between">
             <span>Phí internet</span>

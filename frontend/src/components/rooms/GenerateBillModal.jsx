@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../../api/axios";
 
 const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
@@ -18,6 +18,92 @@ function FormattedNumberInput({ name, value, onChange, placeholder, required, cl
 
   return (
     <input type="text" name={name} value={formatNumber(value)} onChange={handleInputChange} placeholder={placeholder} required={required} className={className} inputMode="numeric" />
+  );
+}
+
+function VietnameseMonthPicker({ value, onChange, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const currentYear = value ? parseInt(value.split('-')[0], 10) : new Date().getFullYear();
+  const currentMonth = value ? parseInt(value.split('-')[1], 10) : new Date().getMonth() + 1;
+  
+  const [viewYear, setViewYear] = useState(currentYear);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMonthSelect = (month) => {
+    const monthStr = String(month).padStart(2, "0");
+    onChange(`${viewYear}-${monthStr}`);
+    setIsOpen(false); 
+  };
+
+  return (
+    <div className="relative inline-block w-full sm:w-auto text-left" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setViewYear(currentYear); 
+          setIsOpen(!isOpen);
+        }}
+        className={`${className} flex items-center justify-between gap-3 min-w-[200px] hover:border-blue-400 transition-colors`}
+      >
+        <span>📅 Tháng {String(currentMonth).padStart(2, "0")} năm {currentYear}</span>
+        <svg className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-2 w-[280px] p-4 bg-white border border-gray-200 rounded-2xl shadow-xl right-0 sm:left-0 origin-top animate-fade-in">
+          
+          <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-xl p-1 border border-gray-100">
+            <button
+              type="button"
+              onClick={() => setViewYear(viewYear - 1)}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <span className="font-bold text-gray-800 text-sm tracking-wide">NĂM {viewYear}</span>
+            <button
+              type="button"
+              onClick={() => setViewYear(viewYear + 1)}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[...Array(12)].map((_, index) => {
+              const monthNum = index + 1;
+              const isSelected = currentYear === viewYear && currentMonth === monthNum;
+              return (
+                <button
+                  key={monthNum}
+                  type="button"
+                  onClick={() => handleMonthSelect(monthNum)}
+                  className={`py-2.5 text-sm font-semibold rounded-xl transition-all
+                    ${isSelected 
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-200 ring-2 ring-blue-600 ring-offset-1' 
+                      : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-100 hover:border-blue-200'
+                    }`}
+                >
+                  Tháng {monthNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -48,16 +134,12 @@ function calculateDueDate(monthStr, paymentDay, startDateStr) {
   
   let dueDate = new Date(year, month - 1, actualDay);
 
-  // Xử lý thông minh: Nếu ngày hạn thanh toán nằm TRƯỚC ngày bắt đầu hợp đồng
-  // (Trường hợp xuất bill tháng đầu nhưng payment_day nhỏ hơn ngày dọn vào)
   if (startDateStr) {
     const startDate = new Date(startDateStr);
-    // Xoá thời gian để so sánh thuần tuý theo ngày
     dueDate.setHours(0, 0, 0, 0);
     startDate.setHours(0, 0, 0, 0);
 
     if (dueDate < startDate) {
-      // Đẩy hạn thanh toán sang tháng tiếp theo
       month += 1;
       if (month > 12) {
         month = 1;
@@ -85,6 +167,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [internetFee, setInternetFee]   = useState("");
   const [additionalFee, setAdditionalFee]             = useState("");
   const [additionalFeeReason, setAdditionalFeeReason] = useState("");
+  const [discountAmount, setDiscountAmount] = useState("");
   const [electricOld, setElectricOld]   = useState("");
   const [electricNew, setElectricNew]   = useState("");
   const [waterOld, setWaterOld]         = useState("");
@@ -157,6 +240,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
 
   useEffect(() => {
     if (contract) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (contract.service_fee) setServiceFee(contract.service_fee);
       if (contract.cleaning_fee) setCleaningFee(contract.cleaning_fee);
       if (contract.internet_fee) setInternetFee(contract.internet_fee);
@@ -205,6 +289,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
         internet_fee:  internetFee ? Number(internetFee) : 0,
         additional_fee: additionalFee ? Number(additionalFee) : 0, 
         additional_fee_reason: additionalFeeReason,
+        discount_amount: discountAmount ? Number(discountAmount) : 0,
         due_date: estimatedDueDate.isoDate
       });
       setPreview(res.data);
@@ -216,7 +301,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
 
   const displayDueDate = preview?.due_date 
     ? new Date(preview.due_date).toLocaleDateString("vi-VN") 
-    : calculateDueDate(preview?.billing_month || currentMonthStr, paymentDay).formattedVN;
+    : calculateDueDate(preview?.billing_month || currentMonthStr, paymentDay, contract?.start_date).formattedVN;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
@@ -237,7 +322,11 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tháng xuất bill</label>
-                <input type="month" value={billingMonth} onChange={(e) => setBillingMonth(e.target.value)} required disabled={!isFirstBill} className={`${INPUT} ${!isFirstBill ? "bg-gray-100 cursor-not-allowed text-gray-600 font-medium" : "bg-white hover:border-blue-400"}`} />
+                <VietnameseMonthPicker 
+                  value={billingMonth} 
+                  onChange={setBillingMonth} 
+                  className={`w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${!isFirstBill ? "pointer-events-none opacity-70 bg-gray-100 text-gray-600 font-medium" : "hover:border-blue-400"}`}
+                />
                 <p className={`text-xs mt-1 ${isFirstBill ? "text-blue-500 font-medium" : "text-gray-400"}`}>{isFirstBill ? " Đây là hoá đơn đầu tiên, bạn có thể tuỳ chỉnh tháng." : "Tháng đã được tính toán tự động."}</p>
               </div>
 
@@ -271,9 +360,12 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                 </div>
               )}
 
-              {/* KHU VỰC CÁC LOẠI PHÍ (SẮP XẾP LẠI GRID GỌN GÀNG) */}
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">Các khoản phí</p>
+                <p className="text-sm font-semibold text-gray-700 mb-2">Các khoản phí & Giảm trừ</p>
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-500 mb-1">Giảm trừ tiền phòng (đ) (Tùy chọn cho tháng đầu)</label>
+                  <FormattedNumberInput name="discount_amount" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} placeholder="vd: 500,000" className={INPUT} />
+                </div>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Phí dịch vụ</label>
@@ -315,7 +407,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                 <Row label="Tháng" value={preview.billing_month} />
                 <Row label="Hạn thanh toán" value={<span className="text-red-600 font-semibold">{displayDueDate}</span>} />
-                <Row label="Tiền thuê" value={`${Number(preview.rent_amount).toLocaleString("vi-VN")}đ`} />
+                <Row label="Tiền thuê gốc" value={`${Number(preview.rent_amount).toLocaleString("vi-VN")}đ`} />
+                {Number(preview.discount_amount) > 0 && (
+                  <Row label="Giảm trừ" value={<span className="text-green-600 font-medium">-{Number(preview.discount_amount).toLocaleString("vi-VN")}đ</span>} />
+                )}
                 <Row label={`Điện (${preview.electric_consumed} kWh)`} value={`${Number(preview.electric_amount).toLocaleString("vi-VN")}đ`} />
                 <Row label={preview.water_consumed > 0 ? `Nước (${preview.water_consumed} m³)` : "Nước (cố định)"} value={`${Number(preview.water_amount).toLocaleString("vi-VN")}đ`} />
                 {Number(preview.service_fee) > 0 && <Row label="Phí dịch vụ" value={`${Number(preview.service_fee).toLocaleString("vi-VN")}đ`} />}

@@ -19,6 +19,8 @@ class MonthlyHouseCost(Base):
     total_water_cube: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     total_water_bill: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
 
+    total_internet_cost: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
+
     # Các chi phí vận hành chung
     manager_cost: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
     other_house_cost: Mapped[float] = mapped_column(Numeric(12, 2), default=0)

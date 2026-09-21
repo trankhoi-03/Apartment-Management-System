@@ -14,6 +14,6 @@ class Tenant(Base):
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[str] = mapped_column(String(15), nullable=False)
     email: Mapped[str | None] = mapped_column(String(150), nullable=True)
-    id_card_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    id_card_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     contracts: Mapped[list["Contract"]] = relationship(back_populates="tenant")

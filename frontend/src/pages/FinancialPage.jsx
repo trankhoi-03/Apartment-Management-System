@@ -1,26 +1,27 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import api from "../api/axios";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie } from 'recharts';
 
 const formatYAxis = (tickItem) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(tickItem);
 
 const CATEGORY_COLORS = {
-  //  CHI PHÍ (COST) 
-  'Tiền điện (Chi)': '#0805b4', 
-  'Tiền nước (Chi)': '#3b82f6', 
-  'Sửa chữa': '#ef4444',        
-  'Vốn phòng': '#f59e0b',       
-  'Quản lý': '#64748b',         
-  'Chi phí khác': '#a855f7',    
+  // CHI PHÍ (COST)
+  'Tiền điện (Chi)':    '#1e3a8a',  
+  'Tiền nước (Chi)':    '#0284c7',  
+  'Sửa chữa':           '#ef4444',  
+  'Vốn phòng':          '#f59e0b',  
+  'Quản lý':            '#64748b',  
+  'Chi phí khác':       '#8b5cf6', 
+  'Chi phí Internet':   '#d946ef',  
 
-  //  DOANH THU (REVENUE)
-  'Tiền thuê': '#10b981',       
-  'Tiền điện (Thu)': '#0ea5e9', 
-  'Tiền nước (Thu)': '#3b82f6', 
-  'Phí dịch vụ': '#84cc16',     
-  'Phí phát sinh': '#f43f5e',   
-  'Phí vệ sinh': '#14b8a6',     
-  'Phí internet': '#8b5cf6',    
+  // DOANH THU (REVENUE)
+  'Tiền thuê':          '#10b981',  
+  'Tiền điện (Thu)':    '#0ea5e9',  
+  'Tiền nước (Thu)':    '#2dd4bf',  
+  'Phí dịch vụ':        '#84cc16', 
+  'Phí phát sinh':      '#f43f5e',  
+  'Phí vệ sinh':        '#06b6d4',  
+  'Phí internet':       '#a855f7', 
 };
 
 function FormattedNumberInput({ name, value, onChange, placeholder, required, className }) {
@@ -35,6 +36,92 @@ function FormattedNumberInput({ name, value, onChange, placeholder, required, cl
   };
   return (
     <input type="text" name={name} value={formatNumber(value)} onChange={handleInputChange} placeholder={placeholder} required={required} className={className} inputMode="numeric" />
+  );
+}
+
+function VietnameseMonthPicker({ value, onChange, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const currentYear = value ? parseInt(value.split('-')[0], 10) : new Date().getFullYear();
+  const currentMonth = value ? parseInt(value.split('-')[1], 10) : new Date().getMonth() + 1;
+  
+  const [viewYear, setViewYear] = useState(currentYear);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMonthSelect = (month) => {
+    const monthStr = String(month).padStart(2, "0");
+    onChange(`${viewYear}-${monthStr}`);
+    setIsOpen(false); 
+  };
+
+  return (
+    <div className="relative inline-block w-full sm:w-auto text-left" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setViewYear(currentYear); 
+          setIsOpen(!isOpen);
+        }}
+        className={`${className} flex items-center justify-between gap-3 min-w-[200px] hover:border-blue-400 transition-colors`}
+      >
+        <span>📅 Tháng {String(currentMonth).padStart(2, "0")} năm {currentYear}</span>
+        <svg className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-2 w-[280px] p-4 bg-white border border-gray-200 rounded-2xl shadow-xl right-0 sm:left-0 origin-top animate-fade-in">
+          
+          <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-xl p-1 border border-gray-100">
+            <button
+              type="button"
+              onClick={() => setViewYear(viewYear - 1)}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <span className="font-bold text-gray-800 text-sm tracking-wide">NĂM {viewYear}</span>
+            <button
+              type="button"
+              onClick={() => setViewYear(viewYear + 1)}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[...Array(12)].map((_, index) => {
+              const monthNum = index + 1;
+              const isSelected = currentYear === viewYear && currentMonth === monthNum;
+              return (
+                <button
+                  key={monthNum}
+                  type="button"
+                  onClick={() => handleMonthSelect(monthNum)}
+                  className={`py-2.5 text-sm font-semibold rounded-xl transition-all
+                    ${isSelected 
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-200 ring-2 ring-blue-600 ring-offset-1' 
+                      : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-100 hover:border-blue-200'
+                    }`}
+                >
+                  Tháng {monthNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -116,6 +203,8 @@ export default function FinancialPage() {
 
   const [otherCostInputs, setOtherCostInputs] = useState({ amount: 0, reason: "" });
   const [savingOtherCost, setSavingOtherCost] = useState(false);
+  const [internetInputs, setInternetInputs] = useState({ amount: 0 });
+  const [savingInternet, setSavingInternet] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const loadInitialData = useCallback(async () => {
@@ -139,6 +228,7 @@ export default function FinancialPage() {
       setReportData(res.data);
       if (res.data.utility_bill_input) setUtilInputs(res.data.utility_bill_input);
       if (res.data.other_cost_input) setOtherCostInputs({ amount: res.data.other_cost_input.other_house_cost || 0, reason: res.data.other_cost_input.other_house_cost_reason || "" });
+      if (res.data.internet_cost_input) setInternetInputs({ amount: res.data.internet_cost_input.total_internet_cost || 0 });
     // eslint-disable-next-line no-unused-vars
     } catch (error) { setReportData(null); } finally { setLoading(false); }
   }, [selectedHouse, selectedMonth]);
@@ -268,6 +358,8 @@ export default function FinancialPage() {
     ];
     if (mgmtTotal > 0) costArray.push({ name: 'Quản lý', value: mgmtTotal });
     if (otherCostTotal > 0) costArray.push({ name: 'Chi phí khác', value: otherCostTotal });
+    const internetCostTotal = reportData.internet_cost_tab?.total || 0;
+    if (internetCostTotal > 0) costArray.push({ name: 'Chi phí Internet', value: internetCostTotal });
 
     const pieCostData = costArray.filter(d => d.value > 0).map(item => ({
       ...item, fill: CATEGORY_COLORS[item.name] || '#9ca3af' // Sử dụng bộ màu Cố Định
@@ -317,6 +409,21 @@ export default function FinancialPage() {
       await loadReport();
       alert("Đã lưu chi phí khác!");
     } catch { alert("Có lỗi xảy ra khi lưu chi phí khác."); } finally { setSavingOtherCost(false); }
+  };
+
+  const handleSaveInternetCost = async () => {
+    setSavingInternet(true);
+    try {
+      await api.post(`/reports/financial/${selectedHouse}/internet-cost?month=${selectedMonth}`, {
+        total_internet_cost: Number(internetInputs.amount) || 0
+      });
+      await loadReport();
+      alert("Đã lưu chi phí internet!");
+    } catch { 
+      alert("Có lỗi xảy ra khi lưu chi phí internet."); 
+    } finally { 
+      setSavingInternet(false); 
+    }
   };
 
   const handleSaveUtilityBills = async () => {
@@ -382,7 +489,7 @@ export default function FinancialPage() {
   };
 
   const renderElectricRevContent = () => (
-    <DetailPanel title="Chi tiết Tiền điện (Thu)" colorTheme="blue">
+    <DetailPanel title="Chi tiết Tiền điện (Thu từ người thuê)" colorTheme="blue">
       {displayData.electric_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
@@ -393,7 +500,7 @@ export default function FinancialPage() {
   );
 
   const renderWaterRevContent = () => (
-    <DetailPanel title="Chi tiết Tiền nước (Thu)" colorTheme="blue">
+    <DetailPanel title="Chi tiết Tiền nước (Thu từ người thuê)" colorTheme="blue">
       {displayData.water_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
@@ -522,6 +629,47 @@ export default function FinancialPage() {
     </DetailPanel>
   );
 
+  const renderInternetCostContent = () => (
+    <DetailPanel title="Chi tiết Phí internet (Chi)" colorTheme="purple">
+      {selectedHouse !== 'all' && (
+        <div className="bg-white p-4 sm:p-5 rounded-xl mb-5 border border-purple-100 shadow-sm">
+          <h4 className="text-sm font-bold text-purple-800 mb-4 uppercase tracking-wide">Ghi nhận tổng hóa đơn Internet của nhà</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5">Tổng số tiền bill (đ)</label>
+              <FormattedNumberInput 
+                name="amount" 
+                value={internetInputs.amount} 
+                onChange={(e) => setInternetInputs({amount: e.target.value})} 
+                placeholder="VD: 300000" 
+                className={inputStyle} 
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button onClick={handleSaveInternetCost} disabled={savingInternet} className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50">
+              {savingInternet ? "Đang lưu..." : "Lưu chi phí"}
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {displayData.internet_cost_tab?.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Không có chi phí internet.</p> : (
+        <table className="w-full text-left min-w-[300px]">
+          <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Chi phí phân bổ</th></tr></thead>
+          <tbody>
+            {displayData.internet_cost_tab?.details.map((d, i) => (
+              <tr key={i}>
+                <td className={tableRowStyle}>{d.item}</td>
+                <td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </DetailPanel>
+  );
+
 
   const renderDetailView = () => (
     <div className="space-y-10 animate-fade-in">
@@ -535,7 +683,7 @@ export default function FinancialPage() {
         <div>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-5 border-b-2 border-emerald-500 pb-3">
             <h2 className="text-2xl font-extrabold text-emerald-700 uppercase flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg">↓</span> Tổng Thu
+              <span className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg">↓</span> Tổng Doanh Thu
             </h2>
             <div className="text-3xl font-black text-emerald-600 mt-2 sm:mt-0">+{displayData.total_revenue.toLocaleString('vi-VN')} đ</div>
           </div>
@@ -546,11 +694,11 @@ export default function FinancialPage() {
               {openTabs.rent && <div className="mt-2 lg:mt-0">{renderRentContent()}</div>}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 items-start">
-              <AccordionCard icon="⚡" title="Tiền điện (Thu)" colorTheme="blue" summaryAmount={displayData.electric_rev_tab.total} isOpen={openTabs.electric_rev} onToggle={() => toggleTab('electric_rev')} />
+              <AccordionCard icon="⚡" title="Tiền điện (Thu từ người thuê)" colorTheme="blue" summaryAmount={displayData.electric_rev_tab.total} isOpen={openTabs.electric_rev} onToggle={() => toggleTab('electric_rev')} />
               {openTabs.electric_rev && <div className="mt-2 lg:mt-0">{renderElectricRevContent()}</div>}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 items-start">
-              <AccordionCard icon="💧" title="Tiền nước (Thu)" colorTheme="blue" summaryAmount={displayData.water_rev_tab.total} isOpen={openTabs.water_rev} onToggle={() => toggleTab('water_rev')} />
+              <AccordionCard icon="💧" title="Tiền nước (Thu từ người thuê)" colorTheme="blue" summaryAmount={displayData.water_rev_tab.total} isOpen={openTabs.water_rev} onToggle={() => toggleTab('water_rev')} />
               {openTabs.water_rev && <div className="mt-2 lg:mt-0">{renderWaterRevContent()}</div>}
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 items-start">
@@ -577,7 +725,7 @@ export default function FinancialPage() {
         <div>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-5 border-b-2 border-rose-500 pb-3">
             <h2 className="text-2xl font-extrabold text-rose-700 uppercase flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 text-lg">↑</span> Tổng Chi
+              <span className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 text-lg">↑</span> Tổng Chi Phí
             </h2>
             <div className="text-3xl font-black text-rose-600 mt-2 sm:mt-0">-{displayData.total_cost.toLocaleString('vi-VN')} đ</div>
           </div>
@@ -600,12 +748,12 @@ export default function FinancialPage() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 items-start">
-              <AccordionCard icon="⚡" title="Tiền điện (Chi)" colorTheme="blue" summaryAmount={-displayData.electric_cost_tab.total} isOpen={openTabs.electric_cost} onToggle={() => toggleTab('electric_cost')} />
+              <AccordionCard icon="⚡" title="Tiền điện (Chủ trọ trả)" colorTheme="blue" summaryAmount={-displayData.electric_cost_tab.total} isOpen={openTabs.electric_cost} onToggle={() => toggleTab('electric_cost')} />
               {openTabs.electric_cost && <div className="mt-2 lg:mt-0">{renderElectricCostContent()}</div>}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 items-start">
-              <AccordionCard icon="💧" title="Tiền nước (Chi)" colorTheme="blue" summaryAmount={-displayData.water_cost_tab.total} isOpen={openTabs.water_cost} onToggle={() => toggleTab('water_cost')} />
+              <AccordionCard icon="💧" title="Tiền nước (Chủ trọ trả)" colorTheme="blue" summaryAmount={-displayData.water_cost_tab.total} isOpen={openTabs.water_cost} onToggle={() => toggleTab('water_cost')} />
               {openTabs.water_cost && <div className="mt-2 lg:mt-0">{renderWaterCostContent()}</div>}
             </div>
 
@@ -628,6 +776,11 @@ export default function FinancialPage() {
               <AccordionCard icon="📝" title="Chi phí khác" colorTheme="purple" summaryAmount={-displayData.other_costs_tab.total} isOpen={openTabs.other_costs} onToggle={() => toggleTab('other_costs')} />
               {openTabs.other_costs && <div className="mt-2 lg:mt-0">{renderOtherCostContent()}</div>}
             </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 items-start">
+              <AccordionCard icon="🌐" title="Chi phí Internet" colorTheme="blue" summaryAmount={-displayData.internet_cost_tab.total} isOpen={openTabs.internet_cost} onToggle={() => toggleTab('internet_cost')} />
+              {openTabs.internet_cost && <div className="mt-2 lg:mt-0">{renderInternetCostContent()}</div>}
+            </div>
             
           </div>
         </div>
@@ -639,17 +792,36 @@ export default function FinancialPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
         <div className="bg-blue-500 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
-          <div><p className="text-blue-100 font-medium mb-1">Thu nhập tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{displayData.total_revenue.toLocaleString('vi-VN')} đ</h3></div>
+          <div><p className="text-blue-100 font-medium mb-1">Doanh thu tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{displayData.total_revenue.toLocaleString('vi-VN')} đ</h3></div>
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">💵</div>
         </div>
-        <div className="bg-rose-500 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
-          <div><p className="text-rose-100 font-medium mb-1">Chi tiêu tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{displayData.total_cost.toLocaleString('vi-VN')} đ</h3></div>
+        <div className="bg-yellow-400 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
+          <div><p className="text-amber-700 font-medium mb-1">Chi phí tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{displayData.total_cost.toLocaleString('vi-VN')} đ</h3></div>
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">🛒</div>
         </div>
-        <div className="bg-emerald-500 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
-          <div><p className="text-emerald-100 font-medium mb-1">Lợi nhuận</p><h3 className="text-2xl lg:text-3xl font-bold">{displayData.net_profit.toLocaleString('vi-VN')} đ</h3></div>
-          <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">💎</div>
-        </div>
+        {(() => {
+          const isLoss = displayData.net_profit < 0;
+          const isBreakEven = displayData.net_profit === 0;
+
+          // Lựa chọn icon theo đúng trạng thái lợi nhuận
+          const profitIcon = isLoss ? '📉' : isBreakEven ? '⚖️' : '📈';
+
+          return (
+            <div className={`${isLoss ? 'bg-rose-500' : 'bg-emerald-500'} text-white rounded-2xl p-5 shadow-md flex items-center justify-between transition-colors`}>
+              <div>
+                <p className={`${isLoss ? 'text-rose-100' : 'text-emerald-100'} font-medium mb-1`}>
+                  {isLoss ? 'Thua Lỗ' : 'Lợi nhuận'}
+                </p>
+                <h3 className="text-2xl lg:text-3xl font-bold">
+                  {displayData.net_profit.toLocaleString('vi-VN')} đ
+                </h3>
+              </div>
+              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">
+                {profitIcon}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
@@ -728,11 +900,23 @@ export default function FinancialPage() {
             {selectedHouse !== "all" && (
               <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)} className="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700">
                 <option value="all">🚪 Tất cả phòng</option>
-                {rooms.filter(r => r.house_id.toString() === selectedHouse.toString()).map((r) => <option key={r.id} value={r.id}>Phòng {r.room_number}</option>)}
+                {rooms
+                  .filter(r => r.house_id.toString() === selectedHouse.toString())
+                  .sort((a, b) => a.room_number.toString().localeCompare(b.room_number.toString(), undefined, { numeric: true, sensitivity: 'base' }))
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      Phòng {r.room_number}
+                    </option>
+                  ))
+                }
               </select>
             )}
 
-            <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700" />
+            <VietnameseMonthPicker 
+              value={selectedMonth} 
+              onChange={setSelectedMonth} 
+              className="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700" 
+            />
 
             {displayData && (
               <button onClick={handleExportExcel} disabled={isExporting} className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-sm font-semibold transition shadow-sm flex items-center justify-center gap-2">

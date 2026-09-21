@@ -7,11 +7,10 @@ class TenantBase(BaseModel):
     full_name: str = Field(max_length=100)
     email: EmailStr | None = None
     phone: str = Field(pattern=VN_PHONE_PATTERN)
-    id_card_number: str | None = Field(default=None, max_length=20)
 
 
 class TenantCreate(TenantBase):
-    pass
+    id_card_number: str | None = None
 
 
 class TenantUpdate(BaseModel):

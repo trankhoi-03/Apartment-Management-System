@@ -14,6 +14,7 @@ from app.models.bill import Bill
 from app.models.utility_rate import UtilityRate
 from app.models.utility_reading import UtilityReading
 from app.models.houses import House
+from app.models.tags import Tag
 from app.schemas.room_schema import RoomCreate, RoomUpdate, RoomResponse
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
@@ -25,17 +26,28 @@ def create_room(
     db: Session = Depends(get_db), 
     current_user: User = Depends(require_owner)
 ):
-    # 0. Xác thực người dùng có quyền quản lý nhà trọ này không
     verify_house_access(house_id=payload.house_id, db=db, current_user=current_user)
 
-    # 1. Lấy danh sách ID các nhà trọ mà user hiện tại quản lý
     user_house_ids = [h.id for h in current_user.managed_houses]
 
-    # Đếm CHỈ các phòng thuộc nhà của user hiện tại
     if user_house_ids:
         total_rooms = db.query(func.count(Room.id)).filter(Room.house_id.in_(user_house_ids)).scalar() or 0
     else:
         total_rooms = 0
+
+    
+    if payload.feature_and_furniture:
+        for f_name in payload.feature_and_furniture:
+            tag_name = f_name.strip()
+            if not tag_name:
+                continue
+            
+            existing = db.query(Tag).filter(Tag.name == tag_name).first()
+            
+            if not existing:
+                new_tag = Tag(name=tag_name, type="amenity")
+                db.add(new_tag)
+        db.commit()
     
     # is_premium = (
     #     current_user.subscription_plan != "free"
@@ -44,12 +56,8 @@ def create_room(
     # )
 
     # if not is_premium and total_rooms >= current_user.max_rooms:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail=f"Gói miễn phí giới hạn tối đa {current_user.max_rooms} phòng. Bạn đã tạo {total_rooms}/{current_user.max_rooms} phòng. Vui lòng nâng cấp lên Premium để tạo thêm phòng mới."
-    #     )
+    #     raise HTTPException(...)
 
-    # 2. Kiểm tra trùng số phòng trong cùng một nhà
     existing_room = db.query(Room).filter(
         Room.room_number == payload.room_number,
         Room.house_id == payload.house_id
@@ -61,7 +69,6 @@ def create_room(
             detail=f"Số phòng '{payload.room_number}' đã tồn tại trong nhà trọ này.",
         )
 
-    # 3. Tiến hành tạo phòng
     new_room = Room(**payload.model_dump(), status="vacant")
     db.add(new_room)
     try:
@@ -103,7 +110,12 @@ def get_room(room_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{room_id}", response_model=RoomResponse)
-def update_room(room_id: int, payload: RoomUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_owner)):
+def update_room(
+    room_id: int, 
+    payload: RoomUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(require_owner)
+):
     room = db.query(Room).filter(Room.id == room_id).first()
     if room is None:
         raise HTTPException(
@@ -111,7 +123,19 @@ def update_room(room_id: int, payload: RoomUpdate, db: Session = Depends(get_db)
             detail=f"Không tìm thấy phòng có id={room_id}",
         )
 
-    # Kiểm tra trùng lặp nếu có đổi số phòng
+    if payload.feature_and_furniture:
+        for f_name in payload.feature_and_furniture:
+            tag_name = f_name.strip()
+            if not tag_name:
+                continue
+            
+            existing = db.query(Tag).filter(Tag.name == tag_name).first()
+            
+            if not existing:
+                new_tag = Tag(name=tag_name, type="amenity")
+                db.add(new_tag)
+        db.commit()
+
     if payload.room_number is not None and payload.room_number != room.room_number:
         existing_room = db.query(Room).filter(
             Room.room_number == payload.room_number,
@@ -201,3 +225,35 @@ def delete_room(room_id: int, db: Session = Depends(get_db)):
             detail=f"Không thể xoá phòng do ràng buộc dữ liệu: {str(e.orig)}",
         )
     return None
+
+
+
+@router.post("/sync-legacy-tags", status_code=status.HTTP_200_OK)
+def sync_legacy_tags(db: Session = Depends(get_db)):
+    """
+    API dùng 1 lần để quét toàn bộ phòng cũ và tạo Tag nội thất
+    """
+    rooms = db.query(Room).all()
+    new_tags_count = 0
+    added_tags = []
+    
+    for room in rooms:
+        if room.feature_and_furniture:
+            for f_name in room.feature_and_furniture:
+                tag_name = f_name.strip()
+                if not tag_name:
+                    continue
+                
+                # Kiểm tra xem tag đã có trong bảng tags hay chưa
+                existing = db.query(Tag).filter(Tag.name == tag_name, Tag.type == "furniture").first()
+                if not existing:
+                    new_tag = Tag(name=tag_name, type="furniture")
+                    db.add(new_tag)
+                    db.commit() # Lưu ngay vào DB
+                    new_tags_count += 1
+                    added_tags.append(tag_name)
+                    
+    return {
+        "message": f"Đã đồng bộ thành công {new_tags_count} tag mới từ dữ liệu cũ.",
+        "tags": added_tags
+    }

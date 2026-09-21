@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException,  status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -9,15 +10,27 @@ from app.models.tenant import Tenant
 from app.models.contract import Contract
 from app.models.room import Room
 from app.models.user import User
+from app.models.co_tenant import CoTenant
 from app.schemas.tenant_schema import TenantCreate, TenantUpdate, TenantResponse
+from app.core.security import encrypt_cccd, decrypt_cccd
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
 
+class CCCDSearchRequest(BaseModel):
+    cccd: str
+
+
 @router.post("", response_model=TenantResponse, status_code=status.HTTP_201_CREATED)
 def create_tenant(payload: TenantCreate, db: Session = Depends(get_db)):
-    new_tenant = Tenant(**payload.model_dump())
-    db.add(new_tenant)
+    new_tenant = Tenant(
+        full_name=payload.full_name,
+        phone=payload.phone,
+        email=payload.email,
+        # Chỉ lưu chuỗi đã mã hóa
+        id_card_number=encrypt_cccd(payload.id_card_number) if payload.id_card_number else None
+    )
+    db.add(new_tenant)  
     db.commit()
     db.refresh(new_tenant)
     return new_tenant
@@ -130,3 +143,39 @@ def delete_tenant(tenant_id: int, db: Session = Depends(get_db)):
     db.delete(tenant)
     db.commit()
     return None
+
+
+@router.post("/search/by-cccd", response_model=TenantResponse)
+def search_tenant_by_cccd(
+    payload: CCCDSearchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    cccd_query = payload.cccd.strip()
+    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    if not allowed_house_ids:
+        raise HTTPException(status_code=404, detail="Không tìm thấy.")
+
+    # 1. Quét người thuê chính
+    tenants = db.query(Tenant).join(Contract).join(Room).filter(Room.house_id.in_(allowed_house_ids)).distinct().all()
+    for t in tenants:
+        if t.id_card_number:
+            try:
+                if decrypt_cccd(t.id_card_number) == cccd_query:
+                    return t
+            except Exception:
+                continue
+    
+    # 2. Quét người ở cùng
+    co_tenants = db.query(CoTenant).join(Contract).join(Room).filter(Room.house_id.in_(allowed_house_ids)).all()
+    for ct in co_tenants:
+        if ct.id_card_number:
+            try:
+                if decrypt_cccd(ct.id_card_number) == cccd_query:
+                    main_tenant = db.query(Tenant).filter(Tenant.id == ct.contract.tenant_id).first()
+                    if main_tenant:
+                        return main_tenant
+            except Exception:
+                continue
+
+    raise HTTPException(status_code=404, detail="Không tìm thấy.")

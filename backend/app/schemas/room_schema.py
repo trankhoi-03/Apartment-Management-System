@@ -6,7 +6,7 @@ class RoomBase(BaseModel):
     area_sqm: float | None = None
     cost_price: float = Field(ge=0)
     is_water_meter: bool = True
-    furnitures: list[str] = Field(default_factory=list)
+    feature_and_furniture: list[str] = Field(default_factory=list)
 
 
 
@@ -20,7 +20,7 @@ class RoomUpdate(BaseModel):
     cost_price: float | None = Field(default=None, ge=0)
     status: str | None = None
     is_water_meter: bool | None = None
-    furnitures: list[str] | None = None
+    feature_and_furniture: list[str] | None = None
 
 
 class RoomResponse(RoomBase):

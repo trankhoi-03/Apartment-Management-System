@@ -1,4 +1,5 @@
 import api from "../../api/axios";
+import { useState } from "react";
 
 function Row({ label, value }) {
   return (
@@ -11,6 +12,7 @@ function Row({ label, value }) {
 
 export default function TenantDrawer({ tenant, activeContract, pastContracts, houses = [], rooms = [], onClose, onEdit, onDeleted }) {
 
+  const [showCoTenants, setShowCoTenants] = useState(false);
   function formatDateVN(dateString) {
     if (!dateString) return "—";
     
@@ -63,8 +65,36 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
               Thông tin cá nhân
             </h3>
             <div className="space-y-2 text-sm">
+              <Row label="Họ tên" value={tenant.full_name} />
               <Row label="Số điện thoại" value={tenant.phone} />
               <Row label="Email" value={tenant.email ?? "Chưa có"} />
+              {activeContract && activeContract.num_tenants > 1 && activeContract.co_tenants?.length > 0 && (
+                <div className="flex flex-col pt-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">Người ở cùng</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-800">{activeContract.co_tenants.length} người</span>
+                      <button 
+                        onClick={() => setShowCoTenants(!showCoTenants)} 
+                        className="text-gray-500 hover:text-blue-600 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none transition-colors"
+                      >
+                        {showCoTenants ? "▲ Ẩn" : "▼ Xem"}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {showCoTenants && (
+                    <div className="mt-2 p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-xs space-y-1.5 animate-fade-in">
+                      {activeContract.co_tenants.map((ct, idx) => (
+                        <div key={idx} className="text-gray-700 flex gap-2">
+                          <span className="font-semibold text-gray-500">{idx + 1}.</span> 
+                          <span>{ct.full_name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-4">
               <button onClick={() => onEdit(tenant)}
@@ -92,6 +122,8 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
                   value={`${Number(activeContract.monthly_rent).toLocaleString("vi-VN")}đ/tháng`} />
                 <Row label="Đặt cọc"
                   value={`${Number(activeContract.deposit).toLocaleString("vi-VN")}đ`} />
+                <Row label="Tạm trú" value={activeContract.temp_residence_reg ? "✅ Có" : "❌ Không"} />
+                <Row label="Lưu trú" value={activeContract.temp_residence_dec ? "✅ Có" : "❌ Không"} />
                 <Row label="Bắt đầu" value={formatDateVN(activeContract.start_date)} />
                 {activeContract.end_date &&
                   <Row label="Kết thúc" value={formatDateVN(activeContract.end_date)} />}

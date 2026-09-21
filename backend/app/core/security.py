@@ -1,9 +1,12 @@
 from datetime import datetime, timedelta, timezone
 import bcrypt
 from jose import JWTError, jwt
+from cryptography.fernet import Fernet
 
 from app.core.config import settings
 
+
+fernet = Fernet(settings.ENCRYPTION_KEY.encode())
 
 # --- Password ---
 
@@ -22,6 +25,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     hashed_bytes = hashed_password.encode("utf-8")
     return bcrypt.checkpw(password_bytes, hashed_bytes)
 
+
+
+def encrypt_cccd(plain_cccd: str) -> str:
+    return fernet.encrypt(plain_cccd.encode("utf-8")).decode("utf-8")
+
+def decrypt_cccd(encrypted_cccd: str) -> str:
+    return fernet.decrypt(encrypted_cccd.encode("utf-8")).decode("utf-8")
 
 # --- JWT ---
 

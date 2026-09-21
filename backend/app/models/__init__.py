@@ -9,6 +9,8 @@ from .bill import Bill
 from .houses import House
 from .incident import Incident
 from .monthly_house_cost import MonthlyHouseCost
+from .co_tenant import CoTenant
+from .tags import Tag
 
 
-__all__ = ["Base", "User", "Room", "Tenant", "Contract", "UtilityReading", "UtilityRate", "Bill", "House", "Incident", "MonthlyHouseCost"]
+__all__ = ["Base", "User", "Room", "Tenant", "Contract", "UtilityReading", "UtilityRate", "Bill", "House", "Incident", "MonthlyHouseCost", "CoTenant", "Tag"]

@@ -129,11 +129,11 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
   const [utilityForm, setUtilityForm] = useState({ electric_reading: "", water_reading: "" });
   const isWaterMeter = room?.is_water_meter ?? contract?.room?.is_water_meter;
 
-  const [tenant, setTenant] = useState({ full_name: "", phone: "", email: "", id_card_number: "" });
+  const [tenant, setTenant] = useState({ full_name: "", phone: "", email: ""});
 
   const [contractForm, setContractForm] = useState({
     monthly_rent: "", service_fee: "", cleaning_fee: "", internet_fee: "", deposit: "", start_date: "", end_date: "", payment_day: "",
-    num_tenants: 1, num_vehicles: 0, temp_residence_reg: false,
+    num_tenants: 1, num_vehicles: 0, temp_residence_reg: false, temp_residence_dec: false, co_tenants: [], notes: "",
   });
 
   const [rateForm, setRateForm] = useState({
@@ -172,7 +172,6 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
         full_name:      contract.tenant?.full_name      ?? "",
         phone:          contract.tenant?.phone          ?? "",
         email:          contract.tenant?.email          ?? "",
-        id_card_number: contract.tenant?.id_card_number ?? "",
       });
       
       setContractForm({
@@ -187,12 +186,44 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
         num_tenants:        contract.num_tenants        ?? 1,
         num_vehicles:       contract.num_vehicles       ?? 0,
         temp_residence_reg: contract.temp_residence_reg ?? false,
+        temp_residence_dec: contract.temp_residence_dec ?? false,
+        co_tenants:         contract.co_tenants         ? [...contract.co_tenants] : [],
+        notes:              contract.notes              ?? "",
       });
     };
 
     Promise.resolve().then(syncContractData);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contract?.id]);
+
+  useEffect(() => {
+    const extraTenants = Math.max(0, (Number(contractForm.num_tenants) || 1) - 1);
+    
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setContractForm(prev => {
+      const currentCoTenants = prev.co_tenants || [];
+      if (currentCoTenants.length === extraTenants) return prev;
+      
+      const newCoTenants = [...currentCoTenants];
+      // Add empty objects if num_tenants increased
+      while (newCoTenants.length < extraTenants) {
+        newCoTenants.push({ full_name: "", id_card_number: "" });
+      }
+      // Trim the array if num_tenants decreased
+      if (newCoTenants.length > extraTenants) {
+        newCoTenants.length = extraTenants;
+      }
+      return { ...prev, co_tenants: newCoTenants };
+    });
+  }, [contractForm.num_tenants]);
+
+  function handleCoTenantChange(index, field, value) {
+    setContractForm(prev => {
+      const newCoTenants = [...prev.co_tenants];
+      newCoTenants[index] = { ...newCoTenants[index], [field]: value };
+      return { ...prev, co_tenants: newCoTenants };
+    });
+  }
 
   function handleTenantChange(e) {
     const { name, value } = e.target;
@@ -254,6 +285,9 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
         num_tenants:        Number(contractForm.num_tenants),
         num_vehicles:       Number(contractForm.num_vehicles),
         temp_residence_reg: contractForm.temp_residence_reg,
+        temp_residence_dec: contractForm.temp_residence_dec,
+        co_tenants:         contractForm.co_tenants.filter(ct => ct.full_name.trim() !== ""),
+        notes:              contractForm.notes,
         ...(contractForm.end_date && { end_date: contractForm.end_date }),
       });
 
@@ -335,10 +369,35 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
               <Field label="Số người thuê"><NumericInput name="num_tenants" min={1} value={contractForm.num_tenants} onChange={handleContractChange} className={INPUT} /></Field>
               <Field label="Số lượng xe"><NumericInput name="num_vehicles" min={0} value={contractForm.num_vehicles} onChange={handleContractChange} className={INPUT} /></Field>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input name="temp_residence_reg" type="checkbox" checked={contractForm.temp_residence_reg} onChange={handleContractChange} className="w-4 h-4 rounded accent-blue-600" />
-              <span className="text-sm text-gray-700">Đăng ký tạm trú</span>
-            </label>
+            {contractForm.num_tenants > 1 && contractForm.co_tenants?.length > 0 && (
+              <div className="mt-4 p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4 animate-fade-in">
+                <h4 className="text-sm font-bold text-blue-800">Thông tin người ở cùng</h4>
+                {contractForm.co_tenants.map((ct, idx) => (
+                  <div key={idx} className="space-y-3">
+                    <p className="text-xs font-semibold text-blue-600 uppercase">Người thứ {idx + 2}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Field label="Họ tên" required>
+                        <input value={ct.full_name} onChange={(e) => handleCoTenantChange(idx, 'full_name', e.target.value)} required placeholder="Nguyễn Văn B" className={INPUT} />
+                      </Field>
+                      <Field label="CCCD">
+                        <input value={ct.id_card_number} onChange={(e) => handleCoTenantChange(idx, 'id_card_number', e.target.value)} placeholder="Nhập 12 số..." maxLength={12} className={INPUT} />
+                      </Field>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3 mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input name="temp_residence_reg" type="checkbox" checked={contractForm.temp_residence_reg} onChange={handleContractChange} className="w-4 h-4 rounded accent-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Đăng ký tạm trú</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input name="temp_residence_dec" type="checkbox" checked={contractForm.temp_residence_dec} onChange={handleContractChange} className="w-4 h-4 rounded accent-blue-600" />
+                <span className="text-sm font-medium text-gray-700">Đăng ký lưu trú</span>
+              </label>
+            </div>
           </Section>
 
           {utilityId && (
@@ -369,6 +428,19 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
                 )}
               </div>
             )}
+          </Section>
+
+          <Section title="Ghi chú">
+            <Field label="Ghi chú hợp đồng / Nội thất" hint="Ghi chú lại tình trạng nội thất hoặc các thoả thuận riêng...">
+              <textarea 
+                name="notes" 
+                value={contractForm.notes} 
+                onChange={handleContractChange} 
+                placeholder="VD: Khách không lấy nệm, xin nợ cọc 1 tuần..." 
+                rows={4} 
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white resize-y" 
+              />
+            </Field>
           </Section>
 
           {error && <p className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl">{error}</p>}

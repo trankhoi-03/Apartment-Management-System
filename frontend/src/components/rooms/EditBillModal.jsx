@@ -25,31 +25,44 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
     water_new: "",
     default_water_amount: "",
     service_fee: "",
-    cleaning_fee: "",            // Thêm phí vệ sinh
-    internet_fee: "",            // Thêm phí internet
+    cleaning_fee: "",            
+    internet_fee: "",           
     additional_fee: "",          
-    additional_fee_reason: ""    
+    additional_fee_reason: "",
+    discount_amount: "" 
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const syncDataToForm = () => {
+    const syncDataToForm = async () => { 
       if (bill) {
+        let initialElectric = "";
+        let initialWater = "";
+        
+        try {
+            const res = await api.get(`/bills/${bill.id}/utility-reading`);
+            initialElectric = res.data.electric_new;
+            initialWater = res.data.water_new;
+        } catch (error) {
+            console.error("Không lấy được số điện nước cũ", error);
+        }
+
         setForm({
-          electric_new: bill.electric_new ?? "", 
-          water_new: bill.water_new ?? "",
-          default_water_amount: bill.default_water_amount ?? "",
+          electric_new: initialElectric, 
+          water_new: initialWater,       
+          default_water_amount: bill.default_water_amount ?? bill.water_amount ?? "", 
           service_fee: bill.service_fee ?? 0,
-          cleaning_fee: bill.cleaning_fee ?? 0, // Cập nhật state ban đầu
-          internet_fee: bill.internet_fee ?? 0, // Cập nhật state ban đầu
+          cleaning_fee: bill.cleaning_fee ?? 0, 
+          internet_fee: bill.internet_fee ?? 0, 
           additional_fee: bill.additional_fee ?? 0,
-          additional_fee_reason: bill.additional_fee_reason ?? ""
+          additional_fee_reason: bill.additional_fee_reason ?? "",
+          discount_amount: bill.discount_amount ?? 0
         });
       }
     };
 
-    Promise.resolve().then(syncDataToForm);
+    syncDataToForm(); 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bill?.id]);
 
@@ -63,16 +76,18 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
     setLoading(true);
 
     try {
-      await api.patch(`/bills/${bill.id}/edit`, {
-        electric_new: Number(form.electric_new),
-        water_new: Number(form.water_new),
-        default_water_amount: Number(form.default_water_amount),
-        service_fee: Number(form.service_fee),
-        cleaning_fee: Number(form.cleaning_fee), // Gửi lên BE
-        internet_fee: Number(form.internet_fee), // Gửi lên BE
-        additional_fee: Number(form.additional_fee), 
-        additional_fee_reason: form.additional_fee_reason
-      });
+      const payload = {};
+      if (form.electric_new !== "") payload.electric_new = Number(form.electric_new);
+      if (form.water_new !== "") payload.water_new = Number(form.water_new);
+      if (form.default_water_amount !== "") payload.default_water_amount = Number(form.default_water_amount);
+      if (form.service_fee !== "") payload.service_fee = Number(form.service_fee);
+      if (form.cleaning_fee !== "") payload.cleaning_fee = Number(form.cleaning_fee);
+      if (form.internet_fee !== "") payload.internet_fee = Number(form.internet_fee);
+      if (form.additional_fee !== "") payload.additional_fee = Number(form.additional_fee);
+      if (form.additional_fee_reason !== "") payload.additional_fee_reason = form.additional_fee_reason;
+      if (form.discount_amount !== "") payload.discount_amount = Number(form.discount_amount);
+
+      await api.patch(`/bills/${bill.id}/edit`, payload);
       onSaved();
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -99,8 +114,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-6 space-y-5 max-h-[70vh]">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số điện mới (kWh) *</label>
-              <input name="electric_new" type="number" min="0" value={form.electric_new} onChange={handleChange} required className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Số điện mới (kWh)</label>
+              <input name="electric_new" type="number" min="0" value={form.electric_new} onChange={handleChange} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
 
             {isWaterMeter ? (
@@ -111,13 +126,22 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
             ) : (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tiền nước cố định (đ)</label>
-                <FormattedNumberInput name="water_amount" value={form.water_amount} onChange={handleChange} className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <FormattedNumberInput 
+                  name="default_water_amount" 
+                  value={form.default_water_amount} 
+                  onChange={handleChange} 
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                />
               </div>
             )}
           </div>
           
           <div className="pt-2 border-t border-gray-100">
-             <p className="text-sm font-semibold text-gray-700 mb-3">Các khoản phí</p>
+             <p className="text-sm font-semibold text-gray-700 mb-3">Các khoản phí & Giảm trừ</p>
+             <div className="mb-4">
+               <label className="block text-xs font-medium text-gray-500 mb-1">Giảm trừ tiền phòng (đ)</label>
+               <FormattedNumberInput name="discount_amount" value={form.discount_amount} onChange={handleChange} placeholder="0" className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+             </div>
              <div className="grid grid-cols-2 gap-4 mb-4">
                <div>
                  <label className="block text-xs font-medium text-gray-500 mb-1">Phí dịch vụ (đ)</label>

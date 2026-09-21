@@ -21,6 +21,12 @@ class OtherCostInput(BaseModel):
     other_house_cost: float
     other_house_cost_reason: str | None = None
 
+class InternetCostUpdate(BaseModel):
+    total_internet_cost: float
+
+class InternetCostInput(BaseModel):
+    total_internet_cost: float
+
 class ReportCategory(BaseModel):
     total: float
     details: list
@@ -42,3 +48,5 @@ class HouseFinancialReport(BaseModel):
     other_costs_tab: ReportCategory 
     utility_bill_input: UtilityBillInput
     other_cost_input: OtherCostInput
+    internet_cost_tab: ReportCategory
+    internet_cost_input: InternetCostInput | None = None
