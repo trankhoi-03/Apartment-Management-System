@@ -246,11 +246,11 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Tổng quan</h1>
         
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 whitespace-nowrap"
+            className="flex-1 md:flex-none justify-center px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white rounded-xl text-sm font-medium transition flex items-center gap-2 whitespace-nowrap"
           >
             {isExporting ? "⏳ Đang xuất..." : "📤 Xuất dữ liệu"}
           </button>
@@ -260,14 +260,14 @@ export default function DashboardPage() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isImporting}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-gray-200 whitespace-nowrap"
+                className="flex-1 md:flex-none justify-center px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-gray-200 whitespace-nowrap"
               >
                 {isImporting ? "⏳ Đang xử lý..." : "📥 Nhập dữ liệu"}
               </button>
 
               <button
                 onClick={handleDownloadTemplate}
-                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-blue-200 whitespace-nowrap"
+                className="w-full md:w-auto justify-center px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-medium transition flex items-center gap-2 border border-blue-200 whitespace-nowrap"
               >
                 📄 Tải file mẫu
               </button>
@@ -280,7 +280,7 @@ export default function DashboardPage() {
             <select
               value={selectedHouse}
               onChange={(e) => setSelectedHouse(e.target.value)}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700 min-w-[200px]"
+              className="w-full md:w-auto px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700 md:min-w-[200px]"
             >
               <option value="all">🏢 Tất cả nhà trọ</option>
               {houses.map((h) => (

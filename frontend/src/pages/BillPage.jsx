@@ -330,19 +330,19 @@ export default function BillsPage() {
       )}
 
     
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-nowrap sm:flex-wrap gap-2 w-full md:w-auto overflow-x-auto scrollbar-hide">
           {FILTERS.map((f) => {
             const count = houseFilteredBills.filter((b) => matches(b, f.key)).length;
             return (
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition
+                className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition whitespace-nowrap
                   ${filter === f.key ? "bg-blue-600 text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:border-blue-300"}`}
               >
                 {f.label}
-                <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${filter === f.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                <span className={`ml-1.5 text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full ${filter === f.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                   {count}
                 </span>
               </button>
@@ -354,7 +354,7 @@ export default function BillsPage() {
           <button
             onClick={() => handleSendBulkEmail(pendingBills)}
             disabled={isSendingBulk || sendingId !== null}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm whitespace-nowrap"
+            className="w-full md:w-auto justify-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm whitespace-nowrap"
           >
             {isSendingBulk ? "⏳ Đang gửi hàng loạt..." : `🚀 Gửi tất cả (${pendingBills.length} email)`}
           </button>

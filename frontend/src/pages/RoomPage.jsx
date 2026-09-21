@@ -186,13 +186,13 @@ export default function RoomsPage() {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-          
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full lg:w-auto">
+  
           {isOwner && (
-            <div className="flex items-center gap-1.5 bg-gray-100/70 p-1 rounded-xl border border-gray-100">
+            <div className="flex flex-1 sm:flex-none items-center gap-1.5 bg-gray-100/70 p-1 rounded-xl border border-gray-100">
               <button 
                 onClick={() => setShowHouseForm(true)}
-                className="px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200"
+                className="flex-1 sm:flex-none text-center px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200"
               >
                 + Thêm nhà
               </button>
@@ -200,7 +200,7 @@ export default function RoomsPage() {
               {houses.length > 0 && selectedHouse !== "all" && (
                 <button
                   onClick={handleDeleteHouse}
-                  className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-600 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200 hover:border-red-200"
+                  className="flex-1 sm:flex-none text-center px-3 py-1.5 bg-white hover:bg-red-50 text-red-600 rounded-lg text-sm font-semibold transition whitespace-nowrap shadow-sm border border-gray-200 hover:border-red-200"
                 >
                   🗑️ Xóa nhà
                 </button>
@@ -213,7 +213,7 @@ export default function RoomsPage() {
               disabled={selectedHouse === "all"}
               onClick={() => setShowTemplateSettings(true)}
               title={selectedHouse === "all" ? "Vui lòng chọn một nhà cụ thể để cài đặt mẫu HĐ" : "Cài đặt mẫu hợp đồng cho nhà này"}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap shadow-sm border ${
+              className={`flex-1 sm:flex-none text-center px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap shadow-sm border ${
                 selectedHouse === "all" 
                   ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" 
                   : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-100"
@@ -225,7 +225,7 @@ export default function RoomsPage() {
           
           {isOwner && (
             <button onClick={handleAddRoom}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition whitespace-nowrap shadow-sm">
+              className="flex-1 sm:flex-none text-center px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition whitespace-nowrap shadow-sm">
               + Thêm phòng
             </button>
           )}
