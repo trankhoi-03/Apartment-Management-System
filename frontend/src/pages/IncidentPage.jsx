@@ -193,10 +193,10 @@ export default function IncidentsPage() {
       </div>
 
       
-      <div className="flex flex-wrap items-center gap-2 mb-6">
+      <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 mb-6 w-full overflow-x-auto scrollbar-hide">
         <button
           onClick={() => setSelectedStatus("all")}
-          className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
             selectedStatus === "all"
               ? "bg-blue-600 text-white shadow-md"
               : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -206,7 +206,7 @@ export default function IncidentsPage() {
         </button>
         <button
           onClick={() => setSelectedStatus("received")}
-          className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
             selectedStatus === "received"
               ? "bg-orange-500 text-white shadow-md"
               : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -216,7 +216,7 @@ export default function IncidentsPage() {
         </button>
         <button
           onClick={() => setSelectedStatus("processing")}
-          className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
             selectedStatus === "processing"
               ? "bg-blue-500 text-white shadow-md"
               : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -226,7 +226,7 @@ export default function IncidentsPage() {
         </button>
         <button
           onClick={() => setSelectedStatus("completed")}
-          className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
+          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
             selectedStatus === "completed"
               ? "bg-green-500 text-white shadow-md"
               : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"

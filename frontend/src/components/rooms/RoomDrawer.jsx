@@ -83,7 +83,10 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
         responseType: "blob" 
       });
 
-      const url = window.URL.createObjectURL(new Blob([fileRes.data]));
+      // Thay đổi vào tối hôm qua
+      const url = window.URL.createObjectURL(new Blob([fileRes.data], { 
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+      }));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `HopDong_Phong_${room.room_number}.docx`);
@@ -279,15 +282,26 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
             
             {isOwner && (
               <div className="flex gap-2 mt-4">
-                <button onClick={() => onEdit(room)}
+                <button 
+                  onClick={() => {
+                    setIsMinimized(true); // Thu nhỏ Drawer ngay lập tức
+                    onEdit(room);         // Mở form Sửa ở component cha
+                  }}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
                   ✏️ Sửa
                 </button>
-                <button onClick={() => onDuplicate && onDuplicate(room)}
+                <button 
+                  onClick={() => {
+                    if (onDuplicate) {
+                      setIsMinimized(true); // Thu nhỏ Drawer ngay lập tức
+                      onDuplicate(room);    // Mở form Sao chép ở component cha
+                    }
+                  }}
                   className="flex-1 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm font-medium text-blue-700 hover:bg-blue-100 transition">
                   📋 Sao chép
                 </button>
-                <button onClick={handleDeleteRoom}
+                <button 
+                  onClick={handleDeleteRoom}
                   className="px-3 py-2 border border-red-200 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition">
                   🗑️ Xoá
                 </button>
