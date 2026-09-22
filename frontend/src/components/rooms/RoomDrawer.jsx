@@ -83,7 +83,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
         responseType: "blob" 
       });
 
-      // Thay đổi vào tối hôm qua
+      
       const url = window.URL.createObjectURL(new Blob([fileRes.data], { 
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
       }));
