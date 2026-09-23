@@ -826,20 +826,21 @@ export default function FinancialPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <h4 className="text-sm font-bold text-gray-600 mb-6 uppercase tracking-wider">Thu - Chi theo tháng</h4>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={displayData.charts.barThuChiData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={formatYAxis} />
-                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
-                <Bar dataKey="Thu nhập" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={60} />
-                <Bar dataKey="Chi tiêu" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={60} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div onClick={() => setViewMode('revenue')} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all">
+          <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Doanh thu theo danh mục</h4>
+          <p className="text-xs text-gray-400 mb-4 font-medium">Bấm để xem chi tiết khoản thu</p>
+          <div className="h-56 w-full">
+             {displayData.charts.pieRevData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-gray-400 italic">Chưa có thu nhập</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={displayData.charts.pieRevData} innerRadius={50} outerRadius={75} paddingAngle={2} dataKey="value" />
+                  <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
+                  <Legend iconType="circle" layout="vertical" position="right" wrapperStyle={{ fontSize: '12px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -861,24 +862,123 @@ export default function FinancialPage() {
           </div>
         </div>
 
-        <div onClick={() => setViewMode('revenue')} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all">
-          <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Doanh thu theo danh mục</h4>
-          <p className="text-xs text-gray-400 mb-4 font-medium">Bấm để xem chi tiết khoản thu</p>
-          <div className="h-56 w-full">
-             {displayData.charts.pieRevData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-400 italic">Chưa có thu nhập</div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={displayData.charts.pieRevData} innerRadius={50} outerRadius={75} paddingAngle={2} dataKey="value" />
-                  <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
-                  <Legend iconType="circle" layout="vertical" position="right" wrapperStyle={{ fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+          <h4 className="text-sm font-bold text-gray-600 mb-6 uppercase tracking-wider">Thu - Chi theo tháng</h4>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={displayData.charts.barThuChiData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={formatYAxis} />
+                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
+                <Bar dataKey="Thu nhập" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={60} />
+                <Bar dataKey="Chi tiêu" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={60} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
+      </div>
+      <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm mt-2">
+        <h4 className="text-sm font-bold text-gray-600 mb-4 uppercase tracking-wider flex items-center gap-2">
+          <span>📊</span> Phân tích Lời / Lỗ dịch vụ (Điện, Nước, Internet)
+        </h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+          {/* Phân tích Tiền Điện */}
+          {(() => {
+            const thu = displayData.electric_rev_tab?.total || 0;
+            const chi = displayData.electric_cost_tab?.total || 0;
+            const loi = thu - chi;
+            return (
+              <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 hover:shadow-sm transition-shadow">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-lg">⚡</div>
+                    <h5 className="font-bold text-blue-800">Tiền Điện</h5>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{thu.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{chi.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div className="pt-3 mt-1 border-t border-blue-100/60 flex justify-between items-center">
+                    <span className="font-bold text-gray-700">Lời / Lỗ:</span>
+                    <span className={`text-base font-black ${loi > 0 ? 'text-emerald-600' : loi < 0 ? 'text-rose-600' : 'text-gray-600'}`}>
+                      {loi > 0 ? '+' : ''}{loi.toLocaleString('vi-VN')} đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
+          {/* Phân tích Tiền Nước */}
+          {(() => {
+            const thu = displayData.water_rev_tab?.total || 0;
+            const chi = displayData.water_cost_tab?.total || 0;
+            const loi = thu - chi;
+            return (
+              <div className="rounded-xl border border-cyan-100 bg-cyan-50/40 p-4 hover:shadow-sm transition-shadow">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center text-lg">💧</div>
+                    <h5 className="font-bold text-cyan-800">Tiền Nước</h5>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{thu.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{chi.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div className="pt-3 mt-1 border-t border-cyan-100/60 flex justify-between items-center">
+                    <span className="font-bold text-gray-700">Lời / Lỗ:</span>
+                    <span className={`text-base font-black ${loi > 0 ? 'text-emerald-600' : loi < 0 ? 'text-rose-600' : 'text-gray-600'}`}>
+                      {loi > 0 ? '+' : ''}{loi.toLocaleString('vi-VN')} đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Phân tích Tiền Internet */}
+          {(() => {
+            const thu = displayData.internet_rev_tab?.total || 0;
+            const chi = displayData.internet_cost_tab?.total || 0;
+            const loi = thu - chi;
+            return (
+              <div className="rounded-xl border border-purple-100 bg-purple-50/40 p-4 hover:shadow-sm transition-shadow">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-lg">🌐</div>
+                    <h5 className="font-bold text-purple-800">Tiền Internet</h5>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{thu.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{chi.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div className="pt-3 mt-1 border-t border-purple-100/60 flex justify-between items-center">
+                    <span className="font-bold text-gray-700">Lời / Lỗ:</span>
+                    <span className={`text-base font-black ${loi > 0 ? 'text-emerald-600' : loi < 0 ? 'text-rose-600' : 'text-gray-600'}`}>
+                      {loi > 0 ? '+' : ''}{loi.toLocaleString('vi-VN')} đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </div>
     </div>
   );
