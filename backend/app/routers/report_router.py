@@ -302,18 +302,42 @@ def get_house_financial_report(
     ui_water_cube = float(house_cost.total_water_cube) if house_cost and house_cost.total_water_cube else 0.0
     ui_water_bill = float(house_cost.total_water_bill) if house_cost and house_cost.total_water_bill else 0.0
 
-    calc_elec_kwh = Decimal(str(ui_elec_kwh)) if ui_elec_kwh > 0 else Decimal("1")
     calc_elec_bill = Decimal(str(ui_elec_bill))
-    calc_water_cube = Decimal(str(ui_water_cube)) if ui_water_cube > 0 else Decimal("1")
     calc_water_bill = Decimal(str(ui_water_bill))
+    calc_water_cube = Decimal(str(ui_water_cube)) if ui_water_cube > 0 else Decimal("1")
     
-    active_contracts = db.query(Contract).join(Room).filter(
-        Room.house_id == house_id, 
-        Contract.status == "active"
-    ).all()
-    total_tenants_in_house = sum(c.num_tenants for c in active_contracts) or 1 
-
     rooms = house.rooms
+
+
+    total_rooms_electric_kwh = Decimal("0")
+    tenants_no_meter = 0
+    allocated_water_meter_bill = Decimal("0")
+    water_unit_price = calc_water_bill / calc_water_cube if ui_water_cube > 0 else Decimal("0")
+
+    for r in rooms:
+        r_bill = db.query(Bill).join(Contract).filter(Contract.room_id == r.id, Bill.billing_month == month).first()
+        if r_bill:
+            # Cộng dồn số điện tiêu thụ của tất cả các phòng để làm mẫu số phân bổ
+            total_rooms_electric_kwh += Decimal(str(r_bill.electric_consumed))
+            
+            # Tính trước tiền nước của nhóm CÓ đồng hồ nước
+            if r.is_water_meter:
+                allocated_water_meter_bill += Decimal(str(r_bill.water_consumed)) * water_unit_price
+
+        # Đếm tổng số người ở các phòng KHÔNG có đồng hồ nước để chia theo đầu người
+        if not r.is_water_meter:
+            r_contract = db.query(Contract).filter(Contract.room_id == r.id, Contract.status == "active").first()
+            if r_contract:
+                tenants_no_meter += r_contract.num_tenants
+
+    # Dự phòng tránh lỗi chia cho 0 nếu chưa nhập số liệu
+    calc_rooms_elec_kwh = total_rooms_electric_kwh if total_rooms_electric_kwh > 0 else Decimal("1")
+    calc_tenants_no_meter = Decimal(str(tenants_no_meter)) if tenants_no_meter > 0 else Decimal("1")
+
+    # Số tiền nước còn lại sau khi trừ nhóm có đồng hồ để phân bổ cho nhóm không đồng hồ
+    remaining_water_bill = calc_water_bill - allocated_water_meter_bill
+    if remaining_water_bill < 0:
+        remaining_water_bill = Decimal("0")
 
     rent_details = []
     other_revenue_details = []
@@ -334,7 +358,6 @@ def get_house_financial_report(
     total_utilities_cost = Decimal("0")
     total_maintenance_cost = Decimal("0")
     total_base_cost = Decimal("0")
-    total_internet_cost_val = Decimal("0")
 
     allocated_house_elec_cost = Decimal("0")
     allocated_house_water_cost = Decimal("0")
@@ -346,7 +369,6 @@ def get_house_financial_report(
         end_date = f"{month}-{last_day} 23:59:59"
     except ValueError:
         raise HTTPException(status_code=400, detail="Định dạng tháng không hợp lệ (YYYY-MM)")
-
     
     # CHI PHÍ QUẢN LÝ
     total_management_cost = Decimal(str(house.employee_fee)) if house.employee_fee else Decimal("0")
@@ -367,13 +389,13 @@ def get_house_financial_report(
     if internet_cost > 0 and len(rooms) > 0:
         internet_fee_per_room = internet_cost / Decimal(str(len(rooms)))
 
+   
     for room in rooms:
         bill = db.query(Bill).join(Contract).filter(
             Contract.room_id == room.id,
             Bill.billing_month == month
         ).first()
 
-        room_revenue = Decimal("0")
         if bill:
             room_rent = Decimal(str(bill.rent_amount)) 
             total_rent_revenue += room_rent
@@ -423,15 +445,21 @@ def get_house_financial_report(
         room_elec_kwh = Decimal(str(bill.electric_consumed)) if bill else Decimal("0") 
         room_water_consumed = Decimal(str(bill.water_consumed)) if bill else Decimal("0") 
         
-        elec_cost = (room_elec_kwh / calc_elec_kwh) * calc_elec_bill
+        # LOGIC PHÂN BỔ ĐIỆN THÔNG MINH
+        if ui_elec_kwh > 0:
+            elec_cost = (room_elec_kwh / Decimal(str(ui_elec_kwh))) * calc_elec_bill
+        else:
+            elec_cost = (room_elec_kwh / calc_rooms_elec_kwh) * calc_elec_bill
+        
+        # LOGIC PHÂN BỔ NƯỚC THEO PHƯƠNG PHÁP KHẤU TRỪ CHUẨN
         water_cost = Decimal("0")
         if room.is_water_meter: 
-            water_cost = (room_water_consumed / calc_water_cube) * calc_water_bill
+            water_cost = room_water_consumed * water_unit_price
         else:
             contract = db.query(Contract).filter(Contract.room_id == room.id, Contract.status == "active").first()
             if contract:
                 r_tenants = Decimal(str(contract.num_tenants)) 
-                water_cost = (r_tenants / Decimal(str(total_tenants_in_house))) * calc_water_bill
+                water_cost = (r_tenants / calc_tenants_no_meter) * remaining_water_bill
 
         allocated_house_elec_cost += elec_cost
         allocated_house_water_cost += water_cost
@@ -463,6 +491,7 @@ def get_house_financial_report(
 
         r_base_cost = Decimal(str(room.cost_price)) 
         total_base_cost += r_base_cost
+
         base_cost_details.append({
             "room_name": f"Phòng {room.room_number}",
             "amount": float(r_base_cost)
@@ -492,7 +521,7 @@ def get_house_financial_report(
     
     if unallocated_elec > 0:
         util_details.append({
-            "room_name": f"Hao hụt điện",
+            "room_name": f"Khu vực chung",
             "electric_cost": float(unallocated_elec),
             "water_cost": 0.0
         })

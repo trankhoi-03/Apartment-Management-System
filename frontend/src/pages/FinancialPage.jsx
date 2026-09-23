@@ -810,7 +810,7 @@ export default function FinancialPage() {
             <div className={`${isLoss ? 'bg-rose-500' : 'bg-emerald-500'} text-white rounded-2xl p-5 shadow-md flex items-center justify-between transition-colors`}>
               <div>
                 <p className={`${isLoss ? 'text-rose-100' : 'text-emerald-100'} font-medium mb-1`}>
-                  {isLoss ? 'Thua Lỗ' : 'Lợi nhuận'}
+                  {isLoss ? 'Lỗ' : 'Lợi nhuận'}
                 </p>
                 <h3 className="text-2xl lg:text-3xl font-bold">
                   {displayData.net_profit.toLocaleString('vi-VN')} đ
@@ -844,7 +844,7 @@ export default function FinancialPage() {
         </div>
 
         <div onClick={() => setViewMode('cost')} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md hover:border-rose-200 transition-all">
-          <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Chi tiêu theo danh mục</h4>
+          <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Chi phí theo danh mục</h4>
           <p className="text-xs text-gray-400 mb-4 font-medium">Bấm để xem chi tiết khoản chi</p>
           <div className="h-56 w-full">
             {displayData.charts.pieCostData.length === 0 ? (
@@ -862,7 +862,7 @@ export default function FinancialPage() {
         </div>
 
         <div onClick={() => setViewMode('revenue')} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md hover:border-emerald-200 transition-all">
-          <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Thu nhập theo danh mục</h4>
+          <h4 className="text-sm font-bold text-gray-600 mb-2 uppercase tracking-wider">Doanh thu theo danh mục</h4>
           <p className="text-xs text-gray-400 mb-4 font-medium">Bấm để xem chi tiết khoản thu</p>
           <div className="h-56 w-full">
              {displayData.charts.pieRevData.length === 0 ? (

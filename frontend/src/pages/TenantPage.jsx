@@ -3,7 +3,6 @@ import api from "../api/axios";
 import TenantFormModal from "../components/tenants/TenantFormModal";
 import TenantDrawer from "../components/tenants/TenantDrawer";
 
-// ĐỊNH NGHĨA CÁC TAG LỌC CỐ ĐỊNH CHO KHÁCH THUÊ
 const STATUS_TAGS = [
   { id: "status_active", label: "Đang thuê" },
   { id: "status_inactive", label: "Không HĐ" },
@@ -30,7 +29,6 @@ export default function TenantsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cccdSearchResult, setCccdSearchResult] = useState(null);
 
-  // HARAVAN FILTER STATES
   const [selectedTags, setSelectedTags] = useState([]);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState("");
@@ -106,7 +104,6 @@ export default function TenantsPage() {
     setSelectedTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
   };
 
-  // LOGIC LỌC TỔNG HỢP (Nhà trọ + Tìm kiếm chữ + Tags)
   const filteredTenants = tenants.filter((tenant) => {
     // 1. Kiểm tra Nhà trọ
     if (selectedHouse !== "all") {
@@ -163,7 +160,6 @@ export default function TenantsPage() {
     return isStatusMatch && isAttrMatch;
   });
 
-  // Hỗ trợ tính tổng số người cho từng Tag để hiển thị trên Tab
   const getTagCount = (tagId) => {
     return tenants.filter(tenant => {
       const activeContract = getActiveContract(tenant.id);
@@ -191,7 +187,6 @@ export default function TenantsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       
-      {/* ================= HEADER BỐ CỤC CHUẨN MỚI ================= */}
       <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1 min-w-0 pr-2">
           <div>
@@ -231,10 +226,8 @@ export default function TenantsPage() {
         </div>
       </div>
 
-      {/* ================= HARAVAN-STYLE FILTER BLOCK ================= */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col relative z-30">
         
-        {/* ROW 1: Quick Tabs (Tags ngang) */}
         <div className="flex border-b border-gray-100 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setSelectedTags([])}
@@ -269,7 +262,6 @@ export default function TenantsPage() {
           })}
         </div>
 
-        {/* ROW 2: Filter Toolbar & Dropdown */}
         <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center gap-3 rounded-b-xl">
           <div className="relative">
             <button
@@ -314,7 +306,6 @@ export default function TenantsPage() {
             )}
           </div>
 
-          {/* Hiển thị các tag đang được lọc */}
           {selectedTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 sm:border-l sm:border-gray-300 sm:pl-3">
               <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider hidden sm:block">Lọc theo:</span>
@@ -334,7 +325,6 @@ export default function TenantsPage() {
           )}
         </div>
       </div>
-      {/* ================= END HARAVAN-STYLE FILTER ================= */}
 
       {tenants.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
@@ -354,6 +344,7 @@ export default function TenantsPage() {
             const isSelected = selectedTenant?.id === tenant.id;
             const lastEndedContract = !isActive ? getLastEndedContract(tenant.id) : null;
             const contractRoom = contract ? rooms.find(r => r.id === contract.room_id) : null;
+            const contractHouse = contractRoom ? houses.find(h => h.id === contractRoom.house_id) : null;
 
             return (
               <div
@@ -362,13 +353,21 @@ export default function TenantsPage() {
                 className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md hover:border-blue-200 transition
                             ${isSelected ? "border-blue-400 ring-2 ring-blue-100" : "border-gray-100"}`}
               >
-                <div className="flex justify-between items-start mb-3">
+                <div className={`flex justify-between items-start ${isActive ? 'mb-1' : 'mb-3'}`}>
                   <h3 className="text-lg font-bold text-gray-800">{tenant.full_name}</h3>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap
                     ${isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                     {isActive ? "Đang thuê" : "Không HĐ"}
                   </span>
                 </div>
+                {isActive && (
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="text-sm text-gray-500">🏢</span>
+                    <span className="text-sm font-medium text-blue-600">
+                      {contractHouse ? contractHouse.name : "Không xác định"}
+                    </span>
+                  </div>
+                )}
                 <div className="space-y-1 text-sm text-gray-600">
                   {contract && (
                     <p>Phòng: <span className="font-medium text-blue-600">
