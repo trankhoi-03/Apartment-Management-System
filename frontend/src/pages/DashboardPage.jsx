@@ -168,6 +168,37 @@ export default function DashboardPage() {
   }, [contracts, rooms, houses, selectedHouse]);
 
 
+  const expiringResidences = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return contracts
+      .filter((c) => {
+        if (c.status !== "active" || !c.temp_residence_reg || !c.temp_residence_expiry) return false;
+        
+        const room = rooms.find(r => r.id === c.room_id);
+        if (selectedHouse !== "all" && room?.house_id !== Number(selectedHouse)) return false;
+
+        const expiryDate = new Date(c.temp_residence_expiry);
+        expiryDate.setHours(0, 0, 0, 0);
+        
+        const diffTime = expiryDate - today;
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays <= 30; 
+      })
+      .map((c) => {
+        const room = rooms.find(r => r.id === c.room_id);
+        const house = houses.find(h => h.id === room?.house_id);
+        const expiryDate = new Date(c.temp_residence_expiry);
+        expiryDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((expiryDate - today) / (1000 * 60 * 60 * 24));
+        
+        return { ...c, computed_room: room, computed_house: house, res_days_left: diffDays };
+      })
+      .sort((a, b) => a.res_days_left - b.res_days_left);
+  }, [contracts, rooms, houses, selectedHouse]);
+
+
   async function handleExport() {
     try {
       setIsExporting(true);
@@ -403,6 +434,48 @@ export default function DashboardPage() {
           <div className="mt-3 text-right">
             <Link to="/rooms" className="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline">
               Tới trang Quản lý phòng &rarr;
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {expiringResidences.length > 0 && (
+        <div className="bg-yellow-50 border border-amber-200 rounded-2xl p-5 mb-8 shadow-sm">
+          <h3 className="text-amber-800 font-bold mb-3 flex items-center gap-2">
+            <span className="animate-pulse">⏳</span> Cảnh báo: Có {expiringResidences.length} đăng ký tạm trú sắp hết hạn
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {expiringResidences.map(c => {
+              const formattedDate = new Date(c.temp_residence_expiry).toLocaleDateString("vi-VN");
+              const isOverdue = c.res_days_left < 0;
+              
+              return (
+                <div key={`res_${c.id}`} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border border-amber-100 hover:shadow-md transition">
+                  <div className="mb-2 sm:mb-0">
+                    <p className="font-bold text-gray-800">
+                      Phòng {c.computed_room?.room_number} <span className="text-sm font-normal text-gray-500 ml-1">({c.computed_house?.name})</span>
+                    </p>
+                    <p className="text-sm text-gray-600 mt-0.5">Đại diện: <span className="font-medium text-gray-800">{c.tenant?.full_name || "N/A"}</span></p>
+                  </div>
+                  
+                  <div className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap
+                    ${isOverdue ? "bg-red-100 text-red-700" : "bg-yellow-100 text-amber-700"}`}
+                  >
+                    {isOverdue 
+                      ? `Đã quá hạn ${Math.abs(c.res_days_left)} ngày` 
+                      : c.res_days_left === 0 ? "Hết hạn HÔM NAY" : `Còn ${c.res_days_left} ngày`
+                    }
+                    <div className="text-[10px] font-normal opacity-80 text-center mt-0.5">
+                      ({formattedDate})
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3 text-right">
+            <Link to="/tenants" className="text-sm font-semibold text-amber-600 hover:text-amber-700 hover:underline">
+              Tới trang Quản lý người thuê &rarr;
             </Link>
           </div>
         </div>

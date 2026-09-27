@@ -31,6 +31,13 @@ const checkIsOverdue = (dateString, status) => {
   return diffDays > 3;
 };
 
+// Cấu hình các tab trạng thái
+const STATUS_TAGS = [
+  { id: "status_received", label: "Đã tiếp nhận" },
+  { id: "status_processing", label: "Đang xử lý" },
+  { id: "status_completed", label: "Hoàn thành" },
+];
+
 export default function IncidentsPage() {
   const [incidents, setIncidents] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -38,7 +45,10 @@ export default function IncidentsPage() {
   const [loading, setLoading] = useState(true);
 
   const [selectedHouse, setSelectedHouse] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
+
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [tagSearch, setTagSearch] = useState("");
 
   const [completingIncident, setCompletingIncident] = useState(null);
   const [repairCost, setRepairCost] = useState("");
@@ -147,19 +157,54 @@ export default function IncidentsPage() {
   });
 
   
+  // Lấy danh sách những người/đơn vị xử lý sự cố (loại bỏ trùng lặp và giá trị rỗng)
+  const uniqueHandlers = Array.from(
+    new Set(
+      enrichedIncidents
+        .map(i => i.handler_info?.trim())
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const toggleTag = (tagId) => {
+    setSelectedTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
+  };
+
   const filteredIncidents = enrichedIncidents.filter((incident) => {
     // 1. Lọc theo nhà trọ
     const matchHouse = 
       selectedHouse === "all" || 
       incident.computed_house?.id?.toString() === selectedHouse;
     
-    // 2. Lọc theo trạng thái
-    const matchStatus = 
-      selectedStatus === "all" || 
-      incident.status === selectedStatus;
+    if (!matchHouse) return false;
 
-    return matchHouse && matchStatus;
+    // 2. Nếu không có tag nào được chọn -> Hiện tất cả trong nhà đó
+    if (selectedTags.length === 0) return true;
+
+    // Phân loại tags đang được chọn
+    const selectedStatusIds = selectedTags.filter(tag => tag.startsWith('status_'));
+    const selectedHandlerTags = selectedTags.filter(tag => !tag.startsWith('status_'));
+
+    // 3. Lọc theo Trạng thái (OR logic)
+    let isStatusMatch = true;
+    if (selectedStatusIds.length > 0) {
+      const incidentStatusId = `status_${incident.status}`;
+      isStatusMatch = selectedStatusIds.includes(incidentStatusId);
+    }
+
+    // 4. Lọc theo Bên xử lý (OR logic)
+    let isHandlerMatch = true;
+    if (selectedHandlerTags.length > 0) {
+      const handlerName = incident.handler_info?.trim();
+      isHandlerMatch = handlerName ? selectedHandlerTags.includes(handlerName) : false;
+    }
+
+    return isStatusMatch && isHandlerMatch;
   });
+
+  const totalRepairCost = filteredIncidents.reduce((sum, incident) => {
+    return sum + (Number(incident.repair_cost) || 0);
+  }, 0);
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-[60vh] text-gray-400">Đang tải...</div>;
@@ -193,49 +238,153 @@ export default function IncidentsPage() {
       </div>
 
       
-      <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 mb-6 w-full overflow-x-auto scrollbar-hide">
-        <button
-          onClick={() => setSelectedStatus("all")}
-          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-            selectedStatus === "all"
-              ? "bg-blue-600 text-white shadow-md"
-              : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          Tất cả
-        </button>
-        <button
-          onClick={() => setSelectedStatus("received")}
-          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-            selectedStatus === "received"
-              ? "bg-orange-500 text-white shadow-md"
-              : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          Đã tiếp nhận
-        </button>
-        <button
-          onClick={() => setSelectedStatus("processing")}
-          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-            selectedStatus === "processing"
-              ? "bg-blue-500 text-white shadow-md"
-              : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          Đang xử lý
-        </button>
-        <button
-          onClick={() => setSelectedStatus("completed")}
-          className={`flex-1 sm:flex-none flex items-center justify-center px-2 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
-            selectedStatus === "completed"
-              ? "bg-green-500 text-white shadow-md"
-              : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-          }`}
-        >
-          Hoàn thành
-        </button>
-      </div>
+      {/* ================= HARAVAN-STYLE FILTER BLOCK ================= */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col relative z-30">
+        
+        {/* ROW 1: Quick Tabs (Tags ngang) */}
+        <div className="flex border-b border-gray-100 overflow-x-auto scrollbar-hide">
+          <button
+            onClick={() => setSelectedTags([])}
+            className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              selectedTags.length === 0
+                ? "border-blue-600 text-blue-700 bg-blue-50/40"
+                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+            }`}
+          >
+            Tất cả sự cố
+          </button>
 
+          {/* Các tab Trạng thái */}
+          {STATUS_TAGS.map((tag) => {
+            const isSelected = selectedTags.includes(tag.id);
+            // Đếm số lượng sự cố cho tab này
+            const count = enrichedIncidents.filter(i => 
+              (selectedHouse === "all" || i.computed_house?.id?.toString() === selectedHouse) && 
+              i.status === tag.id.replace('status_', '')
+            ).length;
+
+            return (
+              <button
+                key={tag.id}
+                onClick={() => toggleTag(tag.id)}
+                className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-2 ${
+                  isSelected
+                    ? "border-blue-600 text-blue-700 bg-blue-50/40"
+                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                }`}
+              >
+                {tag.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-blue-200/70 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Hiển thị nhanh tối đa 3 tag Bên xử lý ra ngoài hàng tab ngang nếu đang được chọn */}
+          {uniqueHandlers.slice(0, 3).map((tag) => {
+            const isSelected = selectedTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  isSelected
+                    ? "border-blue-600 text-blue-700 bg-blue-50/40"
+                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                }`}
+              >
+                👷 {tag}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ROW 2: Filter Toolbar & Dropdown */}
+        <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center gap-3 rounded-b-xl">
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+              Lọc bên xử lý
+              <span className="text-gray-400 ml-1">+</span>
+            </button>
+
+            {isFilterDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsFilterDropdownOpen(false)}></div>
+                <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
+                  <div className="p-2 border-b border-gray-100 bg-gray-50">
+                    <input 
+                      type="text" 
+                      placeholder="Tìm tên thợ, bên xử lý..." 
+                      value={tagSearch}
+                      onChange={(e) => setTagSearch(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto p-2 flex flex-col gap-1">
+                    {uniqueHandlers
+                      .filter(t => t.toLowerCase().includes(tagSearch.toLowerCase()))
+                      .map(tag => (
+                        <label key={tag} className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors group">
+                          <input 
+                            type="checkbox" 
+                            checked={selectedTags.includes(tag)}
+                            onChange={() => toggleTag(tag)}
+                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700 group-hover:text-blue-700">{tag}</span>
+                        </label>
+                    ))}
+                    {uniqueHandlers.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">Chưa có thông tin bên xử lý nào được lưu.</p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Hiển thị các tag đang được chọn */}
+          {selectedTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 sm:border-l sm:border-gray-300 sm:pl-3">
+              <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider hidden sm:block">Lọc theo:</span>
+              {selectedTags.map(tagId => {
+                const isStatus = tagId.startsWith('status_');
+                const label = isStatus ? STATUS_TAGS.find(t => t.id === tagId)?.label : `👷 ${tagId}`;
+                return (
+                  <span key={tagId} className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg border border-blue-200">
+                    {label}
+                    <button onClick={() => toggleTag(tagId)} className="text-blue-400 hover:text-red-500 font-bold leading-none mb-0.5">×</button>
+                  </span>
+                );
+              })}
+              <button onClick={() => setSelectedTags([])} className="text-xs font-medium text-gray-500 hover:text-red-600 hover:underline ml-1">
+                Xóa lọc
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* ================= END HARAVAN-STYLE FILTER ================= */}
+      
+      <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center shadow-sm gap-3 animate-fade-in">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-600 text-lg shadow-sm border border-emerald-100">
+            💰
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-emerald-800">Tổng chi phí sửa chữa</p>
+            <p className="text-[11px] text-emerald-600/80 mt-0.5">Được tính dựa trên kết quả lọc hiện tại</p>
+          </div>
+        </div>
+        <div className="text-2xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight">
+          {totalRepairCost.toLocaleString("vi-VN")}đ
+        </div>
+      </div>
       
       {filteredIncidents.length === 0 ? (
         <div className="text-center py-20 text-gray-400 bg-white rounded-3xl border border-dashed border-gray-200">

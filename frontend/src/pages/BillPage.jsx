@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "../api/axios";
 import EditBillModal from "../components/rooms/EditBillModal";
 
@@ -30,6 +30,84 @@ function formatBillingMonth(monthStr) {
     }
   }
   return monthStr;
+}
+
+function VietnameseMonthPicker({ value, onChange, className }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const currentYear = value ? parseInt(value.split('-')[0], 10) : new Date().getFullYear();
+  const currentMonth = value ? parseInt(value.split('-')[1], 10) : new Date().getMonth() + 1;
+  
+  const [viewYear, setViewYear] = useState(currentYear);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMonthSelect = (month) => {
+    const monthStr = String(month).padStart(2, "0");
+    onChange(`${viewYear}-${monthStr}`);
+    setIsOpen(false); 
+  };
+
+  return (
+    <div className="relative inline-block w-full sm:w-auto text-left" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setViewYear(currentYear); 
+          setIsOpen(!isOpen);
+        }}
+        className={`${className} flex items-center justify-between gap-3 min-w-[200px] hover:border-blue-400 transition-colors`}
+      >
+        <span>📅 Tháng {String(currentMonth).padStart(2, "0")} năm {currentYear}</span>
+        <svg className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-2 w-[280px] p-4 bg-white border border-gray-200 rounded-2xl shadow-xl left-0 origin-top animate-fade-in">
+          
+          <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-xl p-1 border border-gray-100">
+            <button type="button" onClick={() => setViewYear(viewYear - 1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <span className="font-bold text-gray-800 text-sm tracking-wide">NĂM {viewYear}</span>
+            <button type="button" onClick={() => setViewYear(viewYear + 1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[...Array(12)].map((_, index) => {
+              const monthNum = index + 1;
+              const isSelected = currentYear === viewYear && currentMonth === monthNum;
+              return (
+                <button
+                  key={monthNum}
+                  type="button"
+                  onClick={() => handleMonthSelect(monthNum)}
+                  className={`py-2.5 text-sm font-semibold rounded-xl transition-all
+                    ${isSelected 
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-200 ring-2 ring-blue-600 ring-offset-1' 
+                      : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-100 hover:border-blue-200'
+                    }`}
+                >
+                  Tháng {monthNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }) {
@@ -173,6 +251,7 @@ export default function BillsPage() {
   const [tenants, setTenants]     = useState([]); 
   
   const [selectedHouse, setSelectedHouse] = useState("all"); 
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [loading, setLoading] = useState(true);
   const [filter, setFilter]   = useState("all");
   const [sendingId, setSendingId] = useState(null);
@@ -277,10 +356,13 @@ export default function BillsPage() {
       alert(err.response?.data?.detail || "Có lỗi xảy ra.");
     }
   }
+  const monthFilteredBills = enrichedBills.filter(
+    (b) => b.billing_month === selectedMonth
+  );
 
   const houseFilteredBills = selectedHouse === "all" 
-    ? enrichedBills 
-    : enrichedBills.filter((b) => b.computed_room?.house_id === Number(selectedHouse));
+    ? monthFilteredBills 
+    : monthFilteredBills.filter((b) => b.computed_room?.house_id === Number(selectedHouse));
 
   const finalDisplayedBills = houseFilteredBills.filter((b) => matches(b, filter));
 
@@ -317,6 +399,11 @@ export default function BillsPage() {
               ))}
             </select>
           )}
+          <VietnameseMonthPicker 
+            value={selectedMonth} 
+            onChange={setSelectedMonth} 
+            className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700" 
+          />
         </div>
       </div>
 

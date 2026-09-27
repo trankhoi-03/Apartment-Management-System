@@ -55,14 +55,16 @@ export default function Navbar() {
   return (
     <>
       {/* GIAO DIỆN DESKTOP */}
-      <nav className="hidden md:flex bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between h-14 w-full">
+      <nav className="hidden md:flex bg-white border-b border-gray-200 sticky top-0 z-50 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+        <div className="max-w-7xl mx-auto px-4 flex items-center h-14 w-full">
 
-          <span className="font-bold text-blue-600 text-lg whitespace-nowrap">
+          {/* Logo App */}
+          <span className="font-extrabold text-blue-600 text-xl whitespace-nowrap mr-8 shrink-0">
             🏠 Phòng trọ
           </span>
 
-          <div className="flex items-center gap-1">
+          {/* Cụm Navigation Links */}
+          <div className="flex items-center gap-1.5 overflow-hidden">
             {NAV_ITEMS.map((item) => {
               if (item.ownerOnly && !isOwner) return null;
               
@@ -72,10 +74,10 @@ export default function Navbar() {
                   to={item.to}
                   end={item.to === "/"}
                   className={({ isActive }) =>
-                    `px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition
+                    `px-3 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all duration-200
                      ${isActive
-                       ? "bg-blue-50 text-blue-600"
-                       : "text-gray-600 hover:bg-gray-100"}`
+                       ? "bg-blue-50 text-blue-700 shadow-sm border border-blue-100/50"
+                       : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"}`
                   }
                 >
                   {item.label}
@@ -84,27 +86,36 @@ export default function Navbar() {
             })}
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* THÊM HIỂN THỊ TÊN USER Ở ĐÂY */}
-            <span className="text-sm text-gray-500 whitespace-nowrap">
-              Xin chào, <strong className="text-gray-800">{userName}</strong>
-            </span>
+          {/* Cụm Bên phải: Nút Gia hạn + Lời chào ngang + Đăng xuất */}
+          <div className="flex items-center gap-4 shrink-0 ml-auto pl-4">
+            
+            {/* Nút Gia hạn/Nâng cấp */}
+            {/* <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition whitespace-nowrap shadow-sm"
+            >
+              ⭐ Gia hạn/ Nâng cấp
+            </button> */}
 
-            <div className="flex items-center gap-2 border-l border-gray-200 pl-4">
-              {/* <button
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-1 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-lg transition whitespace-nowrap shadow-sm"
-              >
-                ⭐ Gia hạn / Nâng cấp
-              </button> */}
+            {/* Đường phân cách mờ */}
+            <div className="h-5 w-px bg-gray-200"></div>
 
-              <button
-                onClick={handleLogout}
-                className="text-sm text-gray-500 hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 transition whitespace-nowrap"
-              >
-                Đăng xuất
-              </button>
+            {/* Thông tin User (Hiển thị hàng ngang) */}
+            <div className="flex items-center gap-1.5 text-sm whitespace-nowrap">
+              <span className="text-gray-500 font-medium">Xin chào,</span>
+              <strong className="text-gray-800">{userName}</strong>
             </div>
+
+            {/* Nút Đăng xuất */}
+            <button
+              onClick={handleLogout}
+              className="text-sm font-semibold text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all whitespace-nowrap flex items-center gap-1.5"
+            >
+              Đăng xuất
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
           </div>
 
         </div>

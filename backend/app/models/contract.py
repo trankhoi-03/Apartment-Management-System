@@ -45,8 +45,10 @@ class Contract(Base):
 
     num_tenants: Mapped[int] = mapped_column(default=1, nullable=False)
     num_vehicles: Mapped[int] = mapped_column(default=0, nullable=False)
-    temp_residence_reg: Mapped[bool] = mapped_column(default=False, nullable=False)
-    temp_residence_dec: Mapped[bool] = mapped_column(default=False, nullable=False)
+    temp_residence_reg: Mapped[bool] = mapped_column(default=False, nullable=False) # Đăng ký tạm trú
+    temp_residence_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    temp_residence_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    temp_residence_dec: Mapped[bool] = mapped_column(default=False, nullable=False) # Đăng ký lưu trú
 
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
 

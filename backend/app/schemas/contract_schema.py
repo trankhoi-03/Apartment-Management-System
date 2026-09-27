@@ -7,10 +7,18 @@ from .tenant_schema import TenantResponse
 class CoTenantCreate(BaseModel):
     full_name: str
     id_card_number: str | None = None
+    temp_residence_reg: bool = False
+    temp_residence_start: date | None = None
+    temp_residence_expiry: date | None = None
+    temp_residence_dec: bool = False
 
 class CoTenantResponse(BaseModel):
     id: int
     full_name: str
+    temp_residence_reg: bool
+    temp_residence_start: date | None = None
+    temp_residence_expiry: date | None = None
+    temp_residence_dec: bool
     model_config = ConfigDict(from_attributes=True)
 
 class ContractBase(BaseModel):
@@ -27,6 +35,8 @@ class ContractBase(BaseModel):
     num_tenants: int = Field(default=1, ge=1)
     num_vehicles: int = Field(default=0, ge=0)
     temp_residence_reg: bool = False
+    temp_residence_start: date | None = None
+    temp_residence_expiry: date | None = None
     temp_residence_dec: bool = False
     notes: str | None = None
 
@@ -55,6 +65,8 @@ class ContractUpdate(BaseModel):
     num_tenants: int | None = Field(default=None, ge=1)       
     num_vehicles: int | None = Field(default=None, ge=0)      
     temp_residence_reg: bool | None = None
+    temp_residence_start: date | None = None
+    temp_residence_expiry: date | None = None
     temp_residence_dec: bool | None = None
     co_tenants: list[CoTenantCreate] | None = Field(default=None)
     status: str | None = None

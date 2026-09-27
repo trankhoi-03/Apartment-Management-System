@@ -95,7 +95,11 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db)):
             new_ct = CoTenant(
                 contract_id=new_contract.id,
                 full_name=ct.full_name,
-                id_card_number=enc_cccd
+                id_card_number=enc_cccd,
+                temp_residence_reg=ct.temp_residence_reg,
+                temp_residence_start=ct.temp_residence_start,
+                temp_residence_expiry=ct.temp_residence_expiry,
+                temp_residence_dec=ct.temp_residence_dec,
             )
             db.add(new_ct)
 
@@ -175,7 +179,11 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
             new_ct = CoTenant(
                 contract_id=contract.id,
                 full_name=ct["full_name"],
-                id_card_number=final_cccd_enc
+                id_card_number=final_cccd_enc,
+                temp_residence_reg=ct.get("temp_residence_reg", False),
+                temp_residence_start=ct.get("temp_residence_start"),
+                temp_residence_expiry=ct.get("temp_residence_expiry"),
+                temp_residence_dec=ct.get("temp_residence_dec", False),
             )
             db.add(new_ct)
 

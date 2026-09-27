@@ -122,11 +122,31 @@ export default function TenantDrawer({ tenant, activeContract, pastContracts, ho
                   value={`${Number(activeContract.monthly_rent).toLocaleString("vi-VN")}đ/tháng`} />
                 <Row label="Đặt cọc"
                   value={`${Number(activeContract.deposit).toLocaleString("vi-VN")}đ`} />
-                <Row label="Tạm trú" value={activeContract.temp_residence_reg ? "✅ Có" : "❌ Không"} />
-                <Row label="Lưu trú" value={activeContract.temp_residence_dec ? "✅ Có" : "❌ Không"} />
                 <Row label="Bắt đầu" value={formatDateVN(activeContract.start_date)} />
                 {activeContract.end_date &&
                   <Row label="Kết thúc" value={formatDateVN(activeContract.end_date)} />}
+                {(activeContract.temp_residence_reg || activeContract.temp_residence_dec) && (
+                  <div className="flex flex-col pt-1">
+                    <div className="flex flex-wrap gap-2">
+                      {activeContract.temp_residence_reg && (
+                        <span className="text-[11px] font-medium px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-100/50">
+                          Đã đăng ký tạm trú 
+                          {(activeContract.temp_residence_start || activeContract.temp_residence_expiry) && " ("}
+                          {activeContract.temp_residence_start && `Từ ${formatDateVN(activeContract.temp_residence_start)}`}
+                          {activeContract.temp_residence_start && activeContract.temp_residence_expiry && " - "}
+                          {activeContract.temp_residence_expiry && `Đến ${formatDateVN(activeContract.temp_residence_expiry)}`}
+                          {(activeContract.temp_residence_start || activeContract.temp_residence_expiry) && ")"}
+                        </span>
+                      )}
+                      
+                      {!activeContract.temp_residence_reg && activeContract.temp_residence_dec && (
+                        <span className="text-[11px] font-medium px-2 py-1 rounded-md bg-purple-50 text-purple-700 border border-purple-100/50">
+                          Đã đăng ký lưu trú
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">

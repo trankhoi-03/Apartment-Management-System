@@ -1,4 +1,5 @@
-from sqlalchemy import ForeignKey, String
+from datetime import date
+from sqlalchemy import ForeignKey, String, Date, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
@@ -15,5 +16,10 @@ class CoTenant(Base):
     
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     id_card_number: Mapped[str | None] = mapped_column(String(255), nullable=True) 
+
+    temp_residence_reg: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    temp_residence_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    temp_residence_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    temp_residence_dec: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     contract: Mapped["Contract"] = relationship(back_populates="co_tenants")

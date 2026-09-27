@@ -55,7 +55,9 @@ export default function TenantsPage() {
     const query = searchQuery.trim();
     if (/^\d{12}$/.test(query)) {
       api.post(`/tenants/search/by-cccd`, { cccd: query })
-        .then(res => setCccdSearchResult([res.data]))
+        .then(res => {
+          setCccdSearchResult(Array.isArray(res.data) ? res.data : [res.data]); 
+        })
         .catch(() => setCccdSearchResult([]));
     } else {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -105,7 +107,6 @@ export default function TenantsPage() {
   };
 
   const filteredTenants = tenants.filter((tenant) => {
-    // 1. Kiểm tra Nhà trọ
     if (selectedHouse !== "all") {
       const hasContractInHouse = contracts.some((c) => {
         const matchedRoom = rooms.find(r => r.id === c.room_id);
@@ -114,36 +115,31 @@ export default function TenantsPage() {
       if (!hasContractInHouse) return false; 
     }
 
-    // 2. Kiểm tra CCCD
-    if (cccdSearchResult !== null) {
-      if (!cccdSearchResult.some(result => result.id === tenant.id)) return false;
-    }
-
-    // 3. Kiểm tra Search Query
     const query = searchQuery.toLowerCase().trim();
-    if (query) {
+    const isCccdSearch = /^\d{12}$/.test(query);
+
+    if (isCccdSearch) {
+      if (cccdSearchResult === null) return false; 
+      if (!cccdSearchResult.some(result => result.id === tenant.id)) return false; 
+    } else if (query) {
       const isMatch = tenant.full_name?.toLowerCase().includes(query) ||
                       tenant.phone?.toLowerCase().includes(query) ||
-                      tenant.identity_card?.toLowerCase().includes(query) ||
                       tenant.email?.toLowerCase().includes(query);
       if (!isMatch) return false;
     }
 
-    // 4. KIỂM TRA TAGS
     if (selectedTags.length === 0) return true;
 
     const selectedStatusIds = selectedTags.filter(tag => tag.startsWith('status_'));
     const selectedAttrIds = selectedTags.filter(tag => tag.startsWith('attr_'));
     const activeContract = getActiveContract(tenant.id);
 
-    // Lọc theo Trạng thái (OR logic)
     let isStatusMatch = true;
     if (selectedStatusIds.length > 0) {
       const currentStatusId = activeContract ? "status_active" : "status_inactive";
       isStatusMatch = selectedStatusIds.includes(currentStatusId);
     }
 
-    // Lọc theo Đặc điểm (AND logic - phải thỏa mãn tất cả tag đặc điểm đang chọn)
     let isAttrMatch = true;
     if (selectedAttrIds.length > 0) {
       const tenantAttrs = [];
@@ -195,7 +191,7 @@ export default function TenantsPage() {
           </div>
           
           {houses.length > 0 && (
-            <div className="w-full sm:flex-1 min-w-0 max-w-[300px]">
+            <div className="w-full sm:flex-1 min-w-0 sm:max-w-[300px]">
               <select
                 value={selectedHouse}
                 onChange={(e) => setSelectedHouse(e.target.value)}
@@ -338,7 +334,90 @@ export default function TenantsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredTenants.map((tenant) => {
+          {cccdSearchResult && cccdSearchResult.length > 0 ? cccdSearchResult.map((result, index) => {
+            const contract = getActiveContract(result.id);
+            const isActive = !!contract;
+            const isSelected = selectedTenant?.id === result.id;
+            const contractRoom = contract ? rooms.find(r => r.id === contract.room_id) : null;
+            const contractHouse = contractRoom ? houses.find(h => h.id === contractRoom.house_id) : null;
+
+            // XÁC ĐỊNH TÊN HIỂN THỊ DỰA VÀO KẾT QUẢ API
+            const displayName = result.matched_name || result.full_name;
+            const isCoTenantMatch = !!result.matched_name && result.matched_name !== result.full_name;
+
+            return (
+              <div
+                key={`search_${result.id}_${index}`}
+                onClick={() => handleCardClick(result)} 
+                className={`bg-white rounded-2xl border shadow-sm p-5 cursor-pointer hover:shadow-md hover:border-blue-200 transition
+                            ${isSelected ? "border-blue-400 ring-2 ring-blue-100" : "border-gray-100"}`}
+              >
+                <div className={`flex justify-between items-start ${isActive ? 'mb-1' : 'mb-3'}`}>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-800">{displayName}</h3>
+                    {/* Nếu là người ở cùng, thêm 1 badge nhỏ báo hiệu người đại diện */}
+                    {isCoTenantMatch && (
+                      <span className="text-[10px] font-medium text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 inline-block border border-purple-100">
+                        Đại diện: {result.full_name}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap
+                    ${isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                    {isActive ? "Đang thuê" : "Không HĐ"}
+                  </span>
+                </div>
+                
+                {isActive && (
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="text-sm text-gray-500">🏢</span>
+                    <span className="text-sm font-medium text-blue-600">
+                      {contractHouse ? contractHouse.name : "Không xác định"}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="space-y-1 text-sm text-gray-600">
+                  {contract && (
+                    <p>Phòng: <span className="font-medium text-blue-600">
+                      {contractRoom?.room_number ? `Phòng ${contractRoom.room_number}` : `Room ID ${contract.room_id}`}
+                    </span></p>
+                  )}
+                  {/* Cố ý ẨN SĐT/Email nếu đây là Card của người ở cùng vì họ không có thông tin này */}
+                  {!isCoTenantMatch && (
+                    <>
+                      <p>SĐT: <span className="font-medium text-gray-800">{result.phone}</span></p>
+                      {result.email && (
+                        <p className="truncate">Email: <span className="font-medium text-gray-800">{result.email}</span></p>
+                      )}
+                    </>
+                  )}
+
+                  {/* Giữ nguyên phần render tags tạm trú/lưu trú của Card */}
+                  {contract && (contract.temp_residence_reg || contract.temp_residence_dec || contract.num_tenants > 1 || (contract.co_tenants && contract.co_tenants.length > 0)) && (
+                    <div className="flex gap-2 pt-1.5 pb-1">
+                      {contract.temp_residence_reg && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100">
+                          Tạm trú
+                        </span>
+                      )}
+                      {contract.temp_residence_dec && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100">
+                          Lưu trú
+                        </span>
+                      )}
+                      {(contract.num_tenants > 1 || (contract.co_tenants && contract.co_tenants.length > 0)) && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                          Ở ghép
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }) :
+          filteredTenants.map((tenant) => {
             const contract = getActiveContract(tenant.id);
             const isActive = !!contract;
             const isSelected = selectedTenant?.id === tenant.id;

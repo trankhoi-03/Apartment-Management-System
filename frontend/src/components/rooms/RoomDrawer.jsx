@@ -284,8 +284,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
               <div className="flex gap-2 mt-4">
                 <button 
                   onClick={() => {
-                    setIsMinimized(true); // Thu nhỏ Drawer ngay lập tức
-                    onEdit(room);         // Mở form Sửa ở component cha
+                    onEdit(room);         
                   }}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
                   ✏️ Sửa
@@ -293,8 +292,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                 <button 
                   onClick={() => {
                     if (onDuplicate) {
-                      setIsMinimized(true); // Thu nhỏ Drawer ngay lập tức
-                      onDuplicate(room);    // Mở form Sao chép ở component cha
+                      onDuplicate(room);    
                     }
                   }}
                   className="flex-1 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm font-medium text-blue-700 hover:bg-blue-100 transition">
@@ -334,7 +332,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                     <span className="text-gray-500">Số người</span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-800 text-right max-w-[60%]">{contract.num_tenants ?? "—"}</span>
-                      {contract.num_tenants > 1 && contract.co_tenants?.length > 0 && (
+                      {((contract.num_tenants > 1 && contract.co_tenants?.length > 0) || contract.temp_residence_reg || contract.temp_residence_dec) && (
                         <button 
                           onClick={() => setShowCoTenants(!showCoTenants)} 
                           className="text-gray-500 hover:text-blue-600 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none transition-colors"
@@ -345,24 +343,73 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                     </div>
                   </div>
                   
-                  {showCoTenants && contract.num_tenants > 1 && contract.co_tenants?.length > 0 && (
-                    <div className="mt-2 p-2.5 bg-white rounded-lg border border-blue-100 shadow-sm text-xs space-y-1.5 animate-fade-in">
-                      <div className="text-gray-700 flex gap-2">
-                        <span className="font-semibold text-blue-600">1.</span> 
-                        <span>{contract.tenant?.full_name} <span className="text-gray-400 italic">(Đại diện)</span></span>
-                      </div>
-                      {contract.co_tenants.map((ct, idx) => (
-                        <div key={idx} className="text-gray-700 flex gap-2">
-                          <span className="font-semibold text-blue-600">{idx + 2}.</span> 
-                          <span>{ct.full_name}</span>
+                  {showCoTenants && (
+                    <div className="mt-2 p-3 bg-white rounded-xl border border-blue-100 shadow-sm animate-fade-in flex flex-col gap-3">
+                      <div className="text-xs space-y-3">
+                        
+                        {/* 1. NGƯỜI ĐẠI DIỆN */}
+                        <div className="flex gap-2">
+                          <span className="font-semibold text-blue-600 mt-0.5">1.</span> 
+                          <div className="flex flex-col gap-1.5 flex-1">
+                            <span className="text-gray-700 font-medium">
+                              {contract.tenant?.full_name} <span className="text-gray-400 italic font-normal">(Đại diện)</span>
+                            </span>
+                            
+                            {(contract.temp_residence_reg || contract.temp_residence_dec) && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {contract.temp_residence_reg && (
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100/50">
+                                    Tạm trú 
+                                    {(contract.temp_residence_start || contract.temp_residence_expiry) && ": "}
+                                    {contract.temp_residence_start && `${formatDateVN(contract.temp_residence_start)}`}
+                                    {contract.temp_residence_start && contract.temp_residence_expiry && " - "}
+                                    {contract.temp_residence_expiry && `${formatDateVN(contract.temp_residence_expiry)}`}
+                                  </span>
+                                )}
+                                {!contract.temp_residence_reg && contract.temp_residence_dec && (
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100/50">
+                                    Lưu trú
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      ))}
+
+                        {/* 2. NGƯỜI Ở CÙNG */}
+                        {contract.num_tenants > 1 && contract.co_tenants?.length > 0 && contract.co_tenants.map((ct, idx) => (
+                          <div key={idx} className="flex gap-2 pt-2.5 border-t border-gray-100">
+                            <span className="font-semibold text-blue-600 mt-0.5">{idx + 2}.</span> 
+                            <div className="flex flex-col gap-1.5 flex-1">
+                              <span className="text-gray-700 font-medium">{ct.full_name}</span>
+                              
+                              {(ct.temp_residence_reg || ct.temp_residence_dec) && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {ct.temp_residence_reg && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100/50">
+                                      Tạm trú 
+                                      {(ct.temp_residence_start || ct.temp_residence_expiry) && ": "}
+                                      {ct.temp_residence_start && `${formatDateVN(ct.temp_residence_start)}`}
+                                      {ct.temp_residence_start && ct.temp_residence_expiry && " - "}
+                                      {ct.temp_residence_expiry && `${formatDateVN(ct.temp_residence_expiry)}`}
+                                    </span>
+                                  )}
+                                  {!ct.temp_residence_reg && ct.temp_residence_dec && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100/50">
+                                      Lưu trú
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+
+                      </div>
                     </div>
                   )}
                 </div>
                 <Row label="Số xe"       value={contract.num_vehicles ?? "—"} />
-                <Row label="Tạm trú"     value={contract.temp_residence_reg ? "✅ Có" : "❌ Không"} />
-                <Row label="Lưu trú"     value={contract.temp_residence_dec ? "✅ Có" : "❌ Không"} />
                 <Row label="Bắt đầu"     value={formatDateVN(contract.start_date)} />
                 {contract.end_date &&
                   <Row label="Kết thúc"  value={formatDateVN(contract.end_date)} />}

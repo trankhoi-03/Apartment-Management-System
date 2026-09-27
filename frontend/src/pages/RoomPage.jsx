@@ -169,7 +169,7 @@ export default function RoomsPage() {
           <h1 className="text-2xl font-bold text-gray-800 whitespace-nowrap shrink-0">Phòng & Hợp đồng</h1>
           
           {houses.length > 0 && (
-            <div className="w-full sm:flex-1 min-w-0 max-w-[450px]">
+            <div className="w-full sm:flex-1 min-w-0 sm:max-w-[450px]">
               <select
                 value={selectedHouse}
                 onChange={(e) => setSelectedHouse(e.target.value)}

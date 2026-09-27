@@ -22,5 +22,6 @@ class TenantUpdate(BaseModel):
 
 class TenantResponse(TenantBase):
     id: int
+    matched_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

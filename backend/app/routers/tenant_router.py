@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException,  status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import update
 
 
 from app.core.database import get_db
@@ -174,8 +175,39 @@ def search_tenant_by_cccd(
                 if decrypt_cccd(ct.id_card_number) == cccd_query:
                     main_tenant = db.query(Tenant).filter(Tenant.id == ct.contract.tenant_id).first()
                     if main_tenant:
-                        return main_tenant
+                        result_dict = main_tenant.__dict__.copy()
+                        result_dict["matched_name"] = ct.full_name
+                        return result_dict
             except Exception:
                 continue
 
     raise HTTPException(status_code=404, detail="Không tìm thấy.")
+
+
+@router.post("/emergency-clear-cccd", status_code=status.HTTP_200_OK)
+def emergency_clear_id_cards(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user) 
+):
+    try:
+        # 1. Xóa CCCD của toàn bộ người thuê chính
+        db.execute(
+            update(Tenant).values(id_card_number=None)
+        )
+        
+        # 2. Xóa CCCD của toàn bộ người ở ghép
+        db.execute(
+            update(CoTenant).values(id_card_number=None)
+        )
+        
+        # 3. Lưu thay đổi xuống database
+        db.commit()
+        
+        return {"message": "Đã xóa toàn bộ thông tin CCCD khẩn cấp thành công."}
+    
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi thực hiện xóa khẩn cấp: {str(e)}"
+        )
