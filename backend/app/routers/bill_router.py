@@ -129,6 +129,7 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         billing_month=payload.billing_month,
         rent_amount=rent_amount,
         discount_amount=payload.discount_amount,
+        discount_reason=payload.discount_reason,
         electric_amount=electric_amount,
         water_amount=water_amount,
         service_fee=payload.service_fee,
@@ -281,6 +282,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     add_fee = Decimal(str(payload.additional_fee)) if payload.additional_fee is not None else Decimal(str(bill.additional_fee))
     add_reason = payload.additional_fee_reason if payload.additional_fee_reason is not None else bill.additional_fee_reason
     dsc_amt = Decimal(str(payload.discount_amount)) if payload.discount_amount is not None else Decimal(str(bill.discount_amount))
+    dsc_reason = payload.discount_reason if payload.discount_reason is not None else bill.discount_reason
 
     total_amount = (
         Decimal(str(bill.rent_amount)) 
@@ -306,6 +308,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     bill.additional_fee = float(add_fee)
     bill.additional_fee_reason = add_reason  
     bill.discount_amount = float(dsc_amt)
+    bill.discount_reason = dsc_reason
     bill.total_amount = float(total_amount)
 
     try:

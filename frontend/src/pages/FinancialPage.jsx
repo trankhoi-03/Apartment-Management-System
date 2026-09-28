@@ -201,7 +201,7 @@ export default function FinancialPage() {
   const [utilInputs, setUtilInputs] = useState({ total_electric_kwh: 0, total_electric_bill: 0, total_water_cube: 0, total_water_bill: 0 });
   const [savingUtil, setSavingUtil] = useState(false);
 
-  const [otherCostInputs, setOtherCostInputs] = useState({ amount: 0, reason: "" });
+  const [otherCostInputs, setOtherCostInputs] = useState([{ amount: 0, reason: "" }]);
   const [savingOtherCost, setSavingOtherCost] = useState(false);
   const [internetInputs, setInternetInputs] = useState({ amount: 0 });
   const [savingInternet, setSavingInternet] = useState(false);
@@ -227,7 +227,15 @@ export default function FinancialPage() {
       const res = await api.get(`/reports/financial/${selectedHouse}?month=${selectedMonth}`);
       setReportData(res.data);
       if (res.data.utility_bill_input) setUtilInputs(res.data.utility_bill_input);
-      if (res.data.other_cost_input) setOtherCostInputs({ amount: res.data.other_cost_input.other_house_cost || 0, reason: res.data.other_cost_input.other_house_cost_reason || "" });
+      if (res.data.other_cost_input) {
+        setOtherCostInputs([{ 
+          amount: res.data.other_cost_input.other_house_cost || 0, 
+          reason: res.data.other_cost_input.other_house_cost_reason || "" 
+        }]);
+      } else {
+        // Đảm bảo luôn là mảng ngay cả khi không có dữ liệu
+        setOtherCostInputs([{ amount: 0, reason: "" }]);
+      }
       if (res.data.internet_cost_input) setInternetInputs({ amount: res.data.internet_cost_input.total_internet_cost || 0 });
     // eslint-disable-next-line no-unused-vars
     } catch (error) { setReportData(null); } finally { setLoading(false); }
@@ -399,16 +407,61 @@ export default function FinancialPage() {
     };
   }, [reportData, selectedRoom, rooms, selectedHouse, bills, contracts, selectedMonth]);
 
+  const handleOtherCostChange = (index, field, value) => {
+    const newInputs = [...otherCostInputs];
+    newInputs[index][field] = value;
+    setOtherCostInputs(newInputs);
+  };
+
+  const handleAddOtherCostRow = () => {
+    setOtherCostInputs([...otherCostInputs, { amount: 0, reason: "" }]);
+  };
+
+  const handleRemoveOtherCostRow = (index) => {
+    const newInputs = otherCostInputs.filter((_, i) => i !== index);
+    setOtherCostInputs(newInputs);
+  };
+
   const handleSaveOtherCost = async () => {
     setSavingOtherCost(true);
     try {
+      // 1. Lọc ra các dòng hợp lệ (có nhập tiền hoặc có ghi lý do)
+      const validInputs = otherCostInputs.filter(
+        input => (Number(input.amount) || 0) > 0 || input.reason.trim() !== ""
+      );
+
+      if (validInputs.length === 0) {
+        alert("Vui lòng nhập ít nhất 1 khoản chi phí.");
+        setSavingOtherCost(false);
+        return;
+      }
+
+      // 2. Gộp tổng số tiền
+      const totalAmount = validInputs.reduce((sum, input) => sum + (Number(input.amount) || 0), 0);
+      
+      // 3. Ghép nối lý do (bỏ qua các lý do rỗng)
+      const combinedReason = validInputs
+        .map(input => input.reason.trim())
+        .filter(reason => reason !== "")
+        .join(", ");
+
+      // 4. Gọi API duy nhất 1 lần để lưu tổng
       await api.post(`/reports/financial/${selectedHouse}/other-cost?month=${selectedMonth}`, {
-        other_house_cost: Number(otherCostInputs.amount) || 0,
-        other_house_cost_reason: otherCostInputs.reason
+        other_house_cost: totalAmount,
+        other_house_cost_reason: combinedReason || "Chi phí chung"
       });
+
       await loadReport();
-      alert("Đã lưu chi phí khác!");
-    } catch { alert("Có lỗi xảy ra khi lưu chi phí khác."); } finally { setSavingOtherCost(false); }
+      alert("Đã lưu thành công tổng chi phí khác!");
+      
+      // Reset lại form về 1 dòng trống
+      setOtherCostInputs([{ amount: 0, reason: "" }]);
+      
+    } catch { 
+      alert("Có lỗi xảy ra khi lưu chi phí khác."); 
+    } finally { 
+      setSavingOtherCost(false); 
+    }
   };
 
   const handleSaveInternetCost = async () => {
@@ -556,7 +609,7 @@ export default function FinancialPage() {
 
 
   const renderElectricCostContent = () => (
-    <DetailPanel title="Chi tiết Tiền điện (Thanh toán nhà mạng)" colorTheme="blue">
+    <DetailPanel title="Chi tiết Tiền điện" colorTheme="blue">
       {displayData.electric_cost_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
@@ -567,7 +620,7 @@ export default function FinancialPage() {
   );
 
   const renderWaterCostContent = () => (
-    <DetailPanel title="Chi tiết Tiền nước (Thanh toán nhà mạng)" colorTheme="blue">
+    <DetailPanel title="Chi tiết Tiền nước" colorTheme="blue">
       {displayData.water_cost_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
@@ -611,9 +664,54 @@ export default function FinancialPage() {
       {selectedHouse !== 'all' && (
         <div className="bg-white p-4 sm:p-5 rounded-xl mb-5 border border-purple-100 shadow-sm">
           <h4 className="text-sm font-bold text-purple-800 mb-4 uppercase tracking-wide">Ghi nhận chi phí chung của nhà</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label className="block text-xs font-bold text-gray-600 mb-1.5">Lý do chi (Nội dung)</label><input type="text" value={otherCostInputs.reason} onChange={(e) => setOtherCostInputs({...otherCostInputs, reason: e.target.value})} placeholder="VD: Rác, Vệ sinh..." className={inputStyle} /></div>
-            <div><label className="block text-xs font-bold text-gray-600 mb-1.5">Số tiền (đ)</label><FormattedNumberInput name="amount" value={otherCostInputs.amount} onChange={(e) => setOtherCostInputs({...otherCostInputs, amount: e.target.value})} placeholder="VD: 150000" className={inputStyle} /></div>
+          <div className="flex flex-col gap-3">
+            {otherCostInputs.map((item, index) => (
+              <div key={index} className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="flex-[3]">
+                  {index === 0 && <label className="block text-xs font-bold text-gray-600 mb-1.5">Lý do chi (Nội dung)</label>}
+                  <input 
+                    type="text" 
+                    value={item.reason} 
+                    onChange={(e) => handleOtherCostChange(index, 'reason', e.target.value)} 
+                    placeholder="VD: Rác, Vệ sinh..." 
+                    className={inputStyle} 
+                  />
+                </div>
+                <div className="flex-[2]">
+                  {index === 0 && <label className="block text-xs font-bold text-gray-600 mb-1.5">Số tiền (đ)</label>}
+                  <FormattedNumberInput 
+                    name={`amount-${index}`} 
+                    value={item.amount} 
+                    onChange={(e) => handleOtherCostChange(index, 'amount', e.target.value)} 
+                    placeholder="VD: 150000" 
+                    className={inputStyle} 
+                  />
+                </div>
+                
+                {/* Nút Xóa dòng (chỉ hiện từ dòng thứ 2 trở đi) */}
+                {index > 0 ? (
+                  <button 
+                    onClick={() => handleRemoveOtherCostRow(index)} 
+                    className="p-2.5 mb-[1px] text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                    title="Xóa dòng này"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                ) : (
+                  <div className="w-[42px] shrink-0 hidden sm:block"></div> 
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3 flex justify-start">
+            <button 
+              onClick={handleAddOtherCostRow}
+              className="text-sm text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-purple-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+              Thêm dòng
+            </button>
           </div>
           <div className="mt-4 flex justify-end">
             <button onClick={handleSaveOtherCost} disabled={savingOtherCost} className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50">{savingOtherCost ? "Đang lưu..." : "Lưu chi phí"}</button>

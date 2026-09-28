@@ -29,7 +29,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
     internet_fee: "",           
     additional_fee: "",          
     additional_fee_reason: "",
-    discount_amount: "" 
+    discount_amount: "",
+    discount_reason: ""
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -57,7 +58,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
           internet_fee: bill.internet_fee ?? 0, 
           additional_fee: bill.additional_fee ?? 0,
           additional_fee_reason: bill.additional_fee_reason ?? "",
-          discount_amount: bill.discount_amount ?? 0
+          discount_amount: bill.discount_amount ?? 0,
+          discount_reason: bill.discount_reason ?? ""
         });
       }
     };
@@ -86,6 +88,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
       if (form.additional_fee !== "") payload.additional_fee = Number(form.additional_fee);
       if (form.additional_fee_reason !== "") payload.additional_fee_reason = form.additional_fee_reason;
       if (form.discount_amount !== "") payload.discount_amount = Number(form.discount_amount);
+      if (form.discount_reason !== "") payload.discount_reason = form.discount_reason;
 
       await api.patch(`/bills/${bill.id}/edit`, payload);
       onSaved();
@@ -141,6 +144,17 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
              <div className="mb-4">
                <label className="block text-xs font-medium text-gray-500 mb-1">Giảm trừ tiền phòng (đ)</label>
                <FormattedNumberInput name="discount_amount" value={form.discount_amount} onChange={handleChange} placeholder="0" className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+             </div>
+             <div className="mb-4">
+               <label className="block text-xs font-medium text-gray-500 mb-1">Nội dung giảm trừ</label>
+               <input 
+                 name="discount_reason" 
+                 type="text" 
+                 value={form.discount_reason} 
+                 onChange={handleChange} 
+                 placeholder="vd: Hỗ trợ sinh viên, Khuyến mãi..." 
+                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+               />
              </div>
              <div className="grid grid-cols-2 gap-4 mb-4">
                <div>

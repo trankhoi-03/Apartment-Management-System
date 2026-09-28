@@ -112,6 +112,7 @@ function VietnameseMonthPicker({ value, onChange, className }) {
 
 function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }) {
   const cfg = STATUS_CONFIG[bill.status] ?? STATUS_CONFIG.pending;
+  const [showDiscountReason, setShowDiscountReason] = useState(false);
 
   const roomNumber = bill.computed_room?.room_number;
   const tenantName = bill.computed_tenant?.full_name;
@@ -149,9 +150,34 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
           <span>{Number(bill.rent_amount).toLocaleString("vi-VN")}đ</span>
         </div>
         {Number(bill.discount_amount) > 0 && (
-          <div className="flex justify-between text-green-600 font-medium">
-            <span>Giảm trừ</span>
-            <span>-{Number(bill.discount_amount).toLocaleString("vi-VN")}đ</span>
+          <div className="flex flex-col pt-0.5 text-green-600 font-medium">
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="shrink-0">Giảm trừ</span>
+                  
+                  {/* Nếu có lý do, hiển thị nút ẩn/hiện */}
+                  {bill.discount_reason && (
+                     <button 
+                       onClick={() => setShowDiscountReason(!showDiscountReason)} 
+                       className="shrink-0 text-green-600 hover:text-green-800 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 text-[10px] font-bold leading-none transition-colors"
+                     >
+                       {showDiscountReason ? "▲ Ẩn" : "▼ Xem"}
+                     </button>
+                  )}
+                </div>
+                
+                {/* Khi bấm Xem, xổ lý do xuống một dòng mới ngay bên dưới chữ Giảm trừ */}
+                {showDiscountReason && bill.discount_reason && (
+                  <span className="text-xs font-normal mt-1 opacity-90 break-words pr-2">
+                    ({bill.discount_reason})
+                  </span>
+                )}
+              </div>
+              <span className="shrink-0">
+                -{Number(bill.discount_amount).toLocaleString("vi-VN")}đ
+              </span>
+            </div>
           </div>
         )}
         <div className="flex justify-between">

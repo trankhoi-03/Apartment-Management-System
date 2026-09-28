@@ -168,6 +168,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [additionalFee, setAdditionalFee]             = useState("");
   const [additionalFeeReason, setAdditionalFeeReason] = useState("");
   const [discountAmount, setDiscountAmount] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
   const [electricOld, setElectricOld]   = useState("");
   const [electricNew, setElectricNew]   = useState("");
   const [waterOld, setWaterOld]         = useState("");
@@ -290,6 +291,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
         additional_fee: additionalFee ? Number(additionalFee) : 0, 
         additional_fee_reason: additionalFeeReason,
         discount_amount: discountAmount ? Number(discountAmount) : 0,
+        discount_reason: discountReason,
         due_date: estimatedDueDate.isoDate
       });
       setPreview(res.data);
@@ -366,6 +368,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                   <label className="block text-xs text-gray-500 mb-1">Giảm trừ tiền phòng (đ) (Tùy chọn cho tháng đầu)</label>
                   <FormattedNumberInput name="discount_amount" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} placeholder="vd: 500,000" className={INPUT} />
                 </div>
+                <div className="mb-3">
+                  <label className="block text-xs text-gray-500 mb-1">Nội dung giảm trừ</label>
+                  <input type="text" value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="vd: Khuyến mãi tháng đầu, Hỗ trợ sinh viên,..." className={INPUT} />
+                </div>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Phí dịch vụ</label>
@@ -409,7 +415,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                 <Row label="Hạn thanh toán" value={<span className="text-red-600 font-semibold">{displayDueDate}</span>} />
                 <Row label="Tiền thuê gốc" value={`${Number(preview.rent_amount).toLocaleString("vi-VN")}đ`} />
                 {Number(preview.discount_amount) > 0 && (
-                  <Row label="Giảm trừ" value={<span className="text-green-600 font-medium">-{Number(preview.discount_amount).toLocaleString("vi-VN")}đ</span>} />
+                  <Row 
+                    label={`Giảm trừ ${preview.discount_reason ? `(${preview.discount_reason})` : ""}`} 
+                    value={<span className="text-green-600 font-medium">-{Number(preview.discount_amount).toLocaleString("vi-VN")}đ</span>} 
+                  />
                 )}
                 <Row label={`Điện (${preview.electric_consumed} kWh)`} value={`${Number(preview.electric_amount).toLocaleString("vi-VN")}đ`} />
                 <Row label={preview.water_consumed > 0 ? `Nước (${preview.water_consumed} m³)` : "Nước (cố định)"} value={`${Number(preview.water_amount).toLocaleString("vi-VN")}đ`} />

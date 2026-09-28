@@ -18,6 +18,7 @@ class BillGenerateRequest(BaseModel):
     additional_fee: float = 0.0
     additional_fee_reason: str | None = None
     discount_amount: float = Field(ge=0, default=0)
+    discount_reason: str | None = None
 
 
 class BillUpdate(BaseModel):
@@ -34,6 +35,7 @@ class BillEditRequest(BaseModel):
     additional_fee: float | None = None
     additional_fee_reason: str | None = None
     discount_amount: float | None = None
+    discount_reason: str | None = None
 
 
 class BillResponse(BaseModel):
@@ -42,6 +44,7 @@ class BillResponse(BaseModel):
     billing_month: str
     rent_amount: float
     discount_amount: float = 0.0
+    discount_reason: str | None = None
     electric_amount: float
     electric_consumed: float       # kWh tiêu thụ tháng này
     water_amount: float

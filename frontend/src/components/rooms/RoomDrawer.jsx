@@ -38,6 +38,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
   const [isExporting, setIsExporting] = useState(false);
   const [showCoTenants, setShowCoTenants]  = useState(false);
   const [showFurnitures, setShowFurnitures] = useState(false);
+  const [showFullEmail, setShowFullEmail] = useState(false);
 
   useEffect(() => {
     if (!hasOpenModal && isMinimized) {
@@ -322,7 +323,61 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
               <div className="bg-blue-50 rounded-xl p-4 space-y-2 text-sm">
                 <Row label="Người thuê"  value={contract.tenant?.full_name ?? "—"} />
                 <Row label="SĐT"         value={contract.tenant?.phone ?? "—"} />
-                <Row label="Email"       value={contract.tenant?.email ?? "Chưa có"} />
+                {/* Custom UI cho Email để chống tràn */}
+                <div className="flex flex-col pt-1">
+                  <div className="flex justify-between items-start gap-4">
+                    <span className="text-gray-500 shrink-0 mt-0.5">Email</span>
+                    
+                    {contract.tenant?.email ? (
+                      <div className="flex flex-col items-end min-w-0 flex-1">
+                        
+                        {/* Dòng 1: Luôn hiển thị dạng bị cắt (truncate) */}
+                        <div className="flex items-center justify-end gap-2 w-full">
+                          <span className="font-medium text-gray-800 truncate">
+                            {contract.tenant.email}
+                          </span>
+                          
+                          {/* Nút chỉ hiện khi email dài > 20 ký tự */}
+                          {contract.tenant.email.length > 20 && (
+                            <button 
+                              onClick={() => setShowFullEmail(!showFullEmail)} 
+                              className="shrink-0 text-gray-500 hover:text-blue-600 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none transition-colors"
+                            >
+                              {showFullEmail ? "▲ Ẩn" : "▼ Xem"}
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Dòng 2: Box hiển thị full email khi bấm Xem */}
+                        {showFullEmail && contract.tenant.email.length > 20 && (
+                          <div className="mt-2.5 w-full bg-gray-50 border border-gray-200 rounded-lg p-2 shadow-sm animate-fade-in flex items-center justify-between gap-2">
+                            {/* Ép lề trái (text-left) bên trong box để đọc dễ hơn */}
+                            <span className="text-xs font-medium text-gray-700 break-all text-left">
+                              {contract.tenant.email}
+                            </span>
+                            
+                            {/* Nút Copy */}
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(contract.tenant.email);
+                                alert("Đã copy email!");
+                              }}
+                              className="shrink-0 text-gray-400 hover:text-blue-600 bg-white border border-gray-200 p-1.5 rounded-md transition-colors"
+                              title="Copy email"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                        
+                      </div>
+                    ) : (
+                      <span className="font-medium text-gray-800 shrink-0 mt-0.5">Chưa có</span>
+                    )}
+                  </div>
+                </div>
                 <Row label="Tiền thuê"
                   value={`${Number(contract.monthly_rent).toLocaleString("vi-VN")}đ`} />
                 <Row label="Đặt cọc"
