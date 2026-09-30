@@ -125,50 +125,61 @@ function getNextMonth(monthStr) {
   return `${year}-${String(m).padStart(2, "0")}`;
 }
 
-// HÀM TÍNH HẠN THANH TOÁN ĐÃ ĐƯỢC NÂNG CẤP
-function calculateDueDate(monthStr, paymentDay, startDateStr) {
+// LOGIC MỚI: QUY ƯỚC THU TRƯỚC (ĐẦU KỲ) & HỖ TRỢ COMBO BILL
+function calculateDueDate(monthStr, paymentDay, startDateStr, isFirstBill) {
   if (!monthStr) return { formattedVN: "", isoDate: "" };
-  let [year, month] = monthStr.split("-").map(Number);
   
-  // Bước 1: Áp dụng quy tắc thông dụng của nhà trọ
-  // Nếu ngày thu tiền từ mùng 1 đến 15 -> Thu vào tháng sau (Đầu tháng sau)
-  // Nếu ngày thu tiền từ 16 đến 31 -> Thu vào tháng hiện tại (Cuối tháng này)
-  if (paymentDay <= 15) {
-    month += 1;
-    if (month > 12) {
-      month = 1;
-      year += 1;
+  // Mặc định: Hạn thanh toán luôn nằm trong CÙNG tháng với tháng xuất hóa đơn
+  let [year, month] = monthStr.split("-").map(Number);
+  let targetMonth = month;
+  let targetYear = year;
+
+  // Nếu là hóa đơn ĐẦU TIÊN của chu kỳ
+  if (isFirstBill && startDateStr) {
+    const startDate = new Date(startDateStr);
+    const startDay = startDate.getDate();
+    const startMonth = startDate.getMonth() + 1;
+    const startYear = startDate.getFullYear();
+    
+    if (targetMonth === startMonth && targetYear === startYear) {
+       if (startDay > paymentDay) {
+           // TRƯỜNG HỢP A: Vào ở SAU ngày đóng tiền -> Hạn thanh toán nhảy sang tháng tiếp theo
+           targetMonth += 1;
+           if (targetMonth > 12) {
+               targetMonth = 1;
+               targetYear += 1;
+           }
+       }
+       // TRƯỜNG HỢP B: Vào ở TRƯỚC hoặc ĐÚNG ngày đóng tiền -> Hạn thanh toán ở tháng hiện tại (giữ nguyên)
     }
   }
 
-  let lastDayOfMonth = new Date(year, month, 0).getDate();
+  let lastDayOfMonth = new Date(targetYear, targetMonth, 0).getDate();
   let actualDay = paymentDay > lastDayOfMonth ? lastDayOfMonth : paymentDay;
-  
-  let dueDate = new Date(year, month - 1, actualDay);
+  let dueDate = new Date(targetYear, targetMonth - 1, actualDay);
 
-  // Bước 2: Bảo vệ logic an toàn (Hạn thanh toán KHÔNG BAO GIỜ được trước ngày dọn vào ở)
+  // Bảo vệ logic an toàn: Hạn thanh toán KHÔNG BAO GIỜ được trước ngày dọn vào ở
   if (startDateStr) {
     const startDate = new Date(startDateStr);
-    dueDate.setHours(0, 0, 0, 0);
     startDate.setHours(0, 0, 0, 0);
 
     if (dueDate < startDate) {
-      month += 1;
-      if (month > 12) {
-        month = 1;
-        year += 1;
+      targetMonth += 1;
+      if (targetMonth > 12) {
+        targetMonth = 1;
+        targetYear += 1;
       }
-      lastDayOfMonth = new Date(year, month, 0).getDate();
+      lastDayOfMonth = new Date(targetYear, targetMonth, 0).getDate();
       actualDay = paymentDay > lastDayOfMonth ? lastDayOfMonth : paymentDay;
     }
   }
 
   const dayStr = String(actualDay).padStart(2, "0");
-  const monthStrFormatted = String(month).padStart(2, "0");
+  const monthStrFormatted = String(targetMonth).padStart(2, "0");
   
   return {
-    formattedVN: `${dayStr}/${monthStrFormatted}/${year}`,
-    isoDate: `${year}-${monthStrFormatted}-${dayStr}`
+    formattedVN: `${dayStr}/${monthStrFormatted}/${targetYear}`,
+    isoDate: `${targetYear}-${monthStrFormatted}-${dayStr}`
   };
 }
 
@@ -177,6 +188,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [isFirstBill, setIsFirstBill]   = useState(false);
   const [rentAmount, setRentAmount]     = useState("");
   const [isAdjustingRent, setIsAdjustingRent]   = useState(false);
+  const [isComboBill, setIsComboBill]           = useState(false); // Trạng thái Combo Bill
   const [daysStayed, setDaysStayed]             = useState("");
   const [fixedWaterAmount, setFixedWaterAmount] = useState("");
   const [serviceFee, setServiceFee]     = useState("");
@@ -198,7 +210,8 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
 
   const paymentDay = contract?.payment_day || 5;
   const currentMonthStr = billingMonth || new Date().toISOString().slice(0, 7);
-  const estimatedDueDate = calculateDueDate(currentMonthStr, paymentDay, contract?.start_date);
+  // Truyền thêm isFirstBill vào hàm calculateDueDate
+  const estimatedDueDate = calculateDueDate(currentMonthStr, paymentDay, contract?.start_date, isFirstBill);
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -209,6 +222,39 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
         if (res.data.length === 0) {
           setBillingMonth(contractStartMonth);
           setIsFirstBill(true); 
+          
+          // TỰ ĐỘNG PHÂN TÍCH VÀ ĐIỀN THÔNG TIN CHO HÓA ĐƠN ĐẦU TIÊN
+          const startDate = new Date(contract.start_date);
+          const startDay = startDate.getDate();
+          const pDay = contract.payment_day || 5;
+          const [year, month] = contractStartMonth.split("-").map(Number);
+          const daysInMonth = new Date(year, month, 0).getDate();
+
+          // eslint-disable-next-line no-useless-assignment
+          let calcDays = 0;
+          // eslint-disable-next-line no-useless-assignment
+          let combo = false;
+
+          if (startDay > pDay) {
+              // Trường hợp A: Ngày vào ở > Ngày chốt tiền -> Hóa đơn gộp
+              calcDays = daysInMonth - startDay;
+              combo = true;
+          } else {
+              // Trường hợp B: Ngày vào ở <= Ngày chốt tiền -> Hóa đơn lẻ bình thường
+              calcDays = pDay - startDay;
+              combo = false;
+          }
+
+          if (calcDays > 0) {
+              setIsAdjustingRent(true);
+              setDaysStayed(String(calcDays));
+              setIsComboBill(combo);
+          } else {
+              setIsAdjustingRent(false);
+              setIsComboBill(false);
+              setDaysStayed("");
+          }
+
         } else {
           setIsFirstBill(false); 
           const latest = res.data.sort((a, b) => b.billing_month.localeCompare(a.billing_month))[0];
@@ -256,15 +302,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     return () => { isMounted = false; };
   }, [billingMonth, room?.id, room?.is_water_meter]);
 
-  // Lấy thông tin tiền phòng, phí dịch vụ, và giá nước cố định ban đầu
+  // Khởi tạo các mức giá chung
   useEffect(() => {
     if (contract) {
-      if (contract.monthly_rent !== undefined && contract.monthly_rent !== null) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setRentAmount(String(contract.monthly_rent));
-        setIsAdjustingRent(false);
-        setDaysStayed("");
-      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (contract.service_fee) setServiceFee(contract.service_fee);
       if (contract.cleaning_fee) setCleaningFee(contract.cleaning_fee);
       if (contract.internet_fee) setInternetFee(contract.internet_fee);
@@ -289,7 +330,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     }
   }, [contract, room?.id, room?.is_water_meter]);
 
-  // Logic tự động điều chỉnh tiền phòng theo số ngày ở
+  // Logic tự động điều chỉnh tiền phòng (Hỗ trợ Hóa Đơn Gộp)
   useEffect(() => {
     if (!contract?.monthly_rent || !billingMonth) return;
     
@@ -299,7 +340,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
       const days = Number(daysStayed);
       
       if (daysStayed !== "" && days >= 0 && days <= daysInMonth) {
-        const adjusted = Math.round((Number(contract.monthly_rent) / daysInMonth) * days);
+        let adjusted = Math.round((Number(contract.monthly_rent) / daysInMonth) * days);
+        if (isComboBill) {
+            adjusted += Number(contract.monthly_rent); // Hóa đơn gộp (Cộng thêm tháng sau)
+        }
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setRentAmount(String(adjusted));
       }
@@ -309,7 +353,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdjustingRent, daysStayed, billingMonth]);
+  }, [isAdjustingRent, daysStayed, isComboBill, billingMonth]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -371,22 +415,29 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
 
   const displayDueDate = preview?.due_date 
     ? new Date(preview.due_date).toLocaleDateString("vi-VN") 
-    : calculateDueDate(preview?.billing_month || currentMonthStr, paymentDay, contract?.start_date).formattedVN;
+    : calculateDueDate(preview?.billing_month || currentMonthStr, paymentDay, contract?.start_date, isFirstBill).formattedVN;
 
   let daysInfo = "";
   if (preview) {
     const contractRent = contract?.monthly_rent;
     const actualRent = Number(preview.rent_amount);
     
-    if (contractRent && actualRent > 0 && actualRent < contractRent) {
+    if (contractRent && actualRent !== contractRent) {
       try {
         const [year, month] = preview.billing_month.split("-").map(Number);
         const daysInMonth = new Date(year, month, 0).getDate();
         const rentPerDay = contractRent / daysInMonth;
-        const inferredDays = Math.round(actualRent / rentPerDay);
         
-        if (inferredDays > 0 && inferredDays < daysInMonth) {
-          daysInfo = ` (Ở ${inferredDays} ngày)`;
+        if (actualRent > contractRent) {
+            const inferredDays = Math.round((actualRent - contractRent) / rentPerDay);
+            if (inferredDays > 0 && inferredDays <= daysInMonth) {
+                daysInfo = ` (Lẻ ${inferredDays} ngày + Trọn 1 tháng)`;
+            }
+        } else {
+            const inferredDays = Math.round(actualRent / rentPerDay);
+            if (inferredDays > 0 && inferredDays <= daysInMonth) {
+                daysInfo = ` (Ở ${inferredDays} ngày)`;
+            }
         }
       } catch (e) {
         console.error("Lỗi khi tính toán số ngày ở", e);
@@ -448,7 +499,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                   
                   {isAdjustingRent && (
                     <div className="mt-3 pt-3 border-t border-gray-200 animate-fade-in">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Số ngày ở thực tế</label>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Số ngày ở lẻ (của tháng hiện tại)</label>
                       <input
                         type="number"
                         min="0"
@@ -458,12 +509,31 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                         placeholder="vd: 10"
                         className={INPUT}
                       />
+
+                      <label className="flex items-center gap-2 mt-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isComboBill}
+                          onChange={(e) => setIsComboBill(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Hóa đơn gộp (Thu lẻ tháng này + Trọn tháng sau)</span>
+                      </label>
+
                       {daysStayed !== "" && billingMonth && (
-                        <div className="mt-2.5 bg-white p-2.5 border border-gray-200 rounded-lg shadow-sm">
+                        <div className="mt-3 bg-white p-2.5 border border-gray-200 rounded-lg shadow-sm">
                           <p className="text-[11px] text-gray-500 leading-relaxed">
                             Tháng {billingMonth.split("-")[1]} có <strong>{new Date(billingMonth.split("-")[0], billingMonth.split("-")[1], 0).getDate()}</strong> ngày.
                             <br />
-                            Hệ thống tính: ({Number(contract?.monthly_rent || 0).toLocaleString("vi-VN")}đ / {new Date(billingMonth.split("-")[0], billingMonth.split("-")[1], 0).getDate()}) × {daysStayed} = <strong className="text-blue-600 font-semibold">{Math.round((Number(contract?.monthly_rent || 0) / new Date(billingMonth.split("-")[0], billingMonth.split("-")[1], 0).getDate()) * Number(daysStayed)).toLocaleString("vi-VN")}đ</strong>
+                            Tiền lẻ ({daysStayed} ngày): ({Number(contract?.monthly_rent || 0).toLocaleString("vi-VN")}đ / {new Date(billingMonth.split("-")[0], billingMonth.split("-")[1], 0).getDate()}) × {daysStayed} = <strong className="text-blue-600 font-semibold">{Math.round((Number(contract?.monthly_rent || 0) / new Date(billingMonth.split("-")[0], billingMonth.split("-")[1], 0).getDate()) * Number(daysStayed)).toLocaleString("vi-VN")}đ</strong>
+                            {isComboBill && (
+                              <>
+                                <br />
+                                Tiền trọn tháng sau: <strong className="text-blue-600 font-semibold">{Number(contract?.monthly_rent || 0).toLocaleString("vi-VN")}đ</strong>
+                                <br />
+                                Tổng cộng: <strong className="text-blue-600 font-semibold">{(Math.round((Number(contract?.monthly_rent || 0) / new Date(billingMonth.split("-")[0], billingMonth.split("-")[1], 0).getDate()) * Number(daysStayed)) + Number(contract?.monthly_rent || 0)).toLocaleString("vi-VN")}đ</strong>
+                              </>
+                            )}
                           </p>
                         </div>
                       )}
@@ -555,7 +625,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                   <p className="text-sm font-semibold text-gray-700 mb-2">Giảm trừ</p>
                   
                   <div className="mb-3">
-                    <label className="block text-xs text-gray-500 mb-1">Giảm trừ tiền phòng (đ) (Tùy chọn cho tháng đầu)</label>
+                    <label className="block text-xs text-gray-500 mb-1">Giảm trừ tiền phòng (đ)</label>
                     <FormattedNumberInput name="discount_amount" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} placeholder="vd: 500,000" className={INPUT} />
                   </div>
                   
@@ -585,18 +655,18 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                   label={<span>Tiền thuê{daysInfo && <span className="text-gray-400 font-medium ml-1 text-xs">{daysInfo}</span>}</span>} 
                   value={`${Number(preview.rent_amount).toLocaleString("vi-VN")}đ`} 
                 />
-                {Number(preview.discount_amount) > 0 && (
-                  <Row 
-                    label={`Giảm trừ ${preview.discount_reason ? `(${preview.discount_reason})` : ""}`} 
-                    value={<span className="text-green-600 font-medium">-{Number(preview.discount_amount).toLocaleString("vi-VN")}đ</span>} 
-                  />
-                )}
                 <Row label={`Điện (${preview.electric_consumed} kWh)`} value={`${Number(preview.electric_amount).toLocaleString("vi-VN")}đ`} />
                 <Row label={preview.water_consumed > 0 ? `Nước (${preview.water_consumed} m³)` : "Nước (cố định)"} value={`${Number(preview.water_amount).toLocaleString("vi-VN")}đ`} />
                 {Number(preview.service_fee) > 0 && <Row label="Phí dịch vụ" value={`${Number(preview.service_fee).toLocaleString("vi-VN")}đ`} />}
                 {Number(preview.cleaning_fee) > 0 && <Row label="Phí vệ sinh" value={`${Number(preview.cleaning_fee).toLocaleString("vi-VN")}đ`} />}
                 {Number(preview.internet_fee) > 0 && <Row label="Phí internet" value={`${Number(preview.internet_fee).toLocaleString("vi-VN")}đ`} />}
                 {Number(preview.additional_fee) > 0 && <Row label={`Phát sinh ${preview.additional_fee_reason ? `(${preview.additional_fee_reason})` : ""}`} value={`${Number(preview.additional_fee).toLocaleString("vi-VN")}đ`} />}
+                {Number(preview.discount_amount) > 0 && (
+                  <Row 
+                    label={`Giảm trừ ${preview.discount_reason ? `(${preview.discount_reason})` : ""}`} 
+                    value={<span className="text-green-600 font-medium">-{Number(preview.discount_amount).toLocaleString("vi-VN")}đ</span>} 
+                  />
+                )}
                 <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-base">
                   <span>Tổng cộng</span><span className="text-blue-600">{Number(preview.total_amount).toLocaleString("vi-VN")}đ</span>
                 </div>

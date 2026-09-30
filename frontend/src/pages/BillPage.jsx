@@ -8,6 +8,13 @@ const STATUS_CONFIG = {
   paid:    { label: "Đã thanh toán",  color: "bg-green-100 text-green-700"  },
 };
 
+// Đánh trọng số cho trạng thái để sort: số nhỏ hơn sẽ nằm trên
+const STATUS_ORDER = {
+  pending: 1,
+  sent: 2,
+  paid: 3
+};
+
 const FILTERS = [
   { key: "all",     label: "Tất cả"           },
   { key: "unpaid",  label: "Chưa thanh toán"  },
@@ -400,6 +407,7 @@ export default function BillsPage() {
       alert(err.response?.data?.detail || "Có lỗi xảy ra.");
     }
   }
+
   const monthFilteredBills = enrichedBills.filter(
     (b) => b.billing_month === selectedMonth
   );
@@ -408,7 +416,23 @@ export default function BillsPage() {
     ? monthFilteredBills 
     : monthFilteredBills.filter((b) => b.computed_room?.house_id === Number(selectedHouse));
 
-  const finalDisplayedBills = houseFilteredBills.filter((b) => matches(b, filter));
+  // TÍCH HỢP SORT THEO TRẠNG THÁI & SỐ PHÒNG VÀO BIẾN HIỂN THỊ CUỐI CÙNG
+  const finalDisplayedBills = houseFilteredBills
+    .filter((b) => matches(b, filter))
+    .sort((a, b) => {
+       // Sắp xếp ưu tiên 1: Theo Trạng Thái
+       const orderA = STATUS_ORDER[a.status] || 99;
+       const orderB = STATUS_ORDER[b.status] || 99;
+       
+       if (orderA !== orderB) {
+           return orderA - orderB;
+       }
+       
+       // Sắp xếp ưu tiên 2: Cùng Trạng Thái -> Theo Số Phòng Tăng Dần (numeric true)
+       const roomA = String(a.computed_room?.room_number || "");
+       const roomB = String(b.computed_room?.room_number || "");
+       return roomA.localeCompare(roomB, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
   const totalUnpaid = finalDisplayedBills
     .filter((b) => b.status !== "paid")

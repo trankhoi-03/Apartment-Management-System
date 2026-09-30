@@ -204,17 +204,22 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
       // Chèn billingMonth vào payload
       if (billingMonth !== "") payload.billing_month = billingMonth;
 
-      if (form.rent_amount !== "") payload.rent_amount = Number(form.rent_amount);
+      // Ép các trường số về 0 nếu user xóa trắng (value === "")
+      payload.rent_amount = form.rent_amount !== "" ? Number(form.rent_amount) : 0;
+      
       if (form.electric_new !== "") payload.electric_new = Number(form.electric_new);
       if (form.water_new !== "") payload.water_new = Number(form.water_new);
       if (form.default_water_amount !== "") payload.default_water_amount = Number(form.default_water_amount);
-      if (form.service_fee !== "") payload.service_fee = Number(form.service_fee);
-      if (form.cleaning_fee !== "") payload.cleaning_fee = Number(form.cleaning_fee);
-      if (form.internet_fee !== "") payload.internet_fee = Number(form.internet_fee);
-      if (form.additional_fee !== "") payload.additional_fee = Number(form.additional_fee);
-      if (form.additional_fee_reason !== "") payload.additional_fee_reason = form.additional_fee_reason;
-      if (form.discount_amount !== "") payload.discount_amount = Number(form.discount_amount);
-      if (form.discount_reason !== "") payload.discount_reason = form.discount_reason;
+      
+      payload.service_fee = form.service_fee !== "" ? Number(form.service_fee) : 0;
+      payload.cleaning_fee = form.cleaning_fee !== "" ? Number(form.cleaning_fee) : 0;
+      payload.internet_fee = form.internet_fee !== "" ? Number(form.internet_fee) : 0;
+      
+      payload.additional_fee = form.additional_fee !== "" ? Number(form.additional_fee) : 0;
+      payload.additional_fee_reason = (form.additional_fee_reason || "").trim() === "" ? null : form.additional_fee_reason;
+      
+      payload.discount_amount = form.discount_amount !== "" ? Number(form.discount_amount) : 0;
+      payload.discount_reason = (form.discount_reason || "").trim() === "" ? null : form.discount_reason;
 
       await api.patch(`/bills/${bill.id}/edit`, payload);
       onSaved();

@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, ConfigDict
 class BillGenerateRequest(BaseModel):
     contract_id: int
     billing_month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$") 
-    rent_amount: float | None = Field(default=None, gt=0)
+    rent_amount: float | None = Field(default=None, ge=0)
     service_fee: float = Field(ge=0, default=0)
     # service_fee (phí dịch vụ/vệ sinh...) cho phép chủ trọ nhập tay ở đây,
     # vì đây không phải số tính từ công thức cố định như tiền điện/nước
@@ -22,7 +22,7 @@ class BillUpdate(BaseModel):
 
 class BillEditRequest(BaseModel):
     billing_month: str | None = None
-    rent_amount: float | None = Field(default=None, gt=0)
+    rent_amount: float | None = Field(default=None, ge=0)
     electric_new: float | None = None
     water_new: float | None = None
     default_water_amount: float | None = None
