@@ -144,15 +144,28 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition flex flex-col h-full">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition flex flex-col h-full relative overflow-hidden">
       <div className="flex justify-between items-start mb-3">
-        <div>
-          <p className="text-xs text-gray-400 mb-0.5">
-            Tháng {formatBillingMonth(bill.billing_month)}
-          </p>
-          <h3 className="font-bold text-gray-800">
-            {roomNumber ? `Phòng ${roomNumber}` : `HĐ #${bill.contract_id}`}
-          </h3>
+        <div className="flex flex-col items-start w-full">
+          <div className="flex justify-between w-full items-start">
+            <div>
+              {/* Nhãn Hóa đơn kết thúc hợp đồng */}
+              {bill.isFinalBill && (
+                <span className="inline-block bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide mb-1.5">
+                  Hóa đơn kết thúc HĐ
+                </span>
+              )}
+              <p className="text-xs text-gray-400 mb-0.5">
+                Tháng {formatBillingMonth(bill.billing_month)}
+              </p>
+              <h3 className="font-bold text-gray-800">
+                {roomNumber ? `Phòng ${roomNumber}` : `HĐ #${bill.contract_id}`}
+              </h3>
+            </div>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${cfg.color}`}>
+              {cfg.label}
+            </span>
+          </div>
 
           {houseName && (
             <p className="text-xs font-medium text-blue-600 mt-0.5 mb-1">
@@ -164,12 +177,9 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
             {tenantName ?? "—"}
           </p>
         </div>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${cfg.color}`}>
-          {cfg.label}
-        </span>
       </div>
 
-      <div className="border-t border-gray-100 pt-3 space-y-1 text-sm text-gray-600 flex-1">
+      <div className="border-t border-gray-100 pt-3 space-y-1 text-sm text-gray-600 flex-1 mt-1">
         <div className="flex justify-between">
           <span>Tiền thuê<span className="text-gray-400 font-medium ml-1 text-xs">{daysInfo}</span></span>
           <span>{Number(bill.rent_amount).toLocaleString("vi-VN")}đ</span>
@@ -218,7 +228,6 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
           </div>
         )}
 
-        {/* Chuyển phần Giảm trừ xuống cuối, ngay trước Tổng cộng */}
         {Number(bill.discount_amount) > 0 && (
           <div className="flex flex-col pt-0.5 text-green-600 font-medium">
             <div className="flex justify-between items-start gap-3">
@@ -347,12 +356,18 @@ export default function BillsPage() {
     const tenant = tenants.find(t => t.id === contract?.tenant_id) || contract?.tenant;
     const house = houses.find(h => h.id === room?.house_id);
 
+    // Xác định xem đây có phải là hóa đơn cuối cùng của hợp đồng đã kết thúc hay không
+    const isEnded = contract?.status === "ended" || contract?.status === "terminated";
+    // Nếu hợp đồng đã kết thúc và không tìm thấy bill nào của contract này có ID lớn hơn (tức đây là bill mới nhất)
+    const isFinalBill = isEnded && !bills.some(b => b.contract_id === contract?.id && b.id > bill.id);
+
     return {
       ...bill,
       computed_contract: contract,
       computed_room: room,
       computed_tenant: tenant,
-      computed_house: house
+      computed_house: house,
+      isFinalBill
     };
   });
 
@@ -369,7 +384,6 @@ export default function BillsPage() {
       setSendingId(null);
     }
   }
-
   
   async function handleSendBulkEmail(pendingBillsList) {
     if (!confirm(`Bạn có chắc chắn muốn gửi email cho ${pendingBillsList.length} hoá đơn chưa gửi?`)) return;
@@ -416,11 +430,9 @@ export default function BillsPage() {
     ? monthFilteredBills 
     : monthFilteredBills.filter((b) => b.computed_room?.house_id === Number(selectedHouse));
 
-  // TÍCH HỢP SORT THEO TRẠNG THÁI & SỐ PHÒNG VÀO BIẾN HIỂN THỊ CUỐI CÙNG
   const finalDisplayedBills = houseFilteredBills
     .filter((b) => matches(b, filter))
     .sort((a, b) => {
-       // Sắp xếp ưu tiên 1: Theo Trạng Thái
        const orderA = STATUS_ORDER[a.status] || 99;
        const orderB = STATUS_ORDER[b.status] || 99;
        
@@ -428,7 +440,6 @@ export default function BillsPage() {
            return orderA - orderB;
        }
        
-       // Sắp xếp ưu tiên 2: Cùng Trạng Thái -> Theo Số Phòng Tăng Dần (numeric true)
        const roomA = String(a.computed_room?.room_number || "");
        const roomB = String(b.computed_room?.room_number || "");
        return roomA.localeCompare(roomB, undefined, { numeric: true, sensitivity: 'base' });
