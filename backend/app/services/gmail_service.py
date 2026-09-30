@@ -123,7 +123,8 @@ def send_bill_email(
     pdf_filename = f"hoa-don-P{room_number}-{safe_month_filename}.pdf" # Cập nhật tên file PDF đính kèm
     attachment.add_header(
         "Content-Disposition",
-        f'attachment; filename="{pdf_filename}"',
+        "attachment",
+        filename=pdf_filename
     )
     msg.attach(attachment)
 

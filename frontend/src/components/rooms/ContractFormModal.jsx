@@ -343,8 +343,8 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
               <Field label="Số điện thoại" required>
                 <input name="phone" value={form.phone} onChange={handleChange} required placeholder="0912345678" className={INPUT} />
               </Field>
-              <Field label="Email" hint="Dùng để nhận bill hàng tháng" required>
-                <input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="example@gmail.com" className={INPUT} />
+              <Field label="Email" hint="Dùng để nhận bill hàng tháng">
+                <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="example@gmail.com" className={INPUT} />
               </Field>
             </div>
 

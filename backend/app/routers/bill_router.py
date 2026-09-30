@@ -373,12 +373,11 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy bill có id={bill_id}",
         )
-    if bill.status != "pending":
+    if bill.status not in ["pending", "sent", "paid"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
-                f"Bill này đang ở trạng thái '{bill.status}', "
-                "chỉ gửi được bill ở trạng thái 'pending'."
+                f"Không thể gửi email cho bill ở trạng thái '{bill.status}'."
             ),
         )
 
@@ -420,7 +419,11 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
 
     # Cập nhật bill sau khi gửi thành công
     bill.pdf_url = pdf_path
-    bill.status = "sent"
+    
+    # Chỉ chuyển thành "sent" nếu hóa đơn là mới. Không làm mất trạng thái "paid" của khách.
+    if bill.status == "pending":
+        bill.status = "sent"
+        
     db.commit()
     db.refresh(bill)
     return bill

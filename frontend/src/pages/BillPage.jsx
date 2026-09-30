@@ -288,12 +288,21 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
           </div>
         )}
         {bill.status === "sent" && (
-          <button
-            onClick={() => onMarkPaid(bill)}
-            className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
-          >
-            Đánh dấu đã thanh toán
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onMarkPaid(bill)}
+              className="flex-[2] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
+            >
+              Đã thanh toán
+            </button>
+            <button
+              onClick={() => onSendEmail(bill)}
+              disabled={sendingId === bill.id}
+              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
+            >
+              {sendingId === bill.id ? "Đang gửi..." : "📧 Gửi lại"}
+            </button>
+          </div>
         )}
         {bill.status === "paid" && (
           <div className="w-full px-4 py-2 bg-gray-50 text-gray-500 rounded-xl text-sm font-medium text-center">
@@ -395,7 +404,15 @@ export default function BillsPage() {
     for (const bill of pendingBillsList) {
       try {
         await api.post(`/bills/${bill.id}/send`);
-        setBills((prev) => prev.map((b) => b.id === bill.id ? { ...b, status: "sent" } : b));
+        
+        // Chỉ đổi status thành "sent" ở UI nếu bill đang là "pending"
+        setBills((prev) => prev.map((b) => {
+          if (b.id === bill.id && b.status === "pending") {
+            return { ...b, status: "sent" };
+          }
+          return b;
+        }));
+        
         successCount++;
       } catch (err) {
         failCount++;
@@ -449,7 +466,7 @@ export default function BillsPage() {
     .filter((b) => b.status !== "paid")
     .reduce((sum, b) => sum + Number(b.total_amount), 0);
 
-  const pendingBills = houseFilteredBills.filter((b) => b.status === "pending");
+  const sendableBills = houseFilteredBills;
 
   if (loading) {
     return (
@@ -516,13 +533,13 @@ export default function BillsPage() {
           })}
         </div>
 
-        {pendingBills.length > 0 && (
+        {sendableBills.length > 0 && (
           <button
-            onClick={() => handleSendBulkEmail(pendingBills)}
+            onClick={() => handleSendBulkEmail(sendableBills)}
             disabled={isSendingBulk || sendingId !== null}
             className="w-full md:w-auto justify-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm whitespace-nowrap"
           >
-            {isSendingBulk ? "⏳ Đang gửi hàng loạt..." : `🚀 Gửi tất cả (${pendingBills.length} email)`}
+            {isSendingBulk ? "⏳ Đang gửi hàng loạt..." : `🚀 Gửi tất cả (${sendableBills.length} email)`}
           </button>
         )}
       </div>
