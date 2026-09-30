@@ -107,7 +107,11 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         water_consumed = Decimal("0")
         water_amount = Decimal(str(rate.default_water_amount))
 
-    rent_amount = contract.monthly_rent
+    # Ưu tiên lấy rent_amount từ payload nếu có
+    if payload.rent_amount is not None:
+        rent_amount = Decimal(str(payload.rent_amount))
+    else:
+        rent_amount = contract.monthly_rent
     
     total_amount = (
         rent_amount 
@@ -242,6 +246,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     contract = db.query(Contract).filter(Contract.id == bill.contract_id).first()
     room = contract.room
 
+    # 1. Lấy chỉ số điện nước cũ bằng billing_month HIỆN TẠI của bill
     reading = db.query(UtilityReading).filter(
         UtilityReading.room_id == contract.room_id,
         UtilityReading.billing_month == bill.billing_month
@@ -249,6 +254,37 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     
     if not reading:
         raise HTTPException(status_code=404, detail="Không tìm thấy số điện nước gốc của bill này.")
+        
+    # 2. Xử lý việc đổi tháng (nếu có)
+    new_billing_month = getattr(payload, 'billing_month', None)
+    if new_billing_month and new_billing_month != bill.billing_month:
+        # Kiểm tra xem tháng mới đã có hóa đơn nào chưa để tránh trùng lặp
+        existing_bill = db.query(Bill).filter(
+            Bill.contract_id == contract.id,
+            Bill.billing_month == new_billing_month
+        ).first()
+        
+        if existing_bill:
+            raise HTTPException(
+                status_code=409, 
+                detail=f"Phòng này đã có hóa đơn cho tháng {new_billing_month}. Không thể đổi sang tháng này."
+            )
+            
+        # Kiểm tra xem tháng mới có bị trùng UtilityReading không
+        existing_reading = db.query(UtilityReading).filter(
+            UtilityReading.room_id == contract.room_id,
+            UtilityReading.billing_month == new_billing_month
+        ).first()
+        
+        if existing_reading:
+            raise HTTPException(
+                status_code=409, 
+                detail=f"Phòng này đã có chốt điện nước cho tháng {new_billing_month}. Không thể đổi sang tháng này."
+            )
+            
+        # Thực hiện cập nhật tháng cho cả 2 record
+        reading.billing_month = new_billing_month
+        bill.billing_month = new_billing_month
 
     billing_month_end = _billing_month_to_last_date(bill.billing_month)
     rate = db.query(UtilityRate).filter(
@@ -275,7 +311,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
         else:
             water_amount = Decimal(str(bill.water_amount))
 
-
+    rent_amt = Decimal(str(payload.rent_amount)) if payload.rent_amount is not None else Decimal(str(bill.rent_amount))
     svc_fee = Decimal(str(payload.service_fee)) if payload.service_fee is not None else Decimal(str(bill.service_fee))
     cln_fee = Decimal(str(payload.cleaning_fee)) if payload.cleaning_fee is not None else Decimal(str(bill.cleaning_fee))
     net_fee = Decimal(str(payload.internet_fee)) if payload.internet_fee is not None else Decimal(str(bill.internet_fee))
@@ -285,7 +321,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     dsc_reason = payload.discount_reason if payload.discount_reason is not None else bill.discount_reason
 
     total_amount = (
-        Decimal(str(bill.rent_amount)) 
+        rent_amt 
         - dsc_amt
         + electric_amount 
         + water_amount 
@@ -298,6 +334,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     if room.is_water_meter:
         reading.water_new = water_new_val
 
+    bill.rent_amount = float(rent_amt)
     bill.electric_consumed = float(electric_consumed)
     bill.water_consumed = float(water_consumed)
     bill.electric_amount = float(electric_amount)

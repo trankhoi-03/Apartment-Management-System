@@ -2,14 +2,9 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class BillGenerateRequest(BaseModel):
-    """Dùng khi chủ trọ bấm 'xuất bill' cho 1 hợp đồng, 1 tháng cụ thể.
-    CHỈ gửi tham chiếu (contract_id, billing_month) - KHÔNG gửi số tiền.
-    Server sẽ tự tính rent_amount/electric_amount/water_amount dựa trên
-    Contract.monthly_rent + UtilityReading tương ứng + đơn giá điện nước,
-    không bao giờ tin số tiền do client tự gửi lên."""
-
     contract_id: int
     billing_month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$") 
+    rent_amount: float | None = Field(default=None, gt=0)
     service_fee: float = Field(ge=0, default=0)
     # service_fee (phí dịch vụ/vệ sinh...) cho phép chủ trọ nhập tay ở đây,
     # vì đây không phải số tính từ công thức cố định như tiền điện/nước
@@ -26,6 +21,8 @@ class BillUpdate(BaseModel):
 
 
 class BillEditRequest(BaseModel):
+    billing_month: str | None = None
+    rent_amount: float | None = Field(default=None, gt=0)
     electric_new: float | None = None
     water_new: float | None = None
     default_water_amount: float | None = None
