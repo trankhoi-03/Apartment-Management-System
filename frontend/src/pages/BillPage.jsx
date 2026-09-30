@@ -22,11 +22,10 @@ function matches(bill, filter) {
 
 function formatBillingMonth(monthStr) {
   if (!monthStr) return "";
-  // Nếu dữ liệu trả về dạng "YYYY-MM" (VD: "2026-09")
   if (monthStr.includes("-")) {
     const parts = monthStr.split("-");
     if (parts.length >= 2) {
-      return `${parts[1]}/${parts[0]}`; // Chuyển thành "09/2026"
+      return `${parts[1]}/${parts[0]}`; 
     }
   }
   return monthStr;
@@ -118,6 +117,25 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
   const tenantName = bill.computed_tenant?.full_name;
   const houseName = bill.computed_house?.name;
 
+  let daysInfo = "";
+  const contractRent = bill.computed_contract?.monthly_rent;
+  const actualRent = Number(bill.rent_amount);
+  
+  if (contractRent && actualRent > 0 && actualRent < contractRent) {
+    try {
+      const [year, month] = bill.billing_month.split("-").map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const rentPerDay = contractRent / daysInMonth;
+      const inferredDays = Math.round(actualRent / rentPerDay);
+      
+      if (inferredDays > 0 && inferredDays < daysInMonth) {
+        daysInfo = ` (Ở ${inferredDays} ngày)`;
+      }
+    } catch (e) {
+      console.error("Lỗi khi tính toán số ngày ở", e);
+    }
+  }
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition flex flex-col h-full">
       <div className="flex justify-between items-start mb-3">
@@ -146,40 +164,10 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
 
       <div className="border-t border-gray-100 pt-3 space-y-1 text-sm text-gray-600 flex-1">
         <div className="flex justify-between">
-          <span>Tiền thuê</span>
+          <span>Tiền thuê<span className="text-gray-400 font-medium ml-1 text-xs">{daysInfo}</span></span>
           <span>{Number(bill.rent_amount).toLocaleString("vi-VN")}đ</span>
         </div>
-        {Number(bill.discount_amount) > 0 && (
-          <div className="flex flex-col pt-0.5 text-green-600 font-medium">
-            <div className="flex justify-between items-start gap-3">
-              <div className="flex flex-col min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="shrink-0">Giảm trừ</span>
-                  
-                  {/* Nếu có lý do, hiển thị nút ẩn/hiện */}
-                  {bill.discount_reason && (
-                     <button 
-                       onClick={() => setShowDiscountReason(!showDiscountReason)} 
-                       className="shrink-0 text-green-600 hover:text-green-800 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 text-[10px] font-bold leading-none transition-colors"
-                     >
-                       {showDiscountReason ? "▲ Ẩn" : "▼ Xem"}
-                     </button>
-                  )}
-                </div>
-                
-                {/* Khi bấm Xem, xổ lý do xuống một dòng mới ngay bên dưới chữ Giảm trừ */}
-                {showDiscountReason && bill.discount_reason && (
-                  <span className="text-xs font-normal mt-1 opacity-90 break-words pr-2">
-                    ({bill.discount_reason})
-                  </span>
-                )}
-              </div>
-              <span className="shrink-0">
-                -{Number(bill.discount_amount).toLocaleString("vi-VN")}đ
-              </span>
-            </div>
-          </div>
-        )}
+        
         <div className="flex justify-between">
           <span>Điện ({bill.electric_consumed} kWh)</span>
           <span>{Number(bill.electric_amount).toLocaleString("vi-VN")}đ</span>
@@ -222,6 +210,38 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
             </span>
           </div>
         )}
+
+        {/* Chuyển phần Giảm trừ xuống cuối, ngay trước Tổng cộng */}
+        {Number(bill.discount_amount) > 0 && (
+          <div className="flex flex-col pt-0.5 text-green-600 font-medium">
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="shrink-0">Giảm trừ</span>
+                  
+                  {bill.discount_reason && (
+                     <button 
+                       onClick={() => setShowDiscountReason(!showDiscountReason)} 
+                       className="shrink-0 text-green-600 hover:text-green-800 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 text-[10px] font-bold leading-none transition-colors"
+                     >
+                       {showDiscountReason ? "▲ Ẩn" : "▼ Xem"}
+                     </button>
+                  )}
+                </div>
+                
+                {showDiscountReason && bill.discount_reason && (
+                  <span className="text-xs font-normal mt-1 opacity-90 break-words pr-2">
+                    ({bill.discount_reason})
+                  </span>
+                )}
+              </div>
+              <span className="shrink-0">
+                -{Number(bill.discount_amount).toLocaleString("vi-VN")}đ
+              </span>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between font-bold text-gray-800 border-t border-gray-100 pt-2 mt-1">
           <span>Tổng cộng</span>
           <span className="text-blue-600">
@@ -311,7 +331,6 @@ export default function BillsPage() {
     Promise.resolve().then(() => {
       loadBills();
     });
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -352,7 +371,6 @@ export default function BillsPage() {
     let successCount = 0;
     let failCount = 0;
 
-    
     for (const bill of pendingBillsList) {
       try {
         await api.post(`/bills/${bill.id}/send`);

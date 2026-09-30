@@ -13,6 +13,7 @@ const CATEGORY_COLORS = {
   'Quản lý':            '#64748b',  
   'Chi phí khác':       '#8b5cf6', 
   'Chi phí Internet':   '#d946ef',  
+  'Giảm trừ':           '#0cd0e6f7', // Màu cho Giảm trừ
 
   // DOANH THU (REVENUE)
   'Tiền thuê':          '#10b981',  
@@ -194,7 +195,7 @@ export default function FinancialPage() {
 
   const [openTabs, setOpenTabs] = useState({
     rent: true, electric_rev: false, water_rev: false, service_rev: false, additional_rev: false, cleaning_rev: false, internet_rev: false,
-    electric_cost: true, water_cost: true, maintenance: false, base_cost: false, management: false, other_costs: false
+    electric_cost: true, water_cost: true, maintenance: false, base_cost: false, management: false, other_costs: false, internet_cost: false, discount: false
   });
   const toggleTab = (tab) => setOpenTabs(prev => ({ ...prev, [tab]: !prev[tab] }));
 
@@ -233,7 +234,6 @@ export default function FinancialPage() {
           reason: res.data.other_cost_input.other_house_cost_reason || "" 
         }]);
       } else {
-        // Đảm bảo luôn là mảng ngay cả khi không có dữ liệu
         setOtherCostInputs([{ amount: 0, reason: "" }]);
       }
       if (res.data.internet_cost_input) setInternetInputs({ amount: res.data.internet_cost_input.total_internet_cost || 0 });
@@ -326,6 +326,13 @@ export default function FinancialPage() {
         return { room_name: `Phòng ${room?.room_number}`, amount: Number(bill.internet_fee) };
     });
 
+    // Tính toán Giảm trừ (Discount) từ các bill đã lọc
+    const discountDetails = filteredBills.filter(bill => Number(bill.discount_amount) > 0).map(bill => {
+        const contract = contracts.find(c => c.id === bill.contract_id);
+        const room = rooms.find(r => r.id === contract?.room_id);
+        return { room_name: `Phòng ${room?.room_number}`, reason: bill.discount_reason || 'Không có', amount: Number(bill.discount_amount) };
+    });
+
     let paidRent = 0;
     let unpaidRent = 0;
     filteredBills.forEach(bill => {
@@ -336,7 +343,6 @@ export default function FinancialPage() {
 
     const sum = (arr, key) => arr.reduce((acc, curr) => acc + (Number(curr[key]) || 0), 0);
 
-    // Tính tổng cho từng danh mục
     const rentTotal = sum(rentDetails, "revenue");
     const electricRevTotal = sum(electricRevDetails, "amount");
     const waterRevTotal = sum(waterRevDetails, "amount");
@@ -351,13 +357,16 @@ export default function FinancialPage() {
     const baseCostTotal = sum(baseCostDetails, "amount");
     const mgmtTotal = sum(mgmtDetails, "amount");
     const otherCostTotal = sum(otherCostDetails, "amount");
+    const internetCostTotal = reportData.internet_cost_tab?.total || 0;
+    const discountTotal = sum(discountDetails, "amount"); // Tổng giảm trừ
 
     const totalRev = rentTotal + electricRevTotal + waterRevTotal + serviceRevTotal + additionalRevTotal + cleaningRevTotal + internetRevTotal;
-    const totalCost = electricCostTotal + waterCostTotal + maintTotal + baseCostTotal + mgmtTotal + otherCostTotal;
+    
+    // Tổng chi phí (Cộng thêm cả Internet và Giảm trừ vào Chi phí)
+    const totalCost = electricCostTotal + waterCostTotal + maintTotal + baseCostTotal + mgmtTotal + otherCostTotal + internetCostTotal + discountTotal;
 
     const barThuChiData = [{ name: `Tháng ${selectedMonth.split('-')[1]}`, "Thu nhập": totalRev, "Chi tiêu": totalCost }];
 
-    // Dữ liệu cho Biểu đồ Tròn
     const costArray = [
       { name: 'Tiền điện (Chi)', value: electricCostTotal },
       { name: 'Tiền nước (Chi)', value: waterCostTotal },
@@ -366,11 +375,11 @@ export default function FinancialPage() {
     ];
     if (mgmtTotal > 0) costArray.push({ name: 'Quản lý', value: mgmtTotal });
     if (otherCostTotal > 0) costArray.push({ name: 'Chi phí khác', value: otherCostTotal });
-    const internetCostTotal = reportData.internet_cost_tab?.total || 0;
     if (internetCostTotal > 0) costArray.push({ name: 'Chi phí Internet', value: internetCostTotal });
+    if (discountTotal > 0) costArray.push({ name: 'Giảm trừ', value: discountTotal }); // Đẩy Giảm trừ vào biểu đồ tròn
 
     const pieCostData = costArray.filter(d => d.value > 0).map(item => ({
-      ...item, fill: CATEGORY_COLORS[item.name] || '#9ca3af' // Sử dụng bộ màu Cố Định
+      ...item, fill: CATEGORY_COLORS[item.name] || '#9ca3af' 
     }));
 
     const pieRevData = [
@@ -382,7 +391,7 @@ export default function FinancialPage() {
       { name: 'Phí vệ sinh', value: cleaningRevTotal },
       { name: 'Phí internet', value: internetRevTotal }
     ].filter(d => d.value > 0).map(item => ({
-      ...item, fill: CATEGORY_COLORS[item.name] || '#9ca3af' // Sử dụng bộ màu Cố Định
+      ...item, fill: CATEGORY_COLORS[item.name] || '#9ca3af' 
     }));
 
     return {
@@ -403,6 +412,7 @@ export default function FinancialPage() {
       base_cost_tab: { total: baseCostTotal, details: baseCostDetails },
       management_tab: { total: mgmtTotal, details: mgmtDetails },
       other_costs_tab: { total: otherCostTotal, details: otherCostDetails },
+      discount_tab: { total: discountTotal, details: discountDetails }, // Thêm tab Giảm trừ
       charts: { barThuChiData, pieCostData, pieRevData }
     };
   }, [reportData, selectedRoom, rooms, selectedHouse, bills, contracts, selectedMonth]);
@@ -425,7 +435,6 @@ export default function FinancialPage() {
   const handleSaveOtherCost = async () => {
     setSavingOtherCost(true);
     try {
-      // 1. Lọc ra các dòng hợp lệ (có nhập tiền hoặc có ghi lý do)
       const validInputs = otherCostInputs.filter(
         input => (Number(input.amount) || 0) > 0 || input.reason.trim() !== ""
       );
@@ -436,16 +445,13 @@ export default function FinancialPage() {
         return;
       }
 
-      // 2. Gộp tổng số tiền
       const totalAmount = validInputs.reduce((sum, input) => sum + (Number(input.amount) || 0), 0);
       
-      // 3. Ghép nối lý do (bỏ qua các lý do rỗng)
       const combinedReason = validInputs
         .map(input => input.reason.trim())
         .filter(reason => reason !== "")
         .join(", ");
 
-      // 4. Gọi API duy nhất 1 lần để lưu tổng
       await api.post(`/reports/financial/${selectedHouse}/other-cost?month=${selectedMonth}`, {
         other_house_cost: totalAmount,
         other_house_cost_reason: combinedReason || "Chi phí chung"
@@ -454,7 +460,6 @@ export default function FinancialPage() {
       await loadReport();
       alert("Đã lưu thành công tổng chi phí khác!");
       
-      // Reset lại form về 1 dòng trống
       setOtherCostInputs([{ amount: 0, reason: "" }]);
       
     } catch { 
@@ -510,7 +515,6 @@ export default function FinancialPage() {
   const inputStyle = "w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
   const tableHeaderStyle = "text-xs font-semibold text-gray-500 uppercase tracking-wider pb-3 border-b border-gray-200";
   const tableRowStyle = "py-3 text-sm text-gray-700 border-b border-dashed border-gray-200/50";
-
 
 
   const renderRentContent = () => {
@@ -768,6 +772,17 @@ export default function FinancialPage() {
     </DetailPanel>
   );
 
+  const renderDiscountContent = () => (
+    <DetailPanel title="Chi tiết Giảm trừ" colorTheme="rose">
+      {displayData.discount_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Không có dữ liệu giảm trừ.</p> : (
+        <table className="w-full text-left min-w-[400px]">
+          <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={tableHeaderStyle}>Nội dung giảm trừ</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
+          <tbody>{displayData.discount_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={tableRowStyle}>{d.reason}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+        </table>
+      )}
+    </DetailPanel>
+  );
+
 
   const renderDetailView = () => (
     <div className="space-y-10 animate-fade-in">
@@ -880,6 +895,10 @@ export default function FinancialPage() {
               {openTabs.internet_cost && <div className="mt-2 lg:mt-0">{renderInternetCostContent()}</div>}
             </div>
             
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 items-start">
+              <AccordionCard icon="🏷️" title="Giảm trừ" colorTheme="rose" summaryAmount={-displayData.discount_tab.total} isOpen={openTabs.discount} onToggle={() => toggleTab('discount')} />
+              {openTabs.discount && <div className="mt-2 lg:mt-0">{renderDiscountContent()}</div>}
+            </div>
           </div>
         </div>
       )}

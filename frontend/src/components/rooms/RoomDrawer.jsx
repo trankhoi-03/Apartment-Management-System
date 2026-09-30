@@ -527,7 +527,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
               </div>
             ) : (
               <div className="text-center py-6 text-gray-400">
-                <p className="mb-3 text-sm">Phòng chưa có hợp đồng active</p>
+                <p className="mb-3 text-sm">Phòng chưa có hợp đồng</p>
                 <button onClick={() => setShowContractForm(true)}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition">
                   + Thêm hợp đồng
