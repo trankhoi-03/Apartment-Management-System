@@ -529,7 +529,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                             {isComboBill && (
                               <>
                                 <br />
-                                Tiền trọn tháng sau: <strong className="text-blue-600 font-semibold">{Number(contract?.monthly_rent || 0).toLocaleString("vi-VN")}đ</strong>
+                                Tiền trọ tháng sau: <strong className="text-blue-600 font-semibold">{Number(contract?.monthly_rent || 0).toLocaleString("vi-VN")}đ</strong>
                                 <br />
                                 Tổng cộng: <strong className="text-blue-600 font-semibold">{(Math.round((Number(contract?.monthly_rent || 0) / new Date(billingMonth.split("-")[0], billingMonth.split("-")[1], 0).getDate()) * Number(daysStayed)) + Number(contract?.monthly_rent || 0)).toLocaleString("vi-VN")}đ</strong>
                               </>
