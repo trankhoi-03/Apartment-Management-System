@@ -15,6 +15,10 @@ class BillGenerateRequest(BaseModel):
     discount_amount: float = Field(ge=0, default=0)
     discount_reason: str | None = None
 
+    electric_calc_method: str = Field(default="fixed_price") # "fixed_price" | "split_ratio"
+    electric_total_consumed: float | None = Field(default=None, ge=0) 
+    electric_total_cost: float | None = Field(default=None, ge=0)
+
 
 class BillUpdate(BaseModel):
     status: str | None = None
@@ -33,6 +37,10 @@ class BillEditRequest(BaseModel):
     additional_fee_reason: str | None = None
     discount_amount: float | None = None
     discount_reason: str | None = None
+
+    electric_calc_method: str | None = None
+    electric_total_consumed: float | None = None
+    electric_total_cost: float | None = None
 
 
 class BillResponse(BaseModel):
@@ -54,5 +62,9 @@ class BillResponse(BaseModel):
     total_amount: float
     status: str
     pdf_url: str | None = None
+
+    electric_calc_method: str = "fixed_price"
+    electric_total_consumed: float | None = None
+    electric_total_cost: float | None = None
  
     model_config = ConfigDict(from_attributes=True)

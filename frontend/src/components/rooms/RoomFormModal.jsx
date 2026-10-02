@@ -52,7 +52,28 @@ function CreatableTagInput({ value = [], onChange, availableTags = [], placehold
     const newTags = rawInput
       .split(",")
       .map(t => t.trim())
-      .filter(t => t !== "" && !value.includes(t)); 
+      .filter(t => t !== "")
+      .map(t => {
+        // 1. Kiểm tra xem có trùng với tag đã tồn tại trong availableTags không (case-insensitive)
+        const matchedAvailable = availableTags.find(
+          item => item.toLowerCase() === t.toLowerCase()
+        );
+        if (matchedAvailable) {
+          return matchedAvailable; // Sử dụng định dạng đã lưu sẵn
+        }
+        // 2. Nếu là tag mới, chuẩn hóa viết hoa chữ cái đầu tiên (VD: "máy lạnh" -> "Máy lạnh")
+        return t.charAt(0).toUpperCase() + t.slice(1);
+      })
+      // 3. Lọc bỏ các tag đã tồn tại trong danh sách đã chọn (case-insensitive)
+      .filter((t, index, self) => {
+        const alreadySelected = value.some(
+          selected => selected.toLowerCase() === t.toLowerCase()
+        );
+        const duplicateInBatch = self.findIndex(
+          item => item.toLowerCase() === t.toLowerCase()
+        ) !== index;
+        return !alreadySelected && !duplicateInBatch;
+      });
 
     if (newTags.length > 0) {
       onChange([...value, ...newTags]);
@@ -65,7 +86,9 @@ function CreatableTagInput({ value = [], onChange, availableTags = [], placehold
     onChange(value.filter(t => t !== tagToRemove));
   };
 
-  const unselectedTags = availableTags.filter(t => !value.includes(t));
+  const unselectedTags = availableTags.filter(
+    t => !value.some(selected => selected.toLowerCase() === t.toLowerCase())
+  );
   
   const filteredTags = unselectedTags.filter(t => 
     t.toLowerCase().includes(inputValue.toLowerCase())

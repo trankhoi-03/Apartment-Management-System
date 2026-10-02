@@ -200,6 +200,9 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [discountReason, setDiscountReason] = useState("");
   const [electricOld, setElectricOld]   = useState("");
   const [electricNew, setElectricNew]   = useState("");
+  const [electricCalcMethod, setElectricCalcMethod] = useState("fixed_price");
+  const [electricTotalConsumed, setElectricTotalConsumed] = useState(""); 
+  const [electricTotalCost, setElectricTotalCost] = useState("");
   const [waterOld, setWaterOld]         = useState("");
   const [waterNew, setWaterNew]         = useState("");
   const [existingUtilityId, setExistingUtilityId] = useState(null);
@@ -268,6 +271,13 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
       })
       .catch(() => { setBillingMonth(contractStartMonth); setIsFirstBill(true); }); 
   }, [contract]);
+
+  useEffect(() => {
+    if (contract?.electric_calc_method) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setElectricCalcMethod(contract.electric_calc_method);
+    }
+  }, [contract?.electric_calc_method]);
 
   useEffect(() => {
     let isMounted = true;
@@ -359,8 +369,26 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     e.preventDefault();
     setError("");
 
-    if (Number(electricNew) < Number(electricOld)) { setError("Lỗi: Số điện mới không được nhỏ hơn số điện cũ."); return; }
-    if (room?.is_water_meter && Number(waterNew) < Number(waterOld)) { setError("Lỗi: Số nước mới không được nhỏ hơn số nước cũ."); return; }
+    if (Number(electricNew) < Number(electricOld)) { 
+      setError("Lỗi: Số điện mới không được nhỏ hơn số điện cũ."); 
+      return; 
+    }
+    if (room?.is_water_meter && Number(waterNew) < Number(waterOld)) { 
+      setError("Lỗi: Số nước mới không được nhỏ hơn số nước cũ."); 
+      return; 
+    }
+
+    // Validate bổ sung khi tính theo bill tổng
+    if (electricCalcMethod === "split_ratio") {
+      if (!electricTotalConsumed || Number(electricTotalConsumed) <= 0) {
+        setError("Vui lòng nhập Tổng số điện (kWh) của hóa đơn tổng lớn hơn 0.");
+        return;
+      }
+      if (!electricTotalCost || Number(electricTotalCost) < 0) {
+        setError("Vui lòng nhập Tổng tiền của hóa đơn điện tổng.");
+        return;
+      }
+    }
 
     const confirmMessage = `XÁC NHẬN SỐ LIỆU THÁNG ${billingMonth}:\n\n`
                        + `- Tiền thuê: ${rentAmount ? Number(rentAmount).toLocaleString("vi-VN") : "0"} đ\n`
@@ -404,7 +432,10 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
         additional_fee_reason: additionalFeeReason,
         discount_amount:    discountAmount ? Number(discountAmount) : 0,
         discount_reason:    discountReason,
-        due_date:           estimatedDueDate.isoDate
+        due_date:           estimatedDueDate.isoDate,
+        electric_calc_method:   electricCalcMethod,
+        electric_total_consumed: electricCalcMethod === "split_ratio" ? Number(electricTotalConsumed) : null,
+        electric_total_cost:     electricCalcMethod === "split_ratio" ? Number(electricTotalCost) : null,
       });
       setPreview(res.data);
     } catch (err) {
@@ -543,18 +574,127 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
               </div>
 
               {/* Điện */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">⚡ Điện (kWh)</p>
+              {/* Điện */}
+              <div className="space-y-3 p-3.5 bg-gray-50/80 rounded-2xl border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                    <span>⚡</span> Điện
+                  </p>
+
+                  {/* Nút bấm chuyển đổi phương thức tính */}
+                  <div className="flex bg-gray-200/70 p-0.5 rounded-lg text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setElectricCalcMethod("fixed_price")}
+                      className={`px-2.5 py-1 rounded-md transition font-medium ${
+                        electricCalcMethod === "fixed_price"
+                          ? "bg-white text-blue-700 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Đơn giá cố định
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setElectricCalcMethod("split_ratio")}
+                      className={`px-2.5 py-1 rounded-md transition font-medium ${
+                        electricCalcMethod === "split_ratio"
+                          ? "bg-white text-blue-700 shadow-sm"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      Chia bill tổng
+                    </button>
+                  </div>
+                </div>
+
+                {/* Nhập chỉ số đồng hồ phòng */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Số cũ {loadingPrev && <span className="text-blue-400">(đang tải...)</span>}</label>
-                    <FormattedNumberInput name="electric_old" value={electricOld} onChange={(e) => setElectricOld(e.target.value)} placeholder="vd: 100" className={INPUT} />
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Số cũ {loadingPrev && <span className="text-blue-400">(đang tải...)</span>}
+                    </label>
+                    <FormattedNumberInput
+                      name="electric_old"
+                      value={electricOld}
+                      onChange={(e) => setElectricOld(e.target.value)}
+                      placeholder="vd: 100"
+                      className={INPUT}
+                    />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Số mới</label>
-                    <FormattedNumberInput name="electric_new" value={electricNew} onChange={(e) => setElectricNew(e.target.value)} placeholder="vd: 150" className={INPUT} />
+                    <FormattedNumberInput
+                      name="electric_new"
+                      value={electricNew}
+                      onChange={(e) => setElectricNew(e.target.value)}
+                      placeholder="vd: 150"
+                      className={INPUT}
+                    />
                   </div>
                 </div>
+
+                {/* Khu vực nhập Bill tổng khi chọn chia tỉ lệ */}
+                {electricCalcMethod === "split_ratio" && (
+                  <div className="pt-3 border-t border-gray-200/80 space-y-3 animate-fade-in">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
+                      <span>📊</span> Thông tin hóa đơn điện tổng (EVN)
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Tổng kWh cả nhà <span className="text-red-500">*</span>
+                        </label>
+                        <FormattedNumberInput
+                          name="electric_total_consumed"
+                          value={electricTotalConsumed}
+                          onChange={(e) => setElectricTotalConsumed(e.target.value)}
+                          placeholder="vd: 800"
+                          required
+                          className={INPUT}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Tổng tiền bill tổng (đ) <span className="text-red-500">*</span>
+                        </label>
+                        <FormattedNumberInput
+                          name="electric_total_cost"
+                          value={electricTotalCost}
+                          onChange={(e) => setElectricTotalCost(e.target.value)}
+                          placeholder="vd: 2,500,000"
+                          required
+                          className={INPUT}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Hiển thị tính thử tức thì cho người dùng đối chiếu */}
+                    {electricNew !== "" && electricOld !== "" && Number(electricNew) >= Number(electricOld) && (
+                      <div className="p-2.5 bg-white rounded-xl border border-gray-200 text-xs text-gray-600 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Tiêu thụ của phòng:</span>
+                          <span className="font-semibold text-gray-800">
+                            {Number(electricNew) - Number(electricOld)} kWh
+                          </span>
+                        </div>
+                        {Number(electricTotalConsumed) > 0 && Number(electricTotalCost) > 0 && (
+                          <div className="flex justify-between pt-1 border-t border-gray-100 text-blue-700 font-medium">
+                            <span>Tiền điện tạm tính:</span>
+                            <span>
+                              {Math.round(
+                                ((Number(electricNew) - Number(electricOld)) / Number(electricTotalConsumed)) *
+                                  Number(electricTotalCost)
+                              ).toLocaleString("vi-VN")}{" "}
+                              đ
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Nước */}
@@ -655,7 +795,19 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                   label={<span>Tiền thuê{daysInfo && <span className="text-gray-400 font-medium ml-1 text-xs">{daysInfo}</span>}</span>} 
                   value={`${Number(preview.rent_amount).toLocaleString("vi-VN")}đ`} 
                 />
-                <Row label={`Điện (${preview.electric_consumed} kWh)`} value={`${Number(preview.electric_amount).toLocaleString("vi-VN")}đ`} />
+                <Row 
+                  label={
+                    <span>
+                      Điện ({preview.electric_consumed} kWh)
+                      {preview.electric_calc_method === "split_ratio" && (
+                        <span className="ml-1 text-[11px] text-amber-600 font-normal">
+                          (Chia tỉ lệ {preview.electric_consumed}/{preview.electric_total_consumed} kWh)
+                        </span>
+                      )}
+                    </span>
+                  } 
+                  value={`${Number(preview.electric_amount).toLocaleString("vi-VN")}đ`} 
+                />
                 <Row label={preview.water_consumed > 0 ? `Nước (${preview.water_consumed} m³)` : "Nước (cố định)"} value={`${Number(preview.water_amount).toLocaleString("vi-VN")}đ`} />
                 {Number(preview.service_fee) > 0 && <Row label="Phí dịch vụ" value={`${Number(preview.service_fee).toLocaleString("vi-VN")}đ`} />}
                 {Number(preview.cleaning_fee) > 0 && <Row label="Phí vệ sinh" value={`${Number(preview.cleaning_fee).toLocaleString("vi-VN")}đ`} />}

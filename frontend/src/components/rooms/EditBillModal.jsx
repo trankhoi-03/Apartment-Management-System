@@ -122,7 +122,10 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
     additional_fee: "",          
     additional_fee_reason: "",
     discount_amount: "",
-    discount_reason: ""
+    discount_reason: "",
+    electric_calc_method: "fixed_price",
+    electric_total_consumed: "",
+    electric_total_cost: ""
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -161,7 +164,10 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
           additional_fee: bill.additional_fee ?? 0,
           additional_fee_reason: bill.additional_fee_reason ?? "",
           discount_amount: bill.discount_amount ?? 0,
-          discount_reason: bill.discount_reason ?? ""
+          discount_reason: bill.discount_reason ?? "",
+          electric_calc_method: bill.electric_calc_method || bill.computed_contract?.electric_calc_method || "fixed_price",
+          electric_total_consumed: bill.electric_total_consumed ? String(bill.electric_total_consumed) : "",
+          electric_total_cost: bill.electric_total_cost ? String(bill.electric_total_cost) : ""
         });
         
         // REVERSE-CALCULATION: Tự động nhận diện Hóa đơn gộp/Tiền lẻ
@@ -228,6 +234,18 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+
+    // Validate cho cách tính chia bill tổng
+    if (form.electric_calc_method === "split_ratio") {
+      if (!form.electric_total_consumed || Number(form.electric_total_consumed) <= 0) {
+        setError("Vui lòng nhập Tổng số điện (kWh) của hóa đơn tổng lớn hơn 0.");
+        return;
+      }
+      if (form.electric_total_cost === "" || Number(form.electric_total_cost) < 0) {
+        setError("Vui lòng nhập Tổng tiền của hóa đơn điện tổng hợp lệ.");
+        return;
+      }
+    }
     setLoading(true);
 
     try {
@@ -372,43 +390,126 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
           </div>
 
           {/* 2. Điện / Nước */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số điện mới (kWh)</label>
-              <input 
-                name="electric_new" 
-                type="number" 
-                min="0" 
-                value={form.electric_new} 
-                onChange={handleChange} 
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
-              />
-            </div>
+          <div className="space-y-4 pt-2 border-t border-gray-100">
+            {/* Header Điện kèm Tab chuyển đổi phương thức tính */}
+            <div className="p-3 bg-gray-50/80 rounded-2xl border border-gray-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                  <span>⚡</span> Phương thức tính tiền điện
+                </label>
+                
+                <div className="flex bg-gray-200/70 p-0.5 rounded-lg text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, electric_calc_method: "fixed_price" }))}
+                    className={`px-2.5 py-1 rounded-md transition font-medium ${
+                      form.electric_calc_method === "fixed_price"
+                        ? "bg-white text-blue-700 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Đơn giá cố định
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, electric_calc_method: "split_ratio" }))}
+                    className={`px-2.5 py-1 rounded-md transition font-medium ${
+                      form.electric_calc_method === "split_ratio"
+                        ? "bg-white text-blue-700 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Chia bill tổng
+                  </button>
+                </div>
+              </div>
 
-            {isWaterMeter ? (
+              {/* Chỉ số điện mới của phòng */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Số nước mới (m³)</label>
+                <label className="block text-xs text-gray-600 mb-1">
+                  Số điện mới của phòng (kWh) <span className="text-red-500">*</span>
+                </label>
                 <input 
-                  name="water_new" 
+                  name="electric_new" 
                   type="number" 
                   min="0" 
-                  value={form.water_new} 
+                  value={form.electric_new} 
                   onChange={handleChange} 
-                  placeholder="Nhập số khối" 
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  placeholder="Nhập số điện chốt mới..."
+                  required
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
                 />
               </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tiền nước cố định (đ)</label>
-                <FormattedNumberInput 
-                  name="default_water_amount" 
-                  value={form.default_water_amount} 
-                  onChange={handleChange} 
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                />
-              </div>
-            )}
+
+              {/* Nhập số liệu hóa đơn tổng nếu chọn split_ratio */}
+              {form.electric_calc_method === "split_ratio" && (
+                <div className="pt-3 border-t border-gray-200 space-y-3 animate-fade-in">
+                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
+                    <span>📊</span> Thông tin hóa đơn điện tổng (EVN)
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Tổng kWh cả nhà <span className="text-red-500">*</span>
+                      </label>
+                      <FormattedNumberInput
+                        name="electric_total_consumed"
+                        value={form.electric_total_consumed}
+                        onChange={handleChange}
+                        placeholder="vd: 800"
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Tổng tiền bill tổng (đ) <span className="text-red-500">*</span>
+                      </label>
+                      <FormattedNumberInput
+                        name="electric_total_cost"
+                        value={form.electric_total_cost}
+                        onChange={handleChange}
+                        placeholder="vd: 2,500,000"
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Khối nhập Nước */}
+            <div>
+              {isWaterMeter ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    💧 Số nước mới (m³) <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    name="water_new" 
+                    type="number" 
+                    min="0" 
+                    value={form.water_new} 
+                    onChange={handleChange} 
+                    placeholder="Nhập số khối..." 
+                    required
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">💧 Tiền nước cố định (đ)</label>
+                  <FormattedNumberInput 
+                    name="default_water_amount" 
+                    value={form.default_water_amount} 
+                    onChange={handleChange} 
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" 
+                  />
+                </div>
+              )}
+            </div>
           </div>
           
           {/* 3. Các loại phí dịch vụ */}

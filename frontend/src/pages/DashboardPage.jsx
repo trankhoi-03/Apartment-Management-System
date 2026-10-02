@@ -2,12 +2,6 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
 
-const STATUS_CONFIG = {
-  vacant:   { label: "Trống",      color: "bg-green-100 text-green-700"  },
-  occupied: { label: "Đang thuê",  color: "bg-blue-100 text-blue-700"    },
-  inactive: { label: "Ngừng thuê", color: "bg-gray-100 text-gray-500"    },
-};
-
 function StatCard({ label, value, color }) {
   return (
     <div className={`rounded-2xl p-5 ${color}`}>
@@ -17,35 +11,10 @@ function StatCard({ label, value, color }) {
   );
 }
 
-function RoomCard({ room, house }) {
-  const cfg = STATUS_CONFIG[room.status] ?? STATUS_CONFIG.inactive;
-  
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition">
-      <div className="flex justify-between items-start mb-1">
-        <h3 className="text-lg font-bold text-gray-800">Phòng {room.room_number}</h3>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.color}`}>
-          {cfg.label}
-        </span>
-      </div>
-      
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className="text-sm text-gray-500">🏢</span>
-        <span className="text-sm font-medium text-blue-600">
-          {house ? house.name : "Không xác định"}
-        </span>
-      </div>
-
-      <div className="space-y-1 text-sm text-gray-600">
-        <p>Giá cost: <span className="font-medium text-gray-800">
-          {room.cost_price.toLocaleString("vi-VN")}đ
-        </span></p>
-        {room.area_sqm && <p>Diện tích: {room.area_sqm} m²</p>}
-        <p>Đồng hồ nước: {room.is_water_meter ? "✅ Có" : "❌ Không"}</p>
-      </div>
-    </div>
-  );
-}
+const INCIDENT_STATUS_CONFIG = {
+  received:   { label: "Đã tiếp nhận (Chưa chuyển xử lý)", color: "bg-orange-100 text-orange-700 border-orange-200" },
+  processing: { label: "Đang xử lý",                     color: "bg-blue-100 text-blue-700 border-blue-200" },
+};
 
 export default function DashboardPage() {
   const userRole = localStorage.getItem("user_role") || "staff";
@@ -54,6 +23,7 @@ export default function DashboardPage() {
   const [houses, setHouses] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [bills, setBills] = useState([]); 
+  const [incidents, setIncidents] = useState([]);
   
   const [selectedHouse, setSelectedHouse] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -69,13 +39,15 @@ export default function DashboardPage() {
       api.get("/houses").catch(() => ({ data: [] })),
       api.get("/rooms").catch(() => ({ data: [] })),
       api.get("/contracts").catch(() => ({ data: [] })),
-      api.get("/bills").catch(() => ({ data: [] })) 
+      api.get("/bills").catch(() => ({ data: [] })),
+      api.get("/incidents").catch(() => ({ data: [] }))
     ])
-      .then(([housesRes, roomsRes, contractsRes, billsRes]) => {
+      .then(([housesRes, roomsRes, contractsRes, billsRes, incidentsRes]) => {
         setHouses(housesRes.data);
         setRooms(roomsRes.data);
         setContracts(contractsRes.data);
         setBills(billsRes.data);
+        setIncidents(incidentsRes.data);
       })
       .catch(() => setError("Không thể tải dữ liệu."))
       .finally(() => setLoading(false));
@@ -86,6 +58,18 @@ export default function DashboardPage() {
       loadData();
     });
   }, []);
+
+  // Đổi trạng thái nhanh từ received sang processing trực tiếp từ Dashboard
+  async function handleQuickToProcessing(incidentId) {
+    try {
+      await api.patch(`/incidents/${incidentId}`, { status: "processing" });
+      setIncidents((prev) =>
+        prev.map((i) => (i.id === incidentId ? { ...i, status: "processing" } : i))
+      );
+    } catch {
+      alert("Không thể cập nhật trạng thái sự cố.");
+    }
+  }
 
   const revenueStats = useMemo(() => {
     const today = new Date();
@@ -103,15 +87,11 @@ export default function DashboardPage() {
       ? enrichedBills 
       : enrichedBills.filter(b => b.computed_house_id === Number(selectedHouse));
 
-    // 1. Thực thu chỉ tính theo tháng hiện tại
     const thisMonthBills = filteredBills.filter(b => b.billing_month === currentMonthStr);
     const collectedThisMonth = thisMonthBills.filter(b => b.status === "paid").reduce((sum, b) => sum + Number(b.total_amount), 0);
-
-    // 2. Tổng cần thu tính toán toàn bộ hoá đơn chưa đóng (bất kể tháng nào)
     const uncollectedTotal = filteredBills.filter(b => b.status !== "paid").reduce((sum, b) => sum + Number(b.total_amount), 0);
     const unpaidCountTotal = filteredBills.filter(b => b.status !== "paid").length;
 
-    // 3. Tính toán tháng trước
     const lastMonthBills = filteredBills.filter(b => b.billing_month === lastMonthStr);
     const collectedLastMonth = lastMonthBills.filter(b => b.status === "paid").reduce((sum, b) => sum + Number(b.total_amount), 0);
 
@@ -136,7 +116,6 @@ export default function DashboardPage() {
       isUp
     };
   }, [bills, contracts, rooms, selectedHouse]);
-
 
   const expiringContracts = useMemo(() => {
     const today = new Date();
@@ -166,7 +145,6 @@ export default function DashboardPage() {
       })
       .sort((a, b) => a.days_left - b.days_left); 
   }, [contracts, rooms, houses, selectedHouse]);
-
 
   const expiringResidences = useMemo(() => {
     const today = new Date();
@@ -198,6 +176,28 @@ export default function DashboardPage() {
       .sort((a, b) => a.res_days_left - b.res_days_left);
   }, [contracts, rooms, houses, selectedHouse]);
 
+  // Lọc các sự cố cần xử lý (status: received hoặc processing)
+  const activeIncidents = useMemo(() => {
+    return incidents
+      .filter((i) => i.status === "received" || i.status === "processing")
+      .map((i) => {
+        const room = rooms.find((r) => r.id === i.room_id);
+        const house = houses.find((h) => h.id === room?.house_id);
+        return { ...i, computed_room: room, computed_house: house };
+      })
+      .filter((i) => {
+        if (selectedHouse === "all") return true;
+        return i.computed_house?.id === Number(selectedHouse);
+      })
+      .sort((a, b) => {
+        // Ưu tiên hiển thị status 'received' lên trước, sau đó sắp xếp theo thời gian mới nhất
+        if (a.status === "received" && b.status !== "received") return -1;
+        if (a.status !== "received" && b.status === "received") return 1;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+  }, [incidents, rooms, houses, selectedHouse]);
+
+  const receivedCount = activeIncidents.filter((i) => i.status === "received").length;
 
   async function handleExport() {
     try {
@@ -342,7 +342,6 @@ export default function DashboardPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            
             <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-5 shadow-sm relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100 rounded-full blur-3xl opacity-50 -mr-10 -mt-10"></div>
               <div className="flex justify-between items-start relative z-10">
@@ -381,7 +380,6 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-
           </div>
 
           <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3.5 flex justify-between items-center text-sm shadow-sm transition hover:bg-blue-50">
@@ -394,8 +392,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      
-
 
       {expiringContracts.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-8 shadow-sm">
@@ -481,20 +477,103 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <h2 className="text-lg font-semibold text-gray-700 mb-4">Danh sách phòng</h2>
-      {filteredRooms.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-3">🏠</p>
-          <p>Chưa có phòng nào trong nhà trọ này.</p>
+      {/* ================= SECTION: CẢNH BÁO XỬ LÝ SỰ CỐ ================= */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-gray-800">Cảnh báo xử lý sự cố</h2>
+            {receivedCount > 0 && (
+              <span className="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full animate-pulse">
+                {receivedCount} sự cố chưa xử lý
+              </span>
+            )}
+          </div>
+          <Link to="/incidents" className="text-sm font-medium text-blue-600 hover:underline">
+            Quản lý sự cố &rarr;
+          </Link>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRooms.map((room) => {
-            const house = houses.find((h) => h.id === room.house_id);
-            return <RoomCard key={room.id} room={room} house={house} />;
-          })}
-        </div>
-      )}
+
+        {activeIncidents.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
+            <p className="text-3xl mb-2">🎉</p>
+            <p className="text-sm">Hiện không có sự cố nào cần xử lý.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {activeIncidents.map((incident) => {
+              const isReceived = incident.status === "received";
+              const cfg = INCIDENT_STATUS_CONFIG[incident.status] || INCIDENT_STATUS_CONFIG.received;
+
+              return (
+                <div
+                  key={incident.id}
+                  className={`rounded-2xl border p-4 shadow-sm flex flex-col justify-between transition ${
+                    isReceived
+                      ? "bg-amber-50/60 border-amber-300"
+                      : "bg-white border-gray-200 hover:shadow-md"
+                  }`}
+                >
+                  <div>
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+                      <span className="text-xs text-gray-400">#{incident.id}</span>
+                    </div>
+
+                    <div className="mb-2">
+                      <h4 className="font-bold text-gray-800 text-base">
+                        Phòng {incident.computed_room?.room_number ?? "N/A"}
+                      </h4>
+                      {incident.computed_house && (
+                        <p className="text-xs text-blue-600 font-medium">
+                          🏢 {incident.computed_house.name}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-2.5 bg-white/80 rounded-xl border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap mb-3 line-clamp-3">
+                      {incident.description}
+                    </div>
+
+                    {incident.handler_info && (
+                      <p className="text-xs text-gray-500 mb-3">
+                        👷 Bên xử lý: <span className="font-medium text-gray-700">{incident.handler_info}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+                    {isReceived ? (
+                      <>
+                        <button
+                          onClick={() => handleQuickToProcessing(incident.id)}
+                          className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
+                        >
+                          Chuyển sang "Đang xử lý"
+                        </button>
+                        <Link
+                          to="/incidents"
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition"
+                        >
+                          Chi tiết
+                        </Link>
+                      </>
+                    ) : (
+                      <Link
+                        to="/incidents"
+                        className="w-full text-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition"
+                      >
+                        Xem & Cập nhật tại trang Sự cố &rarr;
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

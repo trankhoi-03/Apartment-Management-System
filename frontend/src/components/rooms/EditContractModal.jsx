@@ -133,7 +133,7 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
 
   const [contractForm, setContractForm] = useState({
     monthly_rent: "", service_fee: "", cleaning_fee: "", internet_fee: "", deposit: "", start_date: "", end_date: "", payment_day: "",
-    num_tenants: 1, num_vehicles: 0, temp_residence_reg: false, temp_residence_start: "", temp_residence_expiry: "", temp_residence_dec: false, co_tenants: [], notes: "",
+    electric_calc_method: "fixed_price", num_tenants: 1, num_vehicles: 0, temp_residence_reg: false, temp_residence_start: "", temp_residence_expiry: "", temp_residence_dec: false, co_tenants: [], notes: "",
   });
 
   const [rateForm, setRateForm] = useState({
@@ -180,6 +180,7 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
         cleaning_fee:       contract.cleaning_fee       ?? "", 
         internet_fee:       contract.internet_fee       ?? "", 
         deposit:            contract.deposit            ?? "",
+        electric_calc_method: contract.electric_calc_method || "fixed_price",
         start_date:         contract.start_date         ?? "",
         end_date:           contract.end_date           ?? "",
         payment_day:        contract.payment_day        ?? "",
@@ -289,6 +290,7 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
         cleaning_fee:       Number(contractForm.cleaning_fee) || 0, 
         internet_fee:       Number(contractForm.internet_fee) || 0, 
         deposit:            Number(contractForm.deposit) || 0,
+        electric_calc_method: contractForm.electric_calc_method,
         payment_day:        Number(contractForm.payment_day),
         num_tenants:        Number(contractForm.num_tenants),
         num_vehicles:       Number(contractForm.num_vehicles),
@@ -506,20 +508,99 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
           )}
 
           <Section title="Đơn giá điện / nước">
+            {/* Lựa chọn phương thức tính tiền điện */}
+            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2 mb-3">
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Phương thức tính tiền điện của hợp đồng
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setContractForm(f => ({ ...f, electric_calc_method: "fixed_price" }))}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg border text-left transition flex items-center justify-between ${
+                    contractForm.electric_calc_method === "fixed_price"
+                      ? "border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-sm"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <span>⚡ Đơn giá cố định</span>
+                  {contractForm.electric_calc_method === "fixed_price" && <span className="text-blue-600 text-sm">✓</span>}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setContractForm(f => ({ ...f, electric_calc_method: "split_ratio" }))}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg border text-left transition flex items-center justify-between ${
+                    contractForm.electric_calc_method === "split_ratio"
+                      ? "border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-sm"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <span>📊 Chia theo bill tổng</span>
+                  {contractForm.electric_calc_method === "split_ratio" && <span className="text-blue-600 text-sm">✓</span>}
+                </button>
+              </div>
+
+              {contractForm.electric_calc_method === "split_ratio" && (
+                <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200/60 mt-1">
+                  ℹ️ Hợp đồng này tính điện theo tỉ lệ chia hóa đơn tổng của EVN khi xuất bill hàng tháng.
+                </p>
+              )}
+            </div>
+
+            {/* Checkbox cập nhật đơn giá mới */}
             <label className="flex items-center gap-3 cursor-pointer">
-              <input name="updateRate" type="checkbox" checked={rateForm.updateRate} onChange={handleRateChange} className="w-4 h-4 rounded accent-blue-600" />
+              <input
+                name="updateRate"
+                type="checkbox"
+                checked={rateForm.updateRate}
+                onChange={handleRateChange}
+                className="w-4 h-4 rounded accent-blue-600"
+              />
               <span className="text-sm text-gray-700 font-medium">Cập nhật đơn giá mới</span>
             </label>
 
             {rateForm.updateRate && (
-              <div className="space-y-3 pl-1">
-                <p className="text-xs text-gray-400">Giá cũ vẫn được giữ lại để đối chiếu lịch sử. Giá mới sẽ áp dụng từ ngày hiệu lực trở đi.</p>
-                <Field label="Ngày hiệu lực" hint="Ngày bắt đầu áp dụng đơn giá mới"><VNDateInput name="effective_from" value={rateForm.effective_from} onChange={handleRateChange} className={INPUT} /></Field>
-                <Field label="Giá điện (đ/kWh)"><FormattedNumberInput name="electric_price" value={rateForm.electric_price} onChange={handleRateChange} placeholder="vd: 3,500" className={INPUT} /></Field>
+              <div className="space-y-3 pl-1 mt-3">
+                <p className="text-xs text-gray-400">
+                  Giá cũ vẫn được giữ lại để đối chiếu lịch sử. Giá mới sẽ áp dụng từ ngày hiệu lực trở đi.
+                </p>
+                <Field label="Ngày hiệu lực" hint="Ngày bắt đầu áp dụng đơn giá mới">
+                  <VNDateInput name="effective_from" value={rateForm.effective_from} onChange={handleRateChange} className={INPUT} />
+                </Field>
+
+                {contractForm.electric_calc_method === "fixed_price" && (
+                  <Field label="Giá điện mới (đ/kWh)">
+                    <FormattedNumberInput
+                      name="electric_price"
+                      value={rateForm.electric_price}
+                      onChange={handleRateChange}
+                      placeholder="vd: 3,500"
+                      className={INPUT}
+                    />
+                  </Field>
+                )}
+
                 {isWaterMeter ? (
-                  <Field label="Giá nước (đ/m³)"><FormattedNumberInput name="water_price" value={rateForm.water_price} onChange={handleRateChange} placeholder="vd: 15000" className={INPUT} /></Field>
+                  <Field label="Giá nước mới (đ/m³)">
+                    <FormattedNumberInput
+                      name="water_price"
+                      value={rateForm.water_price}
+                      onChange={handleRateChange}
+                      placeholder="vd: 15,000"
+                      className={INPUT}
+                    />
+                  </Field>
                 ) : (
-                  <Field label="Tiền nước cố định/tháng (đ)"><FormattedNumberInput name="default_water_amount" value={rateForm.default_water_amount} onChange={handleRateChange} placeholder="vd: 20000" className={INPUT} /></Field>
+                  <Field label="Tiền nước cố định mới (đ/tháng)">
+                    <FormattedNumberInput
+                      name="default_water_amount"
+                      value={rateForm.default_water_amount}
+                      onChange={handleRateChange}
+                      placeholder="vd: 20,000"
+                      className={INPUT}
+                    />
+                  </Field>
                 )}
               </div>
             )}

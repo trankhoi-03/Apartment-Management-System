@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "../api/axios";
 
 const STATUS_CONFIG = {
@@ -38,6 +38,131 @@ const STATUS_TAGS = [
   { id: "status_completed", label: "Hoàn thành" },
 ];
 
+// Helper lấy tháng hiện tại (YYYY-MM)
+const getCurrentMonthStr = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
+// Component VietnameseMonthPicker dùng chung cho Filter và Form Modal
+function VietnameseMonthPicker({ 
+  value, 
+  onChange, 
+  className, 
+  allowAll = false, 
+  allLabel = "📅 Tất cả các tháng",
+  placement = "bottom" // "bottom" (mở xuống) hoặc "top" (mở ngược lên trên)
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const isAll = value === "all";
+  const currentYear = !isAll && value ? parseInt(value.split('-')[0], 10) : new Date().getFullYear();
+  const currentMonth = !isAll && value ? parseInt(value.split('-')[1], 10) : new Date().getMonth() + 1;
+  
+  const [viewYear, setViewYear] = useState(currentYear);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleMonthSelect = (month) => {
+    const monthStr = String(month).padStart(2, "0");
+    onChange(`${viewYear}-${monthStr}`);
+    setIsOpen(false); 
+  };
+
+  // Vị trí mở popup: top (ngược lên trên) hoặc bottom (rủ xuống dưới)
+  const positionClass = placement === "top" 
+    ? "bottom-full mb-2 origin-bottom" 
+    : "top-full mt-2 origin-top";
+
+  return (
+    <div className="relative inline-block w-full sm:w-auto text-left" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setViewYear(currentYear); 
+          setIsOpen(!isOpen);
+        }}
+        className={`${className} flex items-center justify-between gap-2 hover:border-blue-400 transition-colors`}
+      >
+        <span className="truncate">
+          {isAll ? allLabel : `📅 Tháng ${String(currentMonth).padStart(2, "0")} năm ${currentYear}`}
+        </span>
+        <svg 
+          className={`w-4 h-4 text-gray-500 shrink-0 transition-transform duration-200 ${
+            (placement === "top" ? !isOpen : isOpen) ? "rotate-180" : ""
+          }`} 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className={`absolute z-[80] w-[280px] p-4 bg-white border border-gray-200 rounded-2xl shadow-2xl right-0 sm:right-auto sm:left-0 animate-fade-in ${positionClass}`}>
+          {allowAll && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange("all");
+                setIsOpen(false);
+              }}
+              className={`w-full py-2 mb-3 text-xs font-semibold rounded-xl transition border ${
+                isAll 
+                  ? "bg-blue-600 text-white border-blue-600" 
+                  : "bg-gray-50 text-gray-700 hover:bg-blue-50 border-gray-200"
+              }`}
+            >
+              {allLabel}
+            </button>
+          )}
+
+          <div className="flex items-center justify-between mb-3 bg-gray-50 rounded-xl p-1 border border-gray-100">
+            <button type="button" onClick={() => setViewYear(viewYear - 1)} className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <span className="font-bold text-gray-800 text-xs tracking-wider">NĂM {viewYear}</span>
+            <button type="button" onClick={() => setViewYear(viewYear + 1)} className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5">
+            {[...Array(12)].map((_, index) => {
+              const monthNum = index + 1;
+              const isSelected = !isAll && currentYear === viewYear && currentMonth === monthNum;
+              return (
+                <button
+                  key={monthNum}
+                  type="button"
+                  onClick={() => handleMonthSelect(monthNum)}
+                  className={`py-2 text-xs font-semibold rounded-xl transition-all
+                    ${isSelected 
+                      ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600 ring-offset-1' 
+                      : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-100 hover:border-blue-200'
+                    }`}
+                >
+                  Tháng {monthNum}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function IncidentsPage() {
   const [incidents, setIncidents] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -45,25 +170,43 @@ export default function IncidentsPage() {
   const [loading, setLoading] = useState(true);
 
   const [selectedHouse, setSelectedHouse] = useState("all");
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthStr()); // Mặc định là tháng hiện tại
 
   const [selectedTags, setSelectedTags] = useState([]);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState("");
 
+  // State hoàn thành sự cố (có thêm expense_month)
   const [completingIncident, setCompletingIncident] = useState(null);
   const [repairCost, setRepairCost] = useState("");
+  const [expenseMonth, setExpenseMonth] = useState(getCurrentMonthStr());
   const [completingLoading, setCompletingLoading] = useState(false);
 
+  // State sửa sự cố (có thêm expense_month)
   const [editingIncident, setEditingIncident] = useState(null);
-  const [editForm, setEditForm] = useState({ description: "", handler_info: "", repair_cost: "" });
+  const [editForm, setEditForm] = useState({ 
+    description: "", 
+    handler_info: "", 
+    repair_cost: "",
+    expense_month: getCurrentMonthStr()
+  });
   const [editLoading, setEditLoading] = useState(false);
+
+  function handleOpenComplete(incident) {
+    setCompletingIncident(incident);
+    setRepairCost(incident.repair_cost ? Number(incident.repair_cost).toLocaleString("en-US") : "");
+    // Mặc định tháng chi phí: nếu đã có expense_month thì lấy, không thì lấy tháng hiện tại
+    setExpenseMonth(incident.expense_month || getCurrentMonthStr());
+  }
 
   function handleOpenEdit(incident) {
     setEditingIncident(incident);
+    const incidentExpenseMonth = incident.expense_month || (incident.completed_at ? incident.completed_at.slice(0, 7) : getCurrentMonthStr());
     setEditForm({
       description: incident.description || "",
       handler_info: incident.handler_info || "",
-      repair_cost: incident.repair_cost ? Number(incident.repair_cost).toLocaleString("en-US") : ""
+      repair_cost: incident.repair_cost ? Number(incident.repair_cost).toLocaleString("en-US") : "",
+      expense_month: incidentExpenseMonth
     });
   }
 
@@ -75,7 +218,8 @@ export default function IncidentsPage() {
       const payload = {
         description: editForm.description,
         handler_info: editForm.handler_info,
-        repair_cost: cost
+        repair_cost: cost,
+        expense_month: editForm.expense_month
       };
       
       await api.patch(`/incidents/${editingIncident.id}`, payload);
@@ -111,23 +255,24 @@ export default function IncidentsPage() {
     Promise.resolve().then(() => {
       loadData();
     });
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadData]);
 
   async function handleConfirmComplete() {
     setCompletingLoading(true);
     try {
       const cost = repairCost ? Number(repairCost.replace(/\D/g, "")) : 0;
       const currentTime = new Date().toISOString();
-      await api.patch(`/incidents/${completingIncident.id}`, { 
+      const payload = { 
         status: "completed",
         repair_cost: cost,
+        expense_month: expenseMonth,
         completed_at: currentTime 
-      });
+      };
+
+      await api.patch(`/incidents/${completingIncident.id}`, payload);
       
       setIncidents((prev) =>
-        prev.map((i) => (i.id === completingIncident.id ? { ...i, status: "completed", repair_cost: cost, completed_at: currentTime } : i))
+        prev.map((i) => (i.id === completingIncident.id ? { ...i, ...payload } : i))
       );
       setCompletingIncident(null);
       setRepairCost("");
@@ -149,15 +294,21 @@ export default function IncidentsPage() {
     }
   }
 
-  
   const enrichedIncidents = incidents.map(incident => {
     const room = rooms.find(r => r.id === incident.room_id);
     const house = houses.find(h => h.id === room?.house_id);
-    return { ...incident, computed_room: room, computed_house: house };
+    
+    // Xác định tháng tính chi phí (nếu chưa có expense_month thì lấy theo tháng tạo created_at)
+    const effectiveMonth = incident.expense_month || (incident.created_at ? incident.created_at.slice(0, 7) : null);
+    
+    return { 
+      ...incident, 
+      computed_room: room, 
+      computed_house: house,
+      effective_month: effectiveMonth
+    };
   });
 
-  
-  // Lấy danh sách những người/đơn vị xử lý sự cố (loại bỏ trùng lặp và giá trị rỗng)
   const uniqueHandlers = Array.from(
     new Set(
       enrichedIncidents
@@ -175,24 +326,25 @@ export default function IncidentsPage() {
     const matchHouse = 
       selectedHouse === "all" || 
       incident.computed_house?.id?.toString() === selectedHouse;
-    
     if (!matchHouse) return false;
 
-    // 2. Nếu không có tag nào được chọn -> Hiện tất cả trong nhà đó
+    // 2. Lọc theo Tháng (Nếu không chọn 'all')
+    if (selectedMonth !== "all" && incident.effective_month !== selectedMonth) {
+      return false;
+    }
+
+    // 3. Lọc theo Tags (Trạng thái và Bên xử lý)
     if (selectedTags.length === 0) return true;
 
-    // Phân loại tags đang được chọn
     const selectedStatusIds = selectedTags.filter(tag => tag.startsWith('status_'));
     const selectedHandlerTags = selectedTags.filter(tag => !tag.startsWith('status_'));
 
-    // 3. Lọc theo Trạng thái (OR logic)
     let isStatusMatch = true;
     if (selectedStatusIds.length > 0) {
       const incidentStatusId = `status_${incident.status}`;
       isStatusMatch = selectedStatusIds.includes(incidentStatusId);
     }
 
-    // 4. Lọc theo Bên xử lý (OR logic)
     let isHandlerMatch = true;
     if (selectedHandlerTags.length > 0) {
       const handlerName = incident.handler_info?.trim();
@@ -213,35 +365,42 @@ export default function IncidentsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
       
-      
+      {/* HEADER & TOP CONTROLS */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Sự cố & Hư hỏng</h1>
           <p className="text-sm text-gray-500 mt-1">Danh sách các sự cố cần xử lý</p>
         </div>
 
-        
-        {houses.length > 0 && (
-          <select
-            value={selectedHouse}
-            onChange={(e) => setSelectedHouse(e.target.value)}
-            className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700 min-w-[200px]"
-          >
-            <option value="all">🏢 Tất cả nhà trọ</option>
-            {houses.map((h) => (
-              <option key={h.id} value={h.id.toString()}>
-                🏠 {h.name} {h.address ? `- ${h.address}` : ""}
-              </option>
-            ))}
-          </select>
-        )}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {houses.length > 0 && (
+            <select
+              value={selectedHouse}
+              onChange={(e) => setSelectedHouse(e.target.value)}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700 min-w-[180px]"
+            >
+              <option value="all">🏢 Tất cả nhà trọ</option>
+              {houses.map((h) => (
+                <option key={h.id} value={h.id.toString()}>
+                  🏠 {h.name} {h.address ? `- ${h.address}` : ""}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* BỘ LỌC THÁNG KIỂU VIETNAMESE MONTH PICKER */}
+          <VietnameseMonthPicker
+            value={selectedMonth}
+            onChange={setSelectedMonth}
+            allowAll={true}
+            allLabel="📅 Tất cả các tháng"
+            className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm font-medium text-gray-700"
+          />
+        </div>
       </div>
 
-      
-      {/* ================= HARAVAN-STYLE FILTER BLOCK ================= */}
+      {/* FILTER BLOCK */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col relative z-30">
-        
-        {/* ROW 1: Quick Tabs (Tags ngang) */}
         <div className="flex border-b border-gray-100 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setSelectedTags([])}
@@ -254,14 +413,13 @@ export default function IncidentsPage() {
             Tất cả sự cố
           </button>
 
-          {/* Các tab Trạng thái */}
           {STATUS_TAGS.map((tag) => {
             const isSelected = selectedTags.includes(tag.id);
-            // Đếm số lượng sự cố cho tab này
-            const count = enrichedIncidents.filter(i => 
-              (selectedHouse === "all" || i.computed_house?.id?.toString() === selectedHouse) && 
-              i.status === tag.id.replace('status_', '')
-            ).length;
+            const count = enrichedIncidents.filter(i => {
+              const matchHouse = selectedHouse === "all" || i.computed_house?.id?.toString() === selectedHouse;
+              const matchMonth = selectedMonth === "all" || i.effective_month === selectedMonth;
+              return matchHouse && matchMonth && i.status === tag.id.replace('status_', '');
+            }).length;
 
             return (
               <button
@@ -281,7 +439,6 @@ export default function IncidentsPage() {
             );
           })}
 
-          {/* Hiển thị nhanh tối đa 3 tag Bên xử lý ra ngoài hàng tab ngang nếu đang được chọn */}
           {uniqueHandlers.slice(0, 3).map((tag) => {
             const isSelected = selectedTags.includes(tag);
             return (
@@ -300,7 +457,6 @@ export default function IncidentsPage() {
           })}
         </div>
 
-        {/* ROW 2: Filter Toolbar & Dropdown */}
         <div className="p-3 bg-white flex flex-col sm:flex-row sm:items-center gap-3 rounded-b-xl">
           <div className="relative">
             <button
@@ -348,7 +504,6 @@ export default function IncidentsPage() {
             )}
           </div>
 
-          {/* Hiển thị các tag đang được chọn */}
           {selectedTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 sm:border-l sm:border-gray-300 sm:pl-3">
               <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider hidden sm:block">Lọc theo:</span>
@@ -369,15 +524,17 @@ export default function IncidentsPage() {
           )}
         </div>
       </div>
-      {/* ================= END HARAVAN-STYLE FILTER ================= */}
       
+      {/* THÔNG KÊ CHI PHÍ SỬA CHỮA */}
       <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center shadow-sm gap-3 animate-fade-in">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-600 text-lg shadow-sm border border-emerald-100">
             💰
           </div>
           <div>
-            <p className="text-sm font-semibold text-emerald-800">Tổng chi phí sửa chữa</p>
+            <p className="text-sm font-semibold text-emerald-800">
+              Tổng chi phí sửa chữa {selectedMonth !== "all" ? `tháng ${selectedMonth.slice(5, 7)}/${selectedMonth.slice(0, 4)}` : "(Tất cả thời gian)"}
+            </p>
             <p className="text-[11px] text-emerald-600/80 mt-0.5">Được tính dựa trên kết quả lọc hiện tại</p>
           </div>
         </div>
@@ -386,6 +543,7 @@ export default function IncidentsPage() {
         </div>
       </div>
       
+      {/* DANH SÁCH SỰ CỐ */}
       {filteredIncidents.length === 0 ? (
         <div className="text-center py-20 text-gray-400 bg-white rounded-3xl border border-dashed border-gray-200">
           <p className="text-4xl mb-3">🛠️</p>
@@ -432,7 +590,7 @@ export default function IncidentsPage() {
                 
                 <div className="mt-1.5 mb-2 space-y-1">
                   <p className={`text-xs flex items-center gap-1.5 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                    🕒 <span>{formatDateTime(incident.created_at)}</span>
+                    🕒 <span>Tiếp nhận: {formatDateTime(incident.created_at)}</span>
                   </p>
                   
                   {incident.completed_at && (
@@ -481,7 +639,7 @@ export default function IncidentsPage() {
                         ✏️ Sửa
                       </button>
                       <button
-                        onClick={() => setCompletingIncident(incident)}
+                        onClick={() => handleOpenComplete(incident)}
                         className="flex-[2] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
                       >
                         ✅ Hoàn thành
@@ -494,16 +652,21 @@ export default function IncidentsPage() {
                       <div className="w-full px-4 py-2 bg-gray-50 text-gray-500 rounded-xl text-sm font-medium text-center flex flex-col gap-1">
                         <span>Sự cố đã được khắc phục</span>
                         {incident.repair_cost > 0 && (
-                          <span className="text-gray-800 font-bold">
+                          <div className="text-gray-800 font-bold">
                             Chi phí: {Number(incident.repair_cost).toLocaleString("vi-VN")}đ
-                          </span>
+                            {incident.effective_month && (
+                              <span className="block text-xs font-normal text-blue-600 mt-0.5">
+                                (Hạch toán tháng {incident.effective_month.slice(5, 7)}/{incident.effective_month.slice(0, 4)})
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                       <button
                         onClick={() => handleOpenEdit(incident)}
                         className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
                       >
-                        ✏️ Sửa thông tin
+                        ✏️ Sửa thông tin & tháng tính
                       </button>
                     </div>
                   )}
@@ -513,25 +676,50 @@ export default function IncidentsPage() {
           })}
         </div>
       )}
+
+      {/* POPUP HOÀN THÀNH SỰ CỐ - CÓ CHỌN THÁNG BẰNG VIETNAMESE MONTH PICKER */}
       {completingIncident && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Xác nhận hoàn thành</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Nhập chi phí sửa chữa cho sự cố phòng {completingIncident.computed_room?.room_number} (nếu có):
+              Nhập chi phí và tháng hạch toán cho sự cố phòng {completingIncident.computed_room?.room_number}:
             </p>
             
-            <input
-              type="text"
-              value={repairCost}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "");
-                setRepairCost(val ? Number(val).toLocaleString("en-US") : "");
-              }}
-              placeholder="Ví dụ: 150,000"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-6"
-              inputMode="numeric"
-            />
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Chi phí sửa chữa (đ)
+                </label>
+                <input
+                  type="text"
+                  value={repairCost}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setRepairCost(val ? Number(val).toLocaleString("en-US") : "");
+                  }}
+                  placeholder="Ví dụ: 150,000"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  inputMode="numeric"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Hạch toán vào chi phí tháng
+                </label>
+                <VietnameseMonthPicker
+                  value={expenseMonth}
+                  onChange={setExpenseMonth}
+                  allowAll={false}
+                  placement="top" // <-- Bung ngược lên trên
+                  className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-medium text-gray-700"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  💡 Bạn có thể chọn chuyển sang tháng sau nếu hoàn thành vào cuối tháng.
+                </p>
+              </div>
+            </div>
 
             <div className="flex gap-3">
               <button
@@ -554,6 +742,8 @@ export default function IncidentsPage() {
           </div>
         </div>
       )}
+
+      {/* POPUP SỬA SỰ CỐ - CÓ CHỌN THÁNG BẰNG VIETNAMESE MONTH PICKER */}
       {editingIncident && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] px-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
@@ -584,21 +774,36 @@ export default function IncidentsPage() {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Chi phí sửa chữa (đ)
-                </label>
-                <input
-                  type="text"
-                  value={editForm.repair_cost}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "");
-                    setEditForm({...editForm, repair_cost: val ? Number(val).toLocaleString("en-US") : ""});
-                  }}
-                  placeholder="Ví dụ: 150,000"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  inputMode="numeric"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Chi phí sửa chữa (đ)
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.repair_cost}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setEditForm({...editForm, repair_cost: val ? Number(val).toLocaleString("en-US") : ""});
+                    }}
+                    placeholder="Ví dụ: 150,000"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    inputMode="numeric"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tính vào tháng
+                  </label>
+                  <VietnameseMonthPicker
+                    value={editForm.expense_month}
+                    onChange={(m) => setEditForm({ ...editForm, expense_month: m })}
+                    allowAll={false}
+                    placement="top" // <-- Bung ngược lên trên để không bị che khuất
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-700"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 mt-6 pt-2">

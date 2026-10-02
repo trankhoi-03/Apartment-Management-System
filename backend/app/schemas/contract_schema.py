@@ -32,6 +32,7 @@ class ContractBase(BaseModel):
     internet_fee: float = Field(ge=0, default=0)
     payment_day: int = Field(default=1, ge=1, le=31)
     deposit: float = Field(ge=0, default=0)
+    electric_calc_method: str = "fixed_price"
     num_tenants: int = Field(default=1, ge=1)
     num_vehicles: int = Field(default=0, ge=0)
     temp_residence_reg: bool = False
@@ -62,6 +63,7 @@ class ContractUpdate(BaseModel):
     internet_fee: float | None = Field(default=None, ge=0)
     payment_day: int | None = Field(default=None, ge=1, le=31)
     deposit: float | None = Field(default=None, ge=0)
+    electric_calc_method: str = "fixed_price"
     num_tenants: int | None = Field(default=None, ge=1)       
     num_vehicles: int | None = Field(default=None, ge=0)      
     temp_residence_reg: bool | None = None
@@ -79,6 +81,7 @@ class ContractResponse(ContractBase):
     status: str
     room: RoomResponse | None = None  # Cho phép None nếu phòng gắn liền đã bị xóa
     tenant: TenantResponse
+    electric_calc_method: str = "fixed_price"
     num_tenants: int
     num_vehicles: int
     temp_residence_reg: bool

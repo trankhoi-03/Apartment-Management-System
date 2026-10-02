@@ -42,6 +42,9 @@ class Contract(Base):
     # active = đang hiệu lực, ended = đã kết thúc, terminated = chấm dứt sớm
 
     end_reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    electric_calc_method: Mapped[str] = mapped_column(
+        String(20), default="fixed_price", nullable=False
+    )  # "fixed_price" hoặc "split_ratio"
 
     num_tenants: Mapped[int] = mapped_column(default=1, nullable=False)
     num_vehicles: Mapped[int] = mapped_column(default=0, nullable=False)

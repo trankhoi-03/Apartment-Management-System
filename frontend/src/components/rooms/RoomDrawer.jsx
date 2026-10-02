@@ -12,6 +12,18 @@ const STATUS_LABEL = {
   inactive: "Ngừng thuê",
 };
 
+
+function isStayDeclarationValid(startDateStr) {
+  if (!startDateStr) return false;
+  const start = new Date(startDateStr);
+  start.setHours(0, 0, 0, 0);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+  return diffDays <= 28;
+}
+
 function Row({ label, value }) {
   return (
     <div className="flex justify-between">
@@ -387,7 +399,9 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                     <span className="text-gray-500">Số người</span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-800 text-right max-w-[60%]">{contract.num_tenants ?? "—"}</span>
-                      {((contract.num_tenants > 1 && contract.co_tenants?.length > 0) || contract.temp_residence_reg || contract.temp_residence_dec) && (
+                      {((contract.num_tenants > 1 && contract.co_tenants?.length > 0) || 
+                        contract.temp_residence_reg || 
+                        (contract.temp_residence_dec && isStayDeclarationValid(contract.start_date))) && (
                         <button 
                           onClick={() => setShowCoTenants(!showCoTenants)} 
                           className="text-gray-500 hover:text-blue-600 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none transition-colors"
@@ -410,7 +424,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                               {contract.tenant?.full_name} <span className="text-gray-400 italic font-normal">(Đại diện)</span>
                             </span>
                             
-                            {(contract.temp_residence_reg || contract.temp_residence_dec) && (
+                            {(contract.temp_residence_reg || (contract.temp_residence_dec && isStayDeclarationValid(contract.start_date))) && (
                               <div className="flex flex-wrap gap-1.5">
                                 {contract.temp_residence_reg && (
                                   <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100/50">
@@ -421,7 +435,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                                     {contract.temp_residence_expiry && `${formatDateVN(contract.temp_residence_expiry)}`}
                                   </span>
                                 )}
-                                {!contract.temp_residence_reg && contract.temp_residence_dec && (
+                                {!contract.temp_residence_reg && contract.temp_residence_dec && isStayDeclarationValid(contract.start_date) && (
                                   <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100/50">
                                     Lưu trú
                                   </span>
@@ -438,7 +452,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                             <div className="flex flex-col gap-1.5 flex-1">
                               <span className="text-gray-700 font-medium">{ct.full_name}</span>
                               
-                              {(ct.temp_residence_reg || ct.temp_residence_dec) && (
+                              {(ct.temp_residence_reg || (ct.temp_residence_dec && isStayDeclarationValid(contract.start_date))) && (
                                 <div className="flex flex-wrap gap-1.5">
                                   {ct.temp_residence_reg && (
                                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100/50">
@@ -449,7 +463,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                                       {ct.temp_residence_expiry && `${formatDateVN(ct.temp_residence_expiry)}`}
                                     </span>
                                   )}
-                                  {!ct.temp_residence_reg && ct.temp_residence_dec && (
+                                  {!ct.temp_residence_reg && ct.temp_residence_dec && isStayDeclarationValid(contract.start_date) && (
                                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-100/50">
                                       Lưu trú
                                     </span>
@@ -473,7 +487,16 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                 {contract.current_rate && (
                   <>
                     <div className="border-t border-blue-100/60 my-2 pt-2"></div>
-                    <Row label="Giá điện" value={`${Number(contract.current_rate.electric_price).toLocaleString("vi-VN")}đ/kWh`} />
+                    
+                    <Row 
+                      label="Giá điện" 
+                      value={
+                        contract.electric_calc_method === "split_ratio"
+                          ? "Theo hóa đơn (chia tỉ lệ)"
+                          : `${Number(contract.current_rate.electric_price).toLocaleString("vi-VN")}đ/kWh`
+                      } 
+                    />
+
                     {room.is_water_meter ? (
                       <Row label="Giá nước" value={`${Number(contract.current_rate.water_price).toLocaleString("vi-VN")}đ/m³`} />
                     ) : (
@@ -522,7 +545,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                 </button>
                 <button onClick={() => setShowGenerateBill(true)}
                   className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition mt-1">
-                  🧾 Xuất hoá đơn tháng này
+                  🧾 Ghi chỉ số & Tính tiền
                 </button>
               </div>
             ) : (

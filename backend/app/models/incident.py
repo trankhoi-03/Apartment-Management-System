@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime, ForeignKey, String, Text, Numeric, func
+from sqlalchemy import DateTime, ForeignKey, String, Text, Numeric, Column, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
 from typing import TYPE_CHECKING
@@ -22,6 +22,8 @@ class Incident(Base):
     handler_info: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     repair_cost: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+
+    expense_month: Mapped[str | None] = mapped_column(String(7), nullable=True)
 
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

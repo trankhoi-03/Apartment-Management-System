@@ -40,4 +40,10 @@ class Bill(Base):
 
     pdf_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    electric_calc_method: Mapped[str] = mapped_column(
+        String(20), default="fixed_price", nullable=False
+    )  # "fixed_price" (cách 1) hoặc "split_ratio" (cách 2)
+    electric_total_consumed: Mapped[float | None] = mapped_column(Float, nullable=True)  
+    electric_total_cost: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+
     contract: Mapped["Contract"] = relationship(back_populates="bills")

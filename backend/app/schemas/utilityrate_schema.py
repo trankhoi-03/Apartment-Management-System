@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class UtilityRateBase(BaseModel):
     room_id: int
-    electric_price: float = Field(gt=0)
+    electric_price: float = Field(ge=0) 
     water_price: float = Field(ge=0, default=0)
     default_water_amount: float | None = Field(default=None, ge=0)
     effective_from: date

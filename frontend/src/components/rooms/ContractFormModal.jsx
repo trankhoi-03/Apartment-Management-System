@@ -130,7 +130,7 @@ const INIT = (room) => ({
   monthly_rent: "", service_fee: "", cleaning_fee: "", internet_fee: "", deposit: "",
   payment_day: 5, num_tenants: 1, num_vehicles: 0, 
   temp_residence_reg: false, temp_residence_start: "", temp_residence_expiry: "", temp_residence_dec: false, co_tenants: [],
-  electric_price: "", water_price: "", default_water_amount: "",
+  electric_calc_method: "fixed_price", electric_price: "", water_price: "", default_water_amount: "",
   electric_reading: "", water_reading: "",
   notes: "",
 });
@@ -248,6 +248,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
         cleaning_fee:       form.cleaning_fee ? Number(form.cleaning_fee) : 0,
         internet_fee:       form.internet_fee ? Number(form.internet_fee) : 0,
         deposit:            form.deposit ? Number(form.deposit) : 0,
+        electric_calc_method: form.electric_calc_method,
         num_tenants:        Number(form.num_tenants),
         num_vehicles:       Number(form.num_vehicles),
         payment_day:        Number(form.payment_day),
@@ -272,15 +273,25 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       const newContractId = contractRes.data.id;
 
       setSubmitStep("Đang lưu đơn giá điện/nước...");
-      await api.post("/utility-rates", {
+      const electricPriceVal = form.electric_calc_method === "fixed_price" 
+        ? (Number(form.electric_price) || 0) 
+        : 0;
+
+      const ratePayload = {
         room_id:        room.id,
-        electric_price: Number(form.electric_price),
+        electric_price: electricPriceVal,
         effective_from: form.start_date,
-        ...(room.is_water_meter
-          ? { water_price: Number(form.water_price) }
-          : { water_price: 0, default_water_amount: Number(form.default_water_amount) }
-        ),
-      });
+      };
+
+      if (room.is_water_meter) {
+        ratePayload.water_price = Number(form.water_price) || 0;
+        ratePayload.default_water_amount = null;
+      } else {
+        ratePayload.water_price = 0;
+        ratePayload.default_water_amount = Number(form.default_water_amount) || 0;
+      }
+
+      await api.post("/utility-rates", ratePayload);
 
       setSubmitStep("Đang lưu số điện/nước ban đầu...");
       const startMonth = form.start_date.slice(0, 7);
@@ -503,17 +514,93 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
 
           {/* 3. Đơn giá điện/nước */}
           <Section title="Đơn giá điện / nước">
-            {room?.is_water_meter ? (
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Giá điện (đ/kWh)" required><FormattedNumberInput name="electric_price" value={form.electric_price} onChange={handleChange} placeholder="vd: 3,500" required className={INPUT} /></Field>
-                <Field label="Giá nước (đ/m³)" required><FormattedNumberInput name="water_price" value={form.water_price} onChange={handleChange} placeholder="vd: 15,000" required className={INPUT} /></Field>
+            {/* Lựa chọn cách tính tiền điện */}
+            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                Phương thức tính tiền điện
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, electric_calc_method: "fixed_price" }))}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg border text-left transition flex items-center justify-between ${
+                    form.electric_calc_method === "fixed_price"
+                      ? "border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-sm"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <span>⚡ Đơn giá cố định</span>
+                  {form.electric_calc_method === "fixed_price" && <span className="text-blue-600 text-sm">✓</span>}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, electric_calc_method: "split_ratio" }))}
+                  className={`px-3 py-2 text-xs font-medium rounded-lg border text-left transition flex items-center justify-between ${
+                    form.electric_calc_method === "split_ratio"
+                      ? "border-blue-500 bg-blue-50/70 text-blue-700 font-semibold shadow-sm"
+                      : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <span>📊 Chia theo bill tổng</span>
+                  {form.electric_calc_method === "split_ratio" && <span className="text-blue-600 text-sm">✓</span>}
+                </button>
               </div>
-            ) : (
-              <>
-                <Field label="Giá điện (đ/kWh)" required><FormattedNumberInput name="electric_price" value={form.electric_price} onChange={handleChange} placeholder="vd: 3,500" required className={INPUT} /></Field>
-                <Field label="Tiền nước cố định (đ/tháng)" required hint="Phòng không đồng hồ nước - nhập tiền cố định"><FormattedNumberInput name="default_water_amount" value={form.default_water_amount} onChange={handleChange} placeholder="vd: 20,000" required className={INPUT} /></Field>
-              </>
-            )}
+
+              {form.electric_calc_method === "split_ratio" && (
+                <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200/60 mt-2">
+                  ℹ️ Tiền điện hàng tháng = <b>(Số điện phòng / Tổng số điện cả nhà) × Tổng tiền bill</b>. Bạn sẽ nhập thông tin bill tổng khi xuất hóa đơn hàng tháng.
+                </p>
+              )}
+            </div>
+
+            {/* Các ô nhập đơn giá */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              {form.electric_calc_method === "fixed_price" ? (
+                <Field label="Giá điện (đ/kWh)" required>
+                  <FormattedNumberInput
+                    name="electric_price"
+                    value={form.electric_price}
+                    onChange={handleChange}
+                    placeholder="vd: 3,500"
+                    required
+                    className={INPUT}
+                  />
+                </Field>
+              ) : (
+                <Field label="Giá điện" hint="Tính theo tỉ lệ bill tổng">
+                  <input
+                    disabled
+                    value="Theo hóa đơn EVN"
+                    className={`${INPUT} bg-gray-100 text-gray-500 italic cursor-not-allowed`}
+                  />
+                </Field>
+              )}
+
+              {room?.is_water_meter ? (
+                <Field label="Giá nước (đ/m³)" required>
+                  <FormattedNumberInput
+                    name="water_price"
+                    value={form.water_price}
+                    onChange={handleChange}
+                    placeholder="vd: 15,000"
+                    required
+                    className={INPUT}
+                  />
+                </Field>
+              ) : (
+                <Field label="Tiền nước cố định (đ/tháng)" required hint="Phòng không có đồng hồ">
+                  <FormattedNumberInput
+                    name="default_water_amount"
+                    value={form.default_water_amount}
+                    onChange={handleChange}
+                    placeholder="vd: 20,000"
+                    required
+                    className={INPUT}
+                  />
+                </Field>
+              )}
+            </div>
           </Section>
 
           {/* 4. Số điện/nước ban đầu */}

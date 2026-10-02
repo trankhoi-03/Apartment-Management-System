@@ -7,6 +7,7 @@ class IncidentBase(BaseModel):
     status: str = Field(default="received", description="Trạng thái (received/processing/completed)")
     handler_info: str | None = Field(default=None, description="Thông tin bên xử lý (Tùy chọn)")
     repair_cost: float | None = Field(default=None, description="Chi phí sửa chữa")
+    expense_month: str | None = Field(default=None, description="Tháng hạch toán chi phí (YYYY-MM)")
 
 class IncidentCreate(IncidentBase):
     room_id: int
@@ -16,6 +17,7 @@ class IncidentUpdate(BaseModel):
     status: str | None = None
     handler_info: str | None = None
     repair_cost: float | None = None
+    expense_month: str | None = None
     completed_at: datetime | None = None
 
 class IncidentResponse(IncidentBase):

@@ -87,9 +87,31 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
 
     # Bước 4: Tính toán 
     room = contract.room
-
     electric_consumed = Decimal(str(reading.electric_new)) - Decimal(str(reading.electric_old))
-    electric_amount = electric_consumed * rate.electric_price
+    if electric_consumed < 0:
+        raise HTTPException(status_code=400, detail="Chỉ số điện mới không thể nhỏ hơn chỉ số cũ.")
+
+    if payload.electric_calc_method == "split_ratio":
+        # Validate dữ liệu đầu vào cho cách 2
+        if not payload.electric_total_consumed or payload.electric_total_consumed <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Tổng số kWh của hóa đơn tổng phải lớn hơn 0 khi chọn cách tính chia tỉ lệ."
+            )
+        if payload.electric_total_cost is None or payload.electric_total_cost < 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Tổng số tiền của hóa đơn tổng không hợp lệ."
+            )
+
+        total_consumed = Decimal(str(payload.electric_total_consumed))
+        total_cost = Decimal(str(payload.electric_total_cost))
+        
+        # Công thức cách 2: (số điện phòng / số điện tổng) * tổng tiền
+        electric_amount = round((electric_consumed / total_consumed) * total_cost, 2)
+    else:
+        # Cách 1: Cố định theo đơn giá
+        electric_amount = electric_consumed * rate.electric_price
 
     if room.is_water_meter:
         water_consumed = Decimal(str(reading.water_new)) - Decimal(str(reading.water_old))
@@ -145,6 +167,9 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         electric_consumed=float(electric_consumed),
         water_consumed=float(water_consumed),
         status="pending",
+        electric_calc_method=payload.electric_calc_method,
+        electric_total_consumed=payload.electric_total_consumed if payload.electric_calc_method == "split_ratio" else None,
+        electric_total_cost=payload.electric_total_cost if payload.electric_calc_method == "split_ratio" else None,
     )
     db.add(new_bill)
     try:
@@ -258,7 +283,6 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     # 2. Xử lý việc đổi tháng (nếu có)
     new_billing_month = getattr(payload, 'billing_month', None)
     if new_billing_month and new_billing_month != bill.billing_month:
-        # Kiểm tra xem tháng mới đã có hóa đơn nào chưa để tránh trùng lặp
         existing_bill = db.query(Bill).filter(
             Bill.contract_id == contract.id,
             Bill.billing_month == new_billing_month
@@ -270,7 +294,6 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
                 detail=f"Phòng này đã có hóa đơn cho tháng {new_billing_month}. Không thể đổi sang tháng này."
             )
             
-        # Kiểm tra xem tháng mới có bị trùng UtilityReading không
         existing_reading = db.query(UtilityReading).filter(
             UtilityReading.room_id == contract.room_id,
             UtilityReading.billing_month == new_billing_month
@@ -282,23 +305,73 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
                 detail=f"Phòng này đã có chốt điện nước cho tháng {new_billing_month}. Không thể đổi sang tháng này."
             )
             
-        # Thực hiện cập nhật tháng cho cả 2 record
         reading.billing_month = new_billing_month
         bill.billing_month = new_billing_month
 
-    billing_month_end = _billing_month_to_last_date(bill.billing_month)
-    rate = db.query(UtilityRate).filter(
-        UtilityRate.room_id == contract.room_id,
-        UtilityRate.effective_from <= billing_month_end
-    ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
-
+    # 3. Tính toán số điện tiêu thụ
     electric_new_val = payload.electric_new if payload.electric_new is not None else reading.electric_new
     electric_consumed = Decimal(str(electric_new_val)) - Decimal(str(reading.electric_old))
     if electric_consumed < 0:
         raise HTTPException(status_code=400, detail="Số điện mới không được nhỏ hơn số điện cũ.")
-    electric_amount = electric_consumed * rate.electric_price
 
+    # 4. Xác định cách tính tiền điện và tính tiền điện
+    calc_method = payload.electric_calc_method or getattr(bill, "electric_calc_method", "fixed_price")
+
+    if calc_method == "split_ratio":
+        # Ưu tiên lấy từ payload, nếu không có lấy lại từ bill hiện tại
+        tot_consumed = payload.electric_total_consumed if payload.electric_total_consumed is not None else getattr(bill, "electric_total_consumed", None)
+        tot_cost = payload.electric_total_cost if payload.electric_total_cost is not None else getattr(bill, "electric_total_cost", None)
+
+        if not tot_consumed or Decimal(str(tot_consumed)) <= 0:
+            raise HTTPException(
+                status_code=400, 
+                detail="Tổng số kWh của hóa đơn tổng phải lớn hơn 0 khi tính theo chia tỉ lệ."
+            )
+        if tot_cost is None or Decimal(str(tot_cost)) < 0:
+            raise HTTPException(
+                status_code=400, 
+                detail="Tổng số tiền của hóa đơn tổng không hợp lệ."
+            )
+
+        total_consumed_dec = Decimal(str(tot_consumed))
+        total_cost_dec = Decimal(str(tot_cost))
+
+        # Công thức cách 2: (số điện phòng / số điện tổng) * tổng tiền điện
+        electric_amount = round((electric_consumed / total_consumed_dec) * total_cost_dec, 2)
+
+        # Lưu lại thông tin cách tính 2 vào bill
+        bill.electric_calc_method = "split_ratio"
+        bill.electric_total_consumed = float(tot_consumed)
+        bill.electric_total_cost = float(tot_cost)
+    else:
+        # Cách 1: Tính theo đơn giá cố định
+        billing_month_end = _billing_month_to_last_date(bill.billing_month)
+        rate = db.query(UtilityRate).filter(
+            UtilityRate.room_id == contract.room_id,
+            UtilityRate.effective_from <= billing_month_end
+        ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
+
+        if rate is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Chưa có đơn giá điện/nước áp dụng cho phòng tại tháng {bill.billing_month}."
+            )
+
+        electric_amount = electric_consumed * rate.electric_price
+
+        # Lưu lại thông tin cách tính 1 vào bill và dọn các trường cách 2
+        bill.electric_calc_method = "fixed_price"
+        bill.electric_total_consumed = None
+        bill.electric_total_cost = None
+
+    # 5. Tính toán tiền nước
     if room.is_water_meter:
+        billing_month_end = _billing_month_to_last_date(bill.billing_month)
+        rate = db.query(UtilityRate).filter(
+            UtilityRate.room_id == contract.room_id,
+            UtilityRate.effective_from <= billing_month_end
+        ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
+
         water_new_val = payload.water_new if payload.water_new is not None else reading.water_new
         water_consumed = Decimal(str(water_new_val)) - Decimal(str(reading.water_old))
         if water_consumed < 0:
@@ -311,6 +384,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
         else:
             water_amount = Decimal(str(bill.water_amount))
 
+    # 6. Tính tổng tiền hóa đơn
     rent_amt = Decimal(str(payload.rent_amount)) if payload.rent_amount is not None else Decimal(str(bill.rent_amount))
     svc_fee = Decimal(str(payload.service_fee)) if payload.service_fee is not None else Decimal(str(bill.service_fee))
     cln_fee = Decimal(str(payload.cleaning_fee)) if payload.cleaning_fee is not None else Decimal(str(bill.cleaning_fee))
@@ -330,6 +404,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     if total_amount < 0:
         total_amount = Decimal("0")
 
+    # 7. Cập nhật record UtilityReading và Bill
     reading.electric_new = electric_new_val
     if room.is_water_meter:
         reading.water_new = water_new_val

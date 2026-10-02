@@ -183,6 +183,7 @@ export default function FinancialPage() {
   const [rooms, setRooms] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [bills, setBills] = useState([]);
+  const [tenants, setTenants] = useState([]);
 
   const [selectedHouse, setSelectedHouse] = useState("");
   const [selectedRoom, setSelectedRoom] = useState("all");
@@ -249,29 +250,31 @@ export default function FinancialPage() {
   const displayData = useMemo(() => {
     if (!reportData) return null;
 
-    let rentDetails = reportData.rent_tab.details;
-    
-    let electricCostDetails = reportData.utilities_tab.details.filter(d => d.electric_cost > 0).map(d => ({ room_name: d.room_name, amount: d.electric_cost }));
-    let waterCostDetails    = reportData.utilities_tab.details.filter(d => d.water_cost > 0).map(d => ({ room_name: d.room_name, amount: d.water_cost }));
+    let rentDetails = reportData.rent_tab?.details || [];
+    let electricCostDetails = (reportData.utilities_tab?.details || []).filter(d => d.electric_cost > 0).map(d => ({ room_name: d.room_name, amount: d.electric_cost }));
+    let waterCostDetails    = (reportData.utilities_tab?.details || []).filter(d => d.water_cost > 0).map(d => ({ room_name: d.room_name, amount: d.water_cost }));
 
-    let serviceRevDetails    = reportData.other_revenue_tab.details.filter(d => d.item === 'Phí dịch vụ');
-    let additionalRevDetails = reportData.other_revenue_tab.details.filter(d => d.item !== 'Phí dịch vụ');
+    // LẤY TRỰC TIẾP CÁC KHOẢN THU TỪ BACKEND
+    let serviceRevDetails    = (reportData.other_revenue_tab?.details || []).filter(d => d.item === 'Phí dịch vụ');
+    let additionalRevDetails = (reportData.other_revenue_tab?.details || []).filter(d => d.item !== 'Phí dịch vụ');
+    let cleaningRevDetails   = reportData.cleaning_rev_tab?.details || [];
+    let internetRevDetails   = reportData.internet_rev_tab?.details || [];
 
-    let maintDetails = reportData.maintenance_tab.details;
-    let baseCostDetails = reportData.base_cost_tab.details;
-    let mgmtDetails = reportData.management_tab.details;
-    let otherCostDetails = reportData.other_costs_tab.details;
+    let maintDetails = reportData.maintenance_tab?.details || [];
+    let baseCostDetails = reportData.base_cost_tab?.details || [];
+    let mgmtDetails = reportData.management_tab?.details || [];
+    let otherCostDetails = reportData.other_costs_tab?.details || [];
 
+    // NẾU CHỌN LỌC PHÒNG CỤ THỂ
     if (selectedHouse !== "all" && selectedRoom !== "all") {
       const room = rooms.find(r => r.id.toString() === selectedRoom);
       if (room) {
         const exact1 = `Phòng ${room.room_number}`;
-        const prefix1 = `Phòng ${room.room_number} -`;
-        const prefix2 = `P.${room.room_number} -`;
         
+        // Hỗ trợ cả trường hợp có gắn tên khách: "Phòng 3 (Nguyen Van Troi)" hoặc "Phòng 3 - Nhà A (Nguyen Van Troi)"
         const filterByRoomName = (list) => list.filter(d => {
           const name = d.room_name || "";
-          return name === exact1 || name.startsWith(prefix1) || name.startsWith(prefix2);
+          return name === exact1 || name.startsWith(`${exact1} `) || name.startsWith(`${exact1} -`) || name.startsWith(`${exact1}(`);
         });
 
         const filterByItemName = (list) => list.filter(d => {
@@ -284,14 +287,16 @@ export default function FinancialPage() {
         waterCostDetails = filterByRoomName(waterCostDetails);
         serviceRevDetails = filterByRoomName(serviceRevDetails);
         additionalRevDetails = filterByRoomName(additionalRevDetails);
+        cleaningRevDetails = filterByRoomName(cleaningRevDetails);
+        internetRevDetails = filterByRoomName(internetRevDetails);
         maintDetails = filterByRoomName(maintDetails); 
         baseCostDetails = filterByRoomName(baseCostDetails);
-        
         mgmtDetails = filterByItemName(mgmtDetails); 
         otherCostDetails = filterByItemName(otherCostDetails); 
       }
     }
 
+    // Các bill thanh toán tiền điện & tiền nước thu từ người thuê (kèm tên người thuê để phân biệt)
     const currentMonthBills = bills.filter(b => b.billing_month === selectedMonth);
     const filteredBills = currentMonthBills.filter(bill => {
       const contract = contracts.find(c => c.id === bill.contract_id);
@@ -305,32 +310,30 @@ export default function FinancialPage() {
     const electricRevDetails = filteredBills.filter(b => Number(b.electric_amount) > 0).map(bill => {
       const contract = contracts.find(c => c.id === bill.contract_id);
       const room = rooms.find(r => r.id === contract?.room_id);
-      return { room_name: `Phòng ${room?.room_number}`, amount: Number(bill.electric_amount) };
+      const tenant = tenants.find(t => t.id === contract?.tenant_id);
+      const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
+      return { room_name: `Phòng ${room?.room_number}${tenantLabel}`, amount: Number(bill.electric_amount) };
     });
 
     const waterRevDetails = filteredBills.filter(b => Number(b.water_amount) > 0).map(bill => {
       const contract = contracts.find(c => c.id === bill.contract_id);
       const room = rooms.find(r => r.id === contract?.room_id);
-      return { room_name: `Phòng ${room?.room_number}`, amount: Number(bill.water_amount) };
+      const tenant = tenants.find(t => t.id === contract?.tenant_id);
+      const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
+      return { room_name: `Phòng ${room?.room_number}${tenantLabel}`, amount: Number(bill.water_amount) };
     });
 
-    const cleaningRevDetails = filteredBills.filter(bill => Number(bill.cleaning_fee) > 0).map(bill => {
-        const contract = contracts.find(c => c.id === bill.contract_id);
-        const room = rooms.find(r => r.id === contract?.room_id);
-        return { room_name: `Phòng ${room?.room_number}`, amount: Number(bill.cleaning_fee) };
-    });
-
-    const internetRevDetails = filteredBills.filter(bill => Number(bill.internet_fee) > 0).map(bill => {
-        const contract = contracts.find(c => c.id === bill.contract_id);
-        const room = rooms.find(r => r.id === contract?.room_id);
-        return { room_name: `Phòng ${room?.room_number}`, amount: Number(bill.internet_fee) };
-    });
-
-    // Tính toán Giảm trừ (Discount) từ các bill đã lọc
+    // Tính toán Giảm trừ (Discount)
     const discountDetails = filteredBills.filter(bill => Number(bill.discount_amount) > 0).map(bill => {
-        const contract = contracts.find(c => c.id === bill.contract_id);
-        const room = rooms.find(r => r.id === contract?.room_id);
-        return { room_name: `Phòng ${room?.room_number}`, reason: bill.discount_reason || 'Không có', amount: Number(bill.discount_amount) };
+      const contract = contracts.find(c => c.id === bill.contract_id);
+      const room = rooms.find(r => r.id === contract?.room_id);
+      const tenant = tenants.find(t => t.id === contract?.tenant_id);
+      const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
+      return { 
+        room_name: `Phòng ${room?.room_number}${tenantLabel}`, 
+        reason: bill.discount_reason || 'Không có', 
+        amount: Number(bill.discount_amount) 
+      };
     });
 
     let paidRent = 0;
@@ -358,11 +361,9 @@ export default function FinancialPage() {
     const mgmtTotal = sum(mgmtDetails, "amount");
     const otherCostTotal = sum(otherCostDetails, "amount");
     const internetCostTotal = reportData.internet_cost_tab?.total || 0;
-    const discountTotal = sum(discountDetails, "amount"); // Tổng giảm trừ
+    const discountTotal = sum(discountDetails, "amount");
 
     const totalRev = rentTotal + electricRevTotal + waterRevTotal + serviceRevTotal + additionalRevTotal + cleaningRevTotal + internetRevTotal;
-    
-    // Tổng chi phí (Cộng thêm cả Internet và Giảm trừ vào Chi phí)
     const totalCost = electricCostTotal + waterCostTotal + maintTotal + baseCostTotal + mgmtTotal + otherCostTotal + internetCostTotal + discountTotal;
 
     const barThuChiData = [{ name: `Tháng ${selectedMonth.split('-')[1]}`, "Thu nhập": totalRev, "Chi tiêu": totalCost }];
@@ -376,7 +377,7 @@ export default function FinancialPage() {
     if (mgmtTotal > 0) costArray.push({ name: 'Quản lý', value: mgmtTotal });
     if (otherCostTotal > 0) costArray.push({ name: 'Chi phí khác', value: otherCostTotal });
     if (internetCostTotal > 0) costArray.push({ name: 'Chi phí Internet', value: internetCostTotal });
-    if (discountTotal > 0) costArray.push({ name: 'Giảm trừ', value: discountTotal }); // Đẩy Giảm trừ vào biểu đồ tròn
+    if (discountTotal > 0) costArray.push({ name: 'Giảm trừ', value: discountTotal });
 
     const pieCostData = costArray.filter(d => d.value > 0).map(item => ({
       ...item, fill: CATEGORY_COLORS[item.name] || '#9ca3af' 
@@ -397,7 +398,6 @@ export default function FinancialPage() {
     return {
       ...reportData,
       total_revenue: totalRev, total_cost: totalCost, net_profit: totalRev - totalCost,
-      
       rent_tab: { total: rentTotal, details: rentDetails, paid: paidRent, unpaid: unpaidRent },
       electric_rev_tab: { total: electricRevTotal, details: electricRevDetails },
       water_rev_tab: { total: waterRevTotal, details: waterRevDetails },
@@ -405,17 +405,16 @@ export default function FinancialPage() {
       additional_rev_tab: { total: additionalRevTotal, details: additionalRevDetails },
       cleaning_rev_tab: { total: cleaningRevTotal, details: cleaningRevDetails },
       internet_rev_tab: { total: internetRevTotal, details: internetRevDetails },
-      
       electric_cost_tab: { total: electricCostTotal, details: electricCostDetails },
       water_cost_tab: { total: waterCostTotal, details: waterCostDetails },
       maintenance_tab: { total: maintTotal, details: maintDetails },
       base_cost_tab: { total: baseCostTotal, details: baseCostDetails },
       management_tab: { total: mgmtTotal, details: mgmtDetails },
       other_costs_tab: { total: otherCostTotal, details: otherCostDetails },
-      discount_tab: { total: discountTotal, details: discountDetails }, // Thêm tab Giảm trừ
+      discount_tab: { total: discountTotal, details: discountDetails },
       charts: { barThuChiData, pieCostData, pieRevData }
     };
-  }, [reportData, selectedRoom, rooms, selectedHouse, bills, contracts, selectedMonth]);
+  }, [reportData, selectedRoom, rooms, selectedHouse, bills, contracts, tenants, selectedMonth]); 
 
   const handleOtherCostChange = (index, field, value) => {
     const newInputs = [...otherCostInputs];

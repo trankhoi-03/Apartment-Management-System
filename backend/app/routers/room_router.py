@@ -42,10 +42,13 @@ def create_room(
             if not tag_name:
                 continue
             
-            existing = db.query(Tag).filter(Tag.name == tag_name).first()
+            existing = db.query(Tag).filter(
+                func.lower(Tag.name) == tag_name.lower(),
+                Tag.user_id == current_user.id
+            ).first()
             
             if not existing:
-                new_tag = Tag(name=tag_name, type="amenity")
+                new_tag = Tag(name=tag_name, type="amenity", user_id=current_user.id)
                 db.add(new_tag)
         db.commit()
     
@@ -129,10 +132,13 @@ def update_room(
             if not tag_name:
                 continue
             
-            existing = db.query(Tag).filter(Tag.name == tag_name).first()
+            existing = db.query(Tag).filter(
+                func.lower(Tag.name) == tag_name.lower(),
+                Tag.user_id == current_user.id
+            ).first()
             
             if not existing:
-                new_tag = Tag(name=tag_name, type="amenity")
+                new_tag = Tag(name=tag_name, type="amenity", user_id=current_user.id)
                 db.add(new_tag)
         db.commit()
 
