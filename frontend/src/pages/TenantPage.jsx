@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import TenantFormModal from "../components/tenants/TenantFormModal";
 import TenantDrawer from "../components/tenants/TenantDrawer";
@@ -15,6 +16,7 @@ const ATTRIBUTE_TAGS = [
 ];
 
 export default function TenantsPage() {
+  const navigate = useNavigate();
   const [tenants, setTenants] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [houses, setHouses] = useState([]); 
@@ -68,6 +70,12 @@ export default function TenantsPage() {
   useEffect(() => {
     Promise.resolve().then(() => loadData());
   }, []);
+
+  // Chuyển sang trang Phòng và mở đúng card phòng
+  function goToRoom(roomId) {
+    if (!roomId) return;
+    navigate("/rooms", { state: { openRoomId: roomId } });
+  }
 
   function getActiveContract(tenantId) {
     return contracts.find((c) => c.tenant_id === tenantId && c.status === "active") ?? null;
@@ -379,9 +387,19 @@ export default function TenantsPage() {
                 
                 <div className="space-y-1 text-sm text-gray-600">
                   {contract && (
-                    <p>Phòng: <span className="font-medium text-blue-600">
-                      {contractRoom?.room_number ? `Phòng ${contractRoom.room_number}` : `Room ID ${contract.room_id}`}
-                    </span></p>
+                    <p>Phòng:{" "}
+                      <button
+                        type="button"
+                        title="Xem phòng này"
+                        onClick={(e) => {
+                          e.stopPropagation(); // không mở TenantDrawer
+                          goToRoom(contract.room_id);
+                        }}
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline underline-offset-2 transition"
+                      >
+                        {contractRoom?.room_number ? `Phòng ${contractRoom.room_number}` : `Room ID ${contract.room_id}`} &rarr;
+                      </button>
+                    </p>
                   )}
                   {/* Cố ý ẨN SĐT/Email nếu đây là Card của người ở cùng vì họ không có thông tin này */}
                   {!isCoTenantMatch && (
@@ -449,9 +467,19 @@ export default function TenantsPage() {
                 )}
                 <div className="space-y-1 text-sm text-gray-600">
                   {contract && (
-                    <p>Phòng: <span className="font-medium text-blue-600">
-                      {contractRoom?.room_number ? `Phòng ${contractRoom.room_number}` : `Room ID ${contract.room_id}`}
-                    </span></p>
+                    <p>Phòng:{" "}
+                      <button
+                        type="button"
+                        title="Xem phòng này"
+                        onClick={(e) => {
+                          e.stopPropagation(); // không mở TenantDrawer
+                          goToRoom(contract.room_id);
+                        }}
+                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline underline-offset-2 transition"
+                      >
+                        {contractRoom?.room_number ? `Phòng ${contractRoom.room_number}` : `Room ID ${contract.room_id}`} &rarr;
+                      </button>
+                    </p>
                   )}
                   <p>SĐT: <span className="font-medium text-gray-800">{tenant.phone}</span></p>
                   {tenant.email && (

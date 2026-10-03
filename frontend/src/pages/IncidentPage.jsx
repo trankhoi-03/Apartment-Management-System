@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
 const STATUS_CONFIG = {
@@ -42,6 +43,14 @@ const STATUS_TAGS = [
 const getCurrentMonthStr = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
+// Lấy tháng (YYYY-MM) của một mốc thời gian, theo giờ địa phương (khớp với giờ hiển thị trên card)
+const getMonthStr = (dateString) => {
+  if (!dateString) return null;
+  const d = new Date(dateString);
+  if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
 // Component VietnameseMonthPicker dùng chung cho Filter và Form Modal
@@ -164,6 +173,12 @@ function VietnameseMonthPicker({
 }
 
 export default function IncidentsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Sự cố cần highlight khi được điều hướng từ Dashboard (chỉ xử lý một lần)
+  const pendingIncidentId = useRef(location.state?.highlightIncidentId ?? null);
+  const [highlightIncidentId, setHighlightIncidentId] = useState(null);
+
   const [incidents, setIncidents] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [houses, setHouses] = useState([]);
@@ -257,6 +272,43 @@ export default function IncidentsPage() {
     });
   }, [loadData]);
 
+  // Khi dữ liệu đã tải xong: đưa bộ lọc về trạng thái hiển thị được sự cố cần tìm
+  useEffect(() => {
+    if (loading || pendingIncidentId.current == null) return;
+
+    const incidentId = pendingIncidentId.current;
+    pendingIncidentId.current = null;
+    // Xoá state trong history để refresh/back không highlight lại
+    navigate(location.pathname, { replace: true, state: null });
+
+    const target = incidents.find((i) => i.id === incidentId);
+    if (!target) return; // sự cố đã bị xoá hoặc không tồn tại
+
+    const room = rooms.find((r) => r.id === target.room_id);
+    // Danh sách lọc theo tháng tiếp nhận nên phải nhảy tới đúng tháng đó
+    const month = getMonthStr(target.created_at) || "all";
+
+    setSelectedHouse(room?.house_id != null ? String(room.house_id) : "all");
+    setSelectedMonth(month);
+    setSelectedTags([]);
+    setHighlightIncidentId(incidentId);
+  }, [loading, incidents, rooms, navigate, location.pathname]);
+
+  // Cuộn tới card được highlight, rồi tắt highlight sau 3s
+  useEffect(() => {
+    if (highlightIncidentId == null) return;
+    const scrollTimer = setTimeout(() => {
+      document
+        .getElementById(`incident-card-${highlightIncidentId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    const clearTimer = setTimeout(() => setHighlightIncidentId(null), 3000);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightIncidentId]);
+
   async function handleConfirmComplete() {
     setCompletingLoading(true);
     try {
@@ -298,13 +350,17 @@ export default function IncidentsPage() {
     const room = rooms.find(r => r.id === incident.room_id);
     const house = houses.find(h => h.id === room?.house_id);
     
-    // Xác định tháng tính chi phí (nếu chưa có expense_month thì lấy theo tháng tạo created_at)
-    const effectiveMonth = incident.expense_month || (incident.created_at ? incident.created_at.slice(0, 7) : null);
+    // Tháng tiếp nhận sự cố: dùng để lọc danh sách hiển thị
+    const createdMonth = getMonthStr(incident.created_at);
+
+    // Tháng hạch toán chi phí (nếu chưa có expense_month thì lấy theo tháng tiếp nhận): dùng để tính tổng chi phí
+    const effectiveMonth = incident.expense_month || createdMonth;
     
     return { 
       ...incident, 
       computed_room: room, 
       computed_house: house,
+      created_month: createdMonth,
       effective_month: effectiveMonth
     };
   });
@@ -321,7 +377,8 @@ export default function IncidentsPage() {
     setSelectedTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
   };
 
-  const filteredIncidents = enrichedIncidents.filter((incident) => {
+  // monthField: "created_month" (lọc danh sách) hoặc "effective_month" (tính chi phí)
+  const matchesFilters = (incident, monthField) => {
     // 1. Lọc theo nhà trọ
     const matchHouse = 
       selectedHouse === "all" || 
@@ -329,7 +386,7 @@ export default function IncidentsPage() {
     if (!matchHouse) return false;
 
     // 2. Lọc theo Tháng (Nếu không chọn 'all')
-    if (selectedMonth !== "all" && incident.effective_month !== selectedMonth) {
+    if (selectedMonth !== "all" && incident[monthField] !== selectedMonth) {
       return false;
     }
 
@@ -352,9 +409,14 @@ export default function IncidentsPage() {
     }
 
     return isStatusMatch && isHandlerMatch;
-  });
+  };
 
-  const totalRepairCost = filteredIncidents.reduce((sum, incident) => {
+  // Danh sách: sự cố hiển thị theo THÁNG TIẾP NHẬN
+  const filteredIncidents = enrichedIncidents.filter((i) => matchesFilters(i, "created_month"));
+  // Tổng chi phí: tính theo THÁNG HẠCH TOÁN (cùng bộ lọc nhà trọ / bên xử lý)
+  const costIncidents = enrichedIncidents.filter((i) => matchesFilters(i, "effective_month"));
+
+  const totalRepairCost = costIncidents.reduce((sum, incident) => {
     return sum + (Number(incident.repair_cost) || 0);
   }, 0);
 
@@ -417,7 +479,7 @@ export default function IncidentsPage() {
             const isSelected = selectedTags.includes(tag.id);
             const count = enrichedIncidents.filter(i => {
               const matchHouse = selectedHouse === "all" || i.computed_house?.id?.toString() === selectedHouse;
-              const matchMonth = selectedMonth === "all" || i.effective_month === selectedMonth;
+              const matchMonth = selectedMonth === "all" || i.created_month === selectedMonth;
               return matchHouse && matchMonth && i.status === tag.id.replace('status_', '');
             }).length;
 
@@ -535,7 +597,7 @@ export default function IncidentsPage() {
             <p className="text-sm font-semibold text-emerald-800">
               Tổng chi phí sửa chữa {selectedMonth !== "all" ? `tháng ${selectedMonth.slice(5, 7)}/${selectedMonth.slice(0, 4)}` : "(Tất cả thời gian)"}
             </p>
-            <p className="text-[11px] text-emerald-600/80 mt-0.5">Được tính dựa trên kết quả lọc hiện tại</p>
+            <p className="text-[11px] text-emerald-600/80 mt-0.5">Tính theo tháng hạch toán, áp dụng bộ lọc nhà trọ & bên xử lý</p>
           </div>
         </div>
         <div className="text-2xl sm:text-3xl font-extrabold text-emerald-900 tracking-tight">
@@ -554,14 +616,17 @@ export default function IncidentsPage() {
           {filteredIncidents.map((incident) => {
             const cfg = STATUS_CONFIG[incident.status] ?? STATUS_CONFIG.received;
             const isOverdue = checkIsOverdue(incident.created_at, incident.status);
+            const isHighlighted = highlightIncidentId === incident.id;
 
             return (
               <div 
                 key={incident.id} 
-                className={`rounded-2xl border shadow-sm p-5 transition flex flex-col h-full 
+                id={`incident-card-${incident.id}`}
+                className={`rounded-2xl border shadow-sm p-5 transition duration-300 flex flex-col h-full 
                   ${isOverdue 
                     ? "bg-red-50 border-red-400 shadow-red-100" 
-                    : "bg-white border-gray-100 hover:shadow-md"}`}
+                    : "bg-white border-gray-100 hover:shadow-md"}
+                  ${isHighlighted ? "relative z-10 -translate-y-1 scale-[1.02] shadow-xl ring-4 ring-blue-400 border-blue-400" : ""}`}
               >
                 
                 <div className="flex justify-between items-start mb-2">

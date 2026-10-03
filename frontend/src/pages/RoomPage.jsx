@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import RoomCard from "../components/rooms/RoomCard";
 import RoomDrawer from "../components/rooms/RoomDrawer";
@@ -15,6 +16,12 @@ const STATUS_TAGS = [
 export default function RoomsPage() {
   const userRole = localStorage.getItem("user_role") || "staff";
   const isOwner = userRole === "owner";
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Phòng cần mở khi được điều hướng từ Dashboard (chỉ xử lý một lần)
+  const pendingRoomId = useRef(location.state?.openRoomId ?? null);
+  const [highlightRoomId, setHighlightRoomId] = useState(null);
   
   const [rooms, setRooms] = useState([]);
   const [houses, setHouses] = useState([]);
@@ -53,6 +60,45 @@ export default function RoomsPage() {
       loadData();
     });
   }, []);
+
+  // Khi dữ liệu đã tải xong: mở đúng phòng được yêu cầu từ Dashboard
+  useEffect(() => {
+    if (loading || pendingRoomId.current == null) return;
+
+    const roomId = pendingRoomId.current;
+    pendingRoomId.current = null;
+    // Xoá state trong history để refresh/back không mở lại drawer
+    navigate(location.pathname, { replace: true, state: null });
+
+    const target = rooms.find((r) => r.id === roomId);
+    if (!target) return; // phòng đã bị xoá hoặc không tồn tại
+
+    setSelectedHouse(String(target.house_id)); // đảm bảo phòng không bị lọc mất
+    setSelectedTags([]);
+    setSelectedRoom({
+      ...target,
+      computed_house: houses.find((h) => h.id === target.house_id),
+      computed_active_contract: contracts.find(
+        (c) => c.room_id === target.id && c.status === "active"
+      ),
+    });
+    setHighlightRoomId(roomId);
+  }, [loading, rooms, houses, contracts, navigate, location.pathname]);
+
+  // Cuộn tới card được highlight, rồi tắt highlight sau 2.5s
+  useEffect(() => {
+    if (highlightRoomId == null) return;
+    const scrollTimer = setTimeout(() => {
+      document
+        .getElementById(`room-card-${highlightRoomId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 150);
+    const clearTimer = setTimeout(() => setHighlightRoomId(null), 2500);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightRoomId]);
 
   function handleCardClick(room) {
     setSelectedRoom((prev) => prev?.id === room.id ? null : room);
@@ -365,14 +411,21 @@ export default function RoomsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {finalDisplayedRooms.map((room) => (
-            <RoomCard
+            <div
               key={room.id}
-              room={room}
-              isOwner={isOwner}
-              onClick={handleCardClick}
-              onDuplicate={handleDuplicateRoom}
-              isSelected={selectedRoom?.id === room.id}
-            />
+              id={`room-card-${room.id}`}
+              className={`rounded-2xl transition-shadow duration-500 ${
+                highlightRoomId === room.id ? "ring-4 ring-orange-300 animate-pulse" : ""
+              }`}
+            >
+              <RoomCard
+                room={room}
+                isOwner={isOwner}
+                onClick={handleCardClick}
+                onDuplicate={handleDuplicateRoom}
+                isSelected={selectedRoom?.id === room.id}
+              />
+            </div>
           ))}
         </div>
       )}

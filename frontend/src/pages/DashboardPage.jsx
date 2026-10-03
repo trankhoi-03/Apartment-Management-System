@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import api from "../api/axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function StatCard({ label, value, color }) {
   return (
@@ -17,6 +17,7 @@ const INCIDENT_STATUS_CONFIG = {
 };
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const userRole = localStorage.getItem("user_role") || "staff";
   const isOwner = userRole === "owner";
   const [rooms, setRooms] = useState([]);
@@ -58,6 +59,51 @@ export default function DashboardPage() {
       loadData();
     });
   }, []);
+
+  // Điều hướng sang trang Phòng và yêu cầu mở đúng card phòng
+  function goToRoom(room) {
+    if (!room?.id) return;
+    navigate("/rooms", { state: { openRoomId: room.id } });
+  }
+
+  // Điều hướng sang trang Sự cố và yêu cầu highlight đúng card sự cố
+  function goToIncident(incident) {
+    if (!incident?.id) return;
+    navigate("/incidents", { state: { highlightIncidentId: incident.id } });
+  }
+
+  // Props dùng chung để biến một card thành vùng bấm được (hỗ trợ cả bàn phím)
+  function roomCardProps(room) {
+    return {
+      role: "button",
+      tabIndex: 0,
+      title: "Bấm để xem phòng này",
+      onClick: () => goToRoom(room),
+      onKeyDown: (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToRoom(room);
+        }
+      },
+    };
+  }
+
+  // Props cho card sự cố (bỏ qua phím bấm phát sinh từ nút/link bên trong card)
+  function incidentCardProps(incident) {
+    return {
+      role: "button",
+      tabIndex: 0,
+      title: "Bấm để xem sự cố này ở trang Sự cố",
+      onClick: () => goToIncident(incident),
+      onKeyDown: (e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          goToIncident(incident);
+        }
+      },
+    };
+  }
 
   // Đổi trạng thái nhanh từ received sang processing trực tiếp từ Dashboard
   async function handleQuickToProcessing(incidentId) {
@@ -404,7 +450,11 @@ export default function DashboardPage() {
               const isOverdue = c.days_left < 0;
               
               return (
-                <div key={c.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border border-orange-100 hover:shadow-md transition">
+                <div
+                  key={c.id}
+                  {...roomCardProps(c.computed_room)}
+                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border border-orange-100 hover:border-orange-300 hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-300"
+                >
                   <div className="mb-2 sm:mb-0">
                     <p className="font-bold text-gray-800">
                       Phòng {c.computed_room?.room_number} <span className="text-sm font-normal text-gray-500 ml-1">({c.computed_house?.name})</span>
@@ -446,7 +496,11 @@ export default function DashboardPage() {
               const isOverdue = c.res_days_left < 0;
               
               return (
-                <div key={`res_${c.id}`} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border border-amber-100 hover:shadow-md transition">
+                <div
+                  key={`res_${c.id}`}
+                  {...roomCardProps(c.computed_room)}
+                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border border-amber-100 hover:border-amber-300 hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
                   <div className="mb-2 sm:mb-0">
                     <p className="font-bold text-gray-800">
                       Phòng {c.computed_room?.room_number} <span className="text-sm font-normal text-gray-500 ml-1">({c.computed_house?.name})</span>
@@ -507,10 +561,11 @@ export default function DashboardPage() {
               return (
                 <div
                   key={incident.id}
-                  className={`rounded-2xl border p-4 shadow-sm flex flex-col justify-between transition ${
+                  {...incidentCardProps(incident)}
+                  className={`rounded-2xl border p-4 shadow-sm flex flex-col justify-between transition cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 ${
                     isReceived
                       ? "bg-amber-50/60 border-amber-300"
-                      : "bg-white border-gray-200 hover:shadow-md"
+                      : "bg-white border-gray-200"
                   }`}
                 >
                   <div>
@@ -547,13 +602,18 @@ export default function DashboardPage() {
                     {isReceived ? (
                       <>
                         <button
-                          onClick={() => handleQuickToProcessing(incident.id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // không kích hoạt điều hướng của card
+                            handleQuickToProcessing(incident.id);
+                          }}
                           className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
                         >
                           Chuyển sang "Đang xử lý"
                         </button>
                         <Link
                           to="/incidents"
+                          state={{ highlightIncidentId: incident.id }}
+                          onClick={(e) => e.stopPropagation()}
                           className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition"
                         >
                           Chi tiết
@@ -562,6 +622,8 @@ export default function DashboardPage() {
                     ) : (
                       <Link
                         to="/incidents"
+                        state={{ highlightIncidentId: incident.id }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-full text-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition"
                       >
                         Xem & Cập nhật tại trang Sự cố &rarr;

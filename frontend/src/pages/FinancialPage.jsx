@@ -4,6 +4,31 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 const formatYAxis = (tickItem) => new Intl.NumberFormat('vi-VN', { notation: "compact", compactDisplay: "short" }).format(tickItem);
 
+// Định dạng tiền VNĐ: luôn làm tròn về số nguyên (tránh hiện phần thập phân như 786.490,566)
+const formatVND = (value) => (Math.round(Number(value) || 0) + 0).toLocaleString('vi-VN');
+
+// Làm tròn từng khoản về số nguyên nhưng GIỮ NGUYÊN TỔNG (phương pháp phần dư lớn nhất).
+// Ví dụ: hoá đơn điện 3.678.000đ chia cho các phòng -> các phòng cộng lại vẫn đúng 3.678.000đ.
+const roundKeepingTotal = (list) => {
+  const raw = list.map((d) => Number(d.amount) || 0);
+  const floors = raw.map((v) => Math.floor(v));
+  const target = Math.round(raw.reduce((a, b) => a + b, 0));
+  let remainder = target - floors.reduce((a, b) => a + b, 0);
+
+  const result = [...floors];
+  raw
+    .map((v, i) => ({ i, frac: v - floors[i] }))
+    .sort((a, b) => b.frac - a.frac)
+    .forEach(({ i }) => {
+      if (remainder > 0) {
+        result[i] += 1;
+        remainder -= 1;
+      }
+    });
+
+  return list.map((d, i) => ({ ...d, amount: result[i] }));
+};
+
 const CATEGORY_COLORS = {
   // CHI PHÍ (COST)
   'Tiền điện (Chi)':    '#1e3a8a',  
@@ -139,7 +164,7 @@ function AccordionCard({ icon, title, colorTheme, summaryAmount, isOpen, onToggl
   };
   const currentTheme = themes[colorTheme] || themes.gray;
   const isPositive = summaryAmount > 0;
-  const formattedAmount = Math.abs(summaryAmount).toLocaleString('vi-VN');
+  const formattedAmount = formatVND(Math.abs(summaryAmount));
   const sign = isPositive ? "+" : (summaryAmount < 0 ? "-" : "");
 
   return (
@@ -183,6 +208,7 @@ export default function FinancialPage() {
   const [rooms, setRooms] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [bills, setBills] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [tenants, setTenants] = useState([]);
 
   const [selectedHouse, setSelectedHouse] = useState("");
@@ -251,8 +277,8 @@ export default function FinancialPage() {
     if (!reportData) return null;
 
     let rentDetails = reportData.rent_tab?.details || [];
-    let electricCostDetails = (reportData.utilities_tab?.details || []).filter(d => d.electric_cost > 0).map(d => ({ room_name: d.room_name, amount: d.electric_cost }));
-    let waterCostDetails    = (reportData.utilities_tab?.details || []).filter(d => d.water_cost > 0).map(d => ({ room_name: d.room_name, amount: d.water_cost }));
+    let electricCostDetails = roundKeepingTotal((reportData.utilities_tab?.details || []).filter(d => d.electric_cost > 0).map(d => ({ room_name: d.room_name, amount: d.electric_cost })));
+    let waterCostDetails    = roundKeepingTotal((reportData.utilities_tab?.details || []).filter(d => d.water_cost > 0).map(d => ({ room_name: d.room_name, amount: d.water_cost })));
 
     // LẤY TRỰC TIẾP CÁC KHOẢN THU TỪ BACKEND
     let serviceRevDetails    = (reportData.other_revenue_tab?.details || []).filter(d => d.item === 'Phí dịch vụ');
@@ -528,7 +554,7 @@ export default function FinancialPage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13, fontWeight: 500}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={formatYAxis} />
-                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
+                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }} formatter={(value) => [`${formatVND(value)} đ`, '']} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', fontWeight: 500, paddingTop: '15px' }} />
                 <Bar dataKey="Đã thu" fill="#10b981" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="Cần thu" fill="#f43f5e" radius={[6, 6, 0, 0]} />
@@ -538,7 +564,7 @@ export default function FinancialPage() {
         </div>
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.rent_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.revenue.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.rent_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.revenue)} đ</td></tr>)}</tbody>
         </table>
       </DetailPanel>
     );
@@ -549,7 +575,7 @@ export default function FinancialPage() {
       {displayData.electric_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.electric_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.electric_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -560,7 +586,7 @@ export default function FinancialPage() {
       {displayData.water_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.water_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.water_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -571,7 +597,7 @@ export default function FinancialPage() {
       {displayData.service_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.service_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.service_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -582,7 +608,7 @@ export default function FinancialPage() {
       {displayData.additional_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[400px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={tableHeaderStyle}>Lý do</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.additional_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={tableRowStyle}>{d.item}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.additional_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={tableRowStyle}>{d.item}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -593,7 +619,7 @@ export default function FinancialPage() {
       {displayData.cleaning_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.cleaning_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.cleaning_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -604,7 +630,7 @@ export default function FinancialPage() {
       {displayData.internet_rev_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.internet_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.internet_rev_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -616,7 +642,7 @@ export default function FinancialPage() {
       {displayData.electric_cost_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.electric_cost_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.electric_cost_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -627,7 +653,7 @@ export default function FinancialPage() {
       {displayData.water_cost_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Chưa có dữ liệu.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.water_cost_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.water_cost_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -638,7 +664,7 @@ export default function FinancialPage() {
       {displayData.maintenance_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Không có chi phí phát sinh.</p> : (
         <table className="w-full text-left min-w-[500px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={tableHeaderStyle}>Nội dung</th><th className={tableHeaderStyle}>Bên xử lý</th><th className={`${tableHeaderStyle} text-right`}>Chi phí</th></tr></thead>
-          <tbody>{displayData.maintenance_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={tableRowStyle}>{d.description}</td><td className={tableRowStyle}>{d.handler_info ? <span className="bg-orange-50 text-orange-700 border border-orange-100 px-2 py-0.5 rounded text-xs font-medium">{d.handler_info}</span> : '—'}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.maintenance_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={tableRowStyle}>{d.description}</td><td className={tableRowStyle}>{d.handler_info ? <span className="bg-orange-50 text-orange-700 border border-orange-100 px-2 py-0.5 rounded text-xs font-medium">{d.handler_info}</span> : '—'}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -648,7 +674,7 @@ export default function FinancialPage() {
     <DetailPanel title="Chi tiết Giá Cost (Vốn phòng)" colorTheme="orange">
       <table className="w-full text-left min-w-[300px]">
         <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={`${tableHeaderStyle} text-right`}>Cost Price</th></tr></thead>
-        <tbody>{displayData.base_cost_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+        <tbody>{displayData.base_cost_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
       </table>
     </DetailPanel>
   );
@@ -657,7 +683,7 @@ export default function FinancialPage() {
     <DetailPanel title="Chi tiết Nhân viên quản lý" colorTheme="gray">
       <table className="w-full text-left min-w-[300px]">
         <thead><tr><th className={tableHeaderStyle}>Hạng mục</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-        <tbody>{displayData.management_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.item}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+        <tbody>{displayData.management_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.item}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
       </table>
     </DetailPanel>
   );
@@ -724,7 +750,7 @@ export default function FinancialPage() {
       {displayData.other_costs_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Không có chi phí khác.</p> : (
         <table className="w-full text-left min-w-[300px]">
           <thead><tr><th className={tableHeaderStyle}>Nội dung chi</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.other_costs_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.item}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.other_costs_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.item}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -762,7 +788,7 @@ export default function FinancialPage() {
             {displayData.internet_cost_tab?.details.map((d, i) => (
               <tr key={i}>
                 <td className={tableRowStyle}>{d.item}</td>
-                <td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td>
+                <td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td>
               </tr>
             ))}
           </tbody>
@@ -776,7 +802,7 @@ export default function FinancialPage() {
       {displayData.discount_tab.details.length === 0 ? <p className="text-gray-500 italic text-sm py-2">Không có dữ liệu giảm trừ.</p> : (
         <table className="w-full text-left min-w-[400px]">
           <thead><tr><th className={tableHeaderStyle}>Phòng</th><th className={tableHeaderStyle}>Nội dung giảm trừ</th><th className={`${tableHeaderStyle} text-right`}>Số tiền</th></tr></thead>
-          <tbody>{displayData.discount_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={tableRowStyle}>{d.reason}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{d.amount.toLocaleString('vi-VN')} đ</td></tr>)}</tbody>
+          <tbody>{displayData.discount_tab.details.map((d, i) => <tr key={i}><td className={tableRowStyle}>{d.room_name}</td><td className={tableRowStyle}>{d.reason}</td><td className={`${tableRowStyle} text-right font-bold text-gray-900`}>{formatVND(d.amount)} đ</td></tr>)}</tbody>
         </table>
       )}
     </DetailPanel>
@@ -797,7 +823,7 @@ export default function FinancialPage() {
             <h2 className="text-2xl font-extrabold text-emerald-700 uppercase flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 text-lg">↓</span> Tổng Doanh Thu
             </h2>
-            <div className="text-3xl font-black text-emerald-600 mt-2 sm:mt-0">+{displayData.total_revenue.toLocaleString('vi-VN')} đ</div>
+            <div className="text-3xl font-black text-emerald-600 mt-2 sm:mt-0">+{formatVND(displayData.total_revenue)} đ</div>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -839,7 +865,7 @@ export default function FinancialPage() {
             <h2 className="text-2xl font-extrabold text-rose-700 uppercase flex items-center gap-3">
               <span className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 text-lg">↑</span> Tổng Chi Phí
             </h2>
-            <div className="text-3xl font-black text-rose-600 mt-2 sm:mt-0">-{displayData.total_cost.toLocaleString('vi-VN')} đ</div>
+            <div className="text-3xl font-black text-rose-600 mt-2 sm:mt-0">-{formatVND(displayData.total_cost)} đ</div>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -908,11 +934,11 @@ export default function FinancialPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
         <div className="bg-blue-500 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
-          <div><p className="text-blue-100 font-medium mb-1">Doanh thu tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{displayData.total_revenue.toLocaleString('vi-VN')} đ</h3></div>
+          <div><p className="text-blue-100 font-medium mb-1">Doanh thu tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{formatVND(displayData.total_revenue)} đ</h3></div>
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">💵</div>
         </div>
         <div className="bg-yellow-400 text-white rounded-2xl p-5 shadow-md flex items-center justify-between">
-          <div><p className="text-amber-700 font-medium mb-1">Chi phí tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{displayData.total_cost.toLocaleString('vi-VN')} đ</h3></div>
+          <div><p className="text-amber-700 font-medium mb-1">Chi phí tháng</p><h3 className="text-2xl lg:text-3xl font-bold">{formatVND(displayData.total_cost)} đ</h3></div>
           <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">🛒</div>
         </div>
         {(() => {
@@ -929,7 +955,7 @@ export default function FinancialPage() {
                   {isLoss ? 'Lỗ' : 'Lợi nhuận'}
                 </p>
                 <h3 className="text-2xl lg:text-3xl font-bold">
-                  {displayData.net_profit.toLocaleString('vi-VN')} đ
+                  {formatVND(displayData.net_profit)} đ
                 </h3>
               </div>
               <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl">
@@ -952,7 +978,7 @@ export default function FinancialPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={displayData.charts.pieRevData} innerRadius={50} outerRadius={75} paddingAngle={2} dataKey="value" />
-                  <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
+                  <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${formatVND(value)} đ`, '']} />
                   <Legend iconType="circle" layout="vertical" position="right" wrapperStyle={{ fontSize: '12px' }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -970,7 +996,7 @@ export default function FinancialPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={displayData.charts.pieCostData} innerRadius={50} outerRadius={75} paddingAngle={2} dataKey="value" />
-                  <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
+                  <Tooltip contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${formatVND(value)} đ`, '']} />
                   <Legend iconType="circle" layout="vertical" position="right" wrapperStyle={{ fontSize: '12px' }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -987,7 +1013,7 @@ export default function FinancialPage() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 13}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} tickFormatter={formatYAxis} />
-                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${value.toLocaleString('vi-VN')} đ`, '']} />
+                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(value) => [`${formatVND(value)} đ`, '']} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '13px', paddingTop: '10px' }} />
                 <Bar dataKey="Thu nhập" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={60} />
                 <Bar dataKey="Chi tiêu" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={60} />
@@ -1017,15 +1043,15 @@ export default function FinancialPage() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
-                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{thu.toLocaleString('vi-VN')} đ</span>
+                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{formatVND(thu)} đ</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{chi.toLocaleString('vi-VN')} đ</span>
+                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{formatVND(chi)} đ</span>
                   </div>
                   <div className="pt-3 mt-1 border-t border-blue-100/60 flex justify-between items-center">
                     <span className="font-bold text-gray-700">Lời / Lỗ:</span>
                     <span className={`text-base font-black ${loi > 0 ? 'text-emerald-600' : loi < 0 ? 'text-rose-600' : 'text-gray-600'}`}>
-                      {loi > 0 ? '+' : ''}{loi.toLocaleString('vi-VN')} đ
+                      {loi > 0 ? '+' : ''}{formatVND(loi)} đ
                     </span>
                   </div>
                 </div>
@@ -1048,15 +1074,15 @@ export default function FinancialPage() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
-                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{thu.toLocaleString('vi-VN')} đ</span>
+                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{formatVND(thu)} đ</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{chi.toLocaleString('vi-VN')} đ</span>
+                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{formatVND(chi)} đ</span>
                   </div>
                   <div className="pt-3 mt-1 border-t border-cyan-100/60 flex justify-between items-center">
                     <span className="font-bold text-gray-700">Lời / Lỗ:</span>
                     <span className={`text-base font-black ${loi > 0 ? 'text-emerald-600' : loi < 0 ? 'text-rose-600' : 'text-gray-600'}`}>
-                      {loi > 0 ? '+' : ''}{loi.toLocaleString('vi-VN')} đ
+                      {loi > 0 ? '+' : ''}{formatVND(loi)} đ
                     </span>
                   </div>
                 </div>
@@ -1079,15 +1105,15 @@ export default function FinancialPage() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
-                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{thu.toLocaleString('vi-VN')} đ</span>
+                    <span>Tổng thu:</span> <span className="font-medium text-gray-800">+{formatVND(thu)} đ</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{chi.toLocaleString('vi-VN')} đ</span>
+                    <span>Tổng chi:</span> <span className="font-medium text-gray-800">-{formatVND(chi)} đ</span>
                   </div>
                   <div className="pt-3 mt-1 border-t border-purple-100/60 flex justify-between items-center">
                     <span className="font-bold text-gray-700">Lời / Lỗ:</span>
                     <span className={`text-base font-black ${loi > 0 ? 'text-emerald-600' : loi < 0 ? 'text-rose-600' : 'text-gray-600'}`}>
-                      {loi > 0 ? '+' : ''}{loi.toLocaleString('vi-VN')} đ
+                      {loi > 0 ? '+' : ''}{formatVND(loi)} đ
                     </span>
                   </div>
                 </div>
