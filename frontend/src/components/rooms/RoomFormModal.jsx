@@ -298,12 +298,16 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h2 className="text-xl font-bold text-gray-800 mb-5">
-          {modalTitle}
-        </h2>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+        {/* Header cố định */}
+        <div className="p-5 border-b border-gray-100 flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-800">
+            {modalTitle}
+          </h2>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Vùng nhập liệu: tự hiện thanh cuộn khi nội dung dài */}
+        <form id="room-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Thuộc nhà trọ *</label>
             <select 
@@ -373,21 +377,25 @@ export default function RoomFormModal({ room, houses = [], selectedHouseId, onCl
             <span className="text-sm text-gray-700">Phòng có đồng hồ nước riêng</span>
           </label>
 
+        </form>
+
+        {/* Footer cố định: luôn hiển thị lỗi + nút Huỷ / Lưu */}
+        <div className="p-5 border-t border-gray-100 flex-shrink-0">
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>
+            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl mb-3">{error}</p>
           )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3">
             <button type="button" onClick={onClose}
               className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
               Huỷ
             </button>
-            <button type="submit" disabled={loading}
+            <button type="submit" form="room-form" disabled={loading}
               className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition">
               {loading ? "Đang lưu..." : (isEdit ? "Lưu thay đổi" : "Thêm phòng")}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

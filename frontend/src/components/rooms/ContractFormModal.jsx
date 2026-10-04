@@ -396,8 +396,8 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
               <Field label="Phí internet (đ/tháng)">
                 <FormattedNumberInput name="internet_fee" value={form.internet_fee} onChange={handleChange} placeholder="0" className={INPUT} />
               </Field>
-              <Field label="Hạn thanh toán (Ngày)" required hint="Nhập ngày khách thuê phải đóng tiền hàng tháng (VD: 5 là ngày 5 hàng tháng)">
-                <NumericInput name="payment_day" min={1} max={31} value={form.payment_day} onChange={handleChange} required className={INPUT} />
+              <Field label="Hạn thanh toán (Ngày)" hint="Nhập ngày khách thuê phải đóng tiền hàng tháng (VD: 5 là ngày 5 hàng tháng)">
+                <NumericInput name="payment_day" min={1} max={31} value={form.payment_day} onChange={handleChange} className={INPUT} />
               </Field>
             </div>
 
@@ -557,13 +557,12 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
             {/* Các ô nhập đơn giá */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               {form.electric_calc_method === "fixed_price" ? (
-                <Field label="Giá điện (đ/kWh)" required>
+                <Field label="Giá điện (đ/kWh)">
                   <FormattedNumberInput
                     name="electric_price"
                     value={form.electric_price}
                     onChange={handleChange}
                     placeholder="vd: 3,500"
-                    required
                     className={INPUT}
                   />
                 </Field>
@@ -578,24 +577,22 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
               )}
 
               {room?.is_water_meter ? (
-                <Field label="Giá nước (đ/m³)" required>
+                <Field label="Giá nước (đ/m³)">
                   <FormattedNumberInput
                     name="water_price"
                     value={form.water_price}
                     onChange={handleChange}
                     placeholder="vd: 15,000"
-                    required
                     className={INPUT}
                   />
                 </Field>
               ) : (
-                <Field label="Tiền nước cố định (đ/tháng)" required hint="Phòng không có đồng hồ">
+                <Field label="Tiền nước cố định (đ/tháng)" hint="Phòng không có đồng hồ">
                   <FormattedNumberInput
                     name="default_water_amount"
                     value={form.default_water_amount}
                     onChange={handleChange}
                     placeholder="vd: 20,000"
-                    required
                     className={INPUT}
                   />
                 </Field>
@@ -605,12 +602,12 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
 
           {/* 4. Số điện/nước ban đầu */}
           <Section title="Số điện / nước ban đầu">
-            <Field label={<>Số điện ban đầu {loadingUtility && <span className="ml-2 text-blue-500 font-normal">(Đang tải...)</span>}</>} required hint="Số chốt tự động điền, có thể chỉnh sửa">
-              <NumericInput name="electric_reading" min={0} value={form.electric_reading} onChange={handleChange} required className={INPUT} />
+            <Field label={<>Số điện ban đầu {loadingUtility && <span className="ml-2 text-blue-500 font-normal">(Đang tải...)</span>}</>} hint="Số chốt tự động điền, có thể chỉnh sửa">
+              <NumericInput name="electric_reading" min={0} value={form.electric_reading} onChange={handleChange} className={INPUT} />
             </Field>
             {room?.is_water_meter && (
-              <Field label={<>Số nước ban đầu {loadingUtility && <span className="ml-2 text-blue-500 font-normal">(Đang tải...)</span>}</>} required hint="Số chốt tự động điền, có thể chỉnh sửa">
-                <NumericInput name="water_reading" min={0} value={form.water_reading} onChange={handleChange} required className={INPUT} />
+              <Field label={<>Số nước ban đầu {loadingUtility && <span className="ml-2 text-blue-500 font-normal">(Đang tải...)</span>}</>} hint="Số chốt tự động điền, có thể chỉnh sửa">
+                <NumericInput name="water_reading" min={0} value={form.water_reading} onChange={handleChange} className={INPUT} />
               </Field>
             )}
           </Section>

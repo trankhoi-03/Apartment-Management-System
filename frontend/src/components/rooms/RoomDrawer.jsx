@@ -161,7 +161,14 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
           const ratesRes = await api.get(`/utility-rates?room_id=${room.id}`);
           if (ratesRes.data && ratesRes.data.length > 0) {
             // Lấy bảng giá mới nhất
-            const sortedRates = ratesRes.data.sort((a,b) => new Date(b.effective_from) - new Date(a.effective_from));
+            const sortedRates = ratesRes.data.sort((a, b) => {
+              const dateDiff = new Date(b.effective_from) - new Date(a.effective_from);
+              // Nếu trùng ngày hiệu lực, ưu tiên record vừa được tạo (id lớn hơn)
+              if (dateDiff === 0) {
+                return b.id - a.id; 
+              }
+              return dateDiff;
+            });
             active.current_rate = sortedRates[0];
           }
         } catch (err) {
