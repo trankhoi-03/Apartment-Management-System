@@ -555,7 +555,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
             <p className="text-sm font-semibold text-gray-700 mb-3">Giảm trừ</p>
             
             <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Giảm trừ tiền phòng (đ)</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Chi phí giảm trừ (đ)</label>
               <FormattedNumberInput 
                 name="discount_amount" 
                 value={form.discount_amount} 

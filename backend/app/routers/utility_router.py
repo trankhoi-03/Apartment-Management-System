@@ -13,46 +13,20 @@ router = APIRouter(prefix="/utility", tags=["utility"])
 @router.post("", response_model=UtilityReadingResponse, status_code=status.HTTP_201_CREATED)
 def create_utility(payload: UtilityReadingCreate, db: Session = Depends(get_db)):
     """Tạo record số điện/nước cho 1 phòng, 1 tháng
-    3 bước validate:
+    2 bước validate:
     1. room_id tồn tại
     2. (room_id, billing_month) chưa tồn tại - bắt qua IntegrityError
-    3. electric_old/water_old nên khớp với số *_new của tháng liền trước
-       (cảnh báo bằng exception rõ ràng, không phải lỗi 'cứng' của DB)"""
+
+    Lưu ý: electric_old/water_old của tháng này KHÔNG bắt buộc phải bằng
+    electric_new/water_new của tháng trước. Đồng hồ vẫn có thể chạy giữa 2 kỳ
+    (vd: bên sale bật điện/nước demo phòng cho khách) nên 2 số này có thể lệch nhau."""
     room = db.query(Room).filter(Room.id == payload.room_id).first()
     if room is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy phòng có id={payload.room_id}"
         )
-    
-    # Tìm record gần nhất TRƯỚC tháng này của cùng phòng, để so sánh nối tiếp
-    previous_reading = (
-        db.query(UtilityReading)
-        .filter(
-            UtilityReading.room_id == payload.room_id,
-            UtilityReading.billing_month < payload.billing_month
-        )
-        .order_by(UtilityReading.billing_month.desc())
-        .first()
-    )
 
-    if previous_reading is not None:
-        if payload.electric_old != previous_reading.electric_new:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=( f"electric_old ({payload.electric_old}) không khớp với "
-                    f"electric_new của tháng {previous_reading.billing_month} "
-                    f"({previous_reading.electric_new}). Kiểm tra lại số đã nhập.")
-            )
-        if payload.water_old != previous_reading.water_new:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    f"water_old ({payload.water_old}) không khớp với "
-                    f"water_new của tháng {previous_reading.billing_month} "
-                    f"({previous_reading.water_new}). Kiểm tra lại số đã nhập.")
-            )
-        
     new_reading = UtilityReading(**payload.model_dump())
     db.add(new_reading)
     try:
@@ -133,4 +107,3 @@ def delete_utility_reading(reading_id: int, db: Session = Depends(get_db)):
             detail="Không thể xóa vì đã có bill được tạo từ số liệu này"
         )
     return None
-     
