@@ -7,6 +7,17 @@ const formatYAxis = (tickItem) => new Intl.NumberFormat('vi-VN', { notation: "co
 // Định dạng tiền VNĐ: luôn làm tròn về số nguyên (tránh hiện phần thập phân như 786.490,566)
 const formatVND = (value) => (Math.round(Number(value) || 0) + 0).toLocaleString('vi-VN');
 
+// Gộp các lý do chi mới vào lý do đã ghi nhận (bỏ trùng, không phân biệt hoa thường). VD: "Nâng cấp" + ["Rác"] -> "Nâng cấp, Rác"
+const mergeReasons = (existing, newReasons) => {
+  const seen = new Set(existing.split(",").map(r => r.trim().toLowerCase()).filter(Boolean));
+  const result = existing ? [existing] : [];
+  newReasons.forEach(r => {
+    const key = r.toLowerCase();
+    if (!seen.has(key)) { seen.add(key); result.push(r); }
+  });
+  return result.join(", ");
+};
+
 // Làm tròn từng khoản về số nguyên nhưng GIỮ NGUYÊN TỔNG (phương pháp phần dư lớn nhất).
 // Ví dụ: hoá đơn điện 3.678.000đ chia cho các phòng -> các phòng cộng lại vẫn đúng 3.678.000đ.
 const roundKeepingTotal = (list) => {
@@ -255,14 +266,8 @@ export default function FinancialPage() {
       const res = await api.get(`/reports/financial/${selectedHouse}?month=${selectedMonth}`);
       setReportData(res.data);
       if (res.data.utility_bill_input) setUtilInputs(res.data.utility_bill_input);
-      if (res.data.other_cost_input) {
-        setOtherCostInputs([{ 
-          amount: res.data.other_cost_input.other_house_cost || 0, 
-          reason: res.data.other_cost_input.other_house_cost_reason || "" 
-        }]);
-      } else {
-        setOtherCostInputs([{ amount: 0, reason: "" }]);
-      }
+      // Form chỉ dùng để nhập khoản chi MỚI (sẽ được cộng dồn vào khoản đã ghi nhận), nên luôn bắt đầu trống
+      setOtherCostInputs([{ amount: 0, reason: "" }]);
       if (res.data.internet_cost_input) setInternetInputs({ amount: res.data.internet_cost_input.total_internet_cost || 0 });
     // eslint-disable-next-line no-unused-vars
     } catch (error) { setReportData(null); } finally { setLoading(false); }
@@ -457,6 +462,22 @@ export default function FinancialPage() {
     setOtherCostInputs(newInputs);
   };
 
+  const handleResetOtherCost = async () => {
+    if (!window.confirm("Xoá toàn bộ chi phí khác đã ghi nhận của tháng này để nhập lại?")) return;
+    setSavingOtherCost(true);
+    try {
+      await api.post(`/reports/financial/${selectedHouse}/other-cost?month=${selectedMonth}`, {
+        other_house_cost: 0,
+        other_house_cost_reason: ""
+      });
+      await loadReport();
+    } catch {
+      alert("Có lỗi xảy ra khi xoá chi phí khác.");
+    } finally {
+      setSavingOtherCost(false);
+    }
+  };
+
   const handleSaveOtherCost = async () => {
     setSavingOtherCost(true);
     try {
@@ -470,12 +491,16 @@ export default function FinancialPage() {
         return;
       }
 
-      const totalAmount = validInputs.reduce((sum, input) => sum + (Number(input.amount) || 0), 0);
-      
-      const combinedReason = validInputs
+      const newAmount = validInputs.reduce((sum, input) => sum + (Number(input.amount) || 0), 0);
+      const newReasons = validInputs
         .map(input => input.reason.trim())
-        .filter(reason => reason !== "")
-        .join(", ");
+        .filter(reason => reason !== "");
+
+      // Cộng dồn vào chi phí khác đã ghi nhận trong tháng, không ghi đè
+      const existingAmount = Number(reportData?.other_cost_input?.other_house_cost) || 0;
+      const existingReason = (reportData?.other_cost_input?.other_house_cost_reason || "").trim();
+      const totalAmount = existingAmount + newAmount;
+      const combinedReason = mergeReasons(existingReason, newReasons);
 
       await api.post(`/reports/financial/${selectedHouse}/other-cost?month=${selectedMonth}`, {
         other_house_cost: totalAmount,
@@ -483,7 +508,7 @@ export default function FinancialPage() {
       });
 
       await loadReport();
-      alert("Đã lưu thành công tổng chi phí khác!");
+      alert(`Đã ghi nhận thêm ${formatVND(newAmount)} đ. Tổng chi phí khác của tháng: ${formatVND(totalAmount)} đ`);
       
       setOtherCostInputs([{ amount: 0, reason: "" }]);
       
@@ -693,6 +718,22 @@ export default function FinancialPage() {
       {selectedHouse !== 'all' && (
         <div className="bg-white p-4 sm:p-5 rounded-xl mb-5 border border-purple-100 shadow-sm">
           <h4 className="text-sm font-bold text-purple-800 mb-4 uppercase tracking-wide">Ghi nhận chi phí chung của nhà</h4>
+          {(Number(reportData?.other_cost_input?.other_house_cost) || 0) > 0 && (
+            <div className="mb-4 flex items-start justify-between gap-3 p-3 bg-purple-50 border border-purple-100 rounded-lg text-xs text-purple-800">
+              <p>
+                Đã ghi nhận: <strong>{formatVND(reportData.other_cost_input.other_house_cost)} đ</strong>
+                {reportData.other_cost_input.other_house_cost_reason ? ` (${reportData.other_cost_input.other_house_cost_reason})` : ""}.
+                Các khoản nhập bên dưới sẽ được <strong>cộng thêm</strong> vào số này và chia đều cho các phòng.
+              </p>
+              <button
+                onClick={handleResetOtherCost}
+                disabled={savingOtherCost}
+                className="shrink-0 font-semibold text-red-600 hover:text-red-800 hover:underline disabled:opacity-50"
+              >
+                Xoá hết
+              </button>
+            </div>
+          )}
           <div className="flex flex-col gap-3">
             {otherCostInputs.map((item, index) => (
               <div key={index} className="flex flex-col sm:flex-row gap-3 items-end">

@@ -24,6 +24,17 @@ function isStayDeclarationValid(startDateStr) {
   return diffDays <= 28;
 }
 
+// Số ngày từ hôm nay đến một ngày (âm = đã qua). Dùng giờ địa phương, bỏ phần giờ.
+function getDaysUntil(dateStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const target = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / 86400000);
+}
+
 function Row({ label, value }) {
   return (
     <div className="flex justify-between">
@@ -489,6 +500,22 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                 <Row label="Bắt đầu"     value={formatDateVN(contract.start_date)} />
                 {contract.end_date &&
                   <Row label="Kết thúc"  value={formatDateVN(contract.end_date)} />}
+                {(() => {
+                  const daysLeft = getDaysUntil(contract.end_date);
+                  if (daysLeft === null || daysLeft > 7) return null;
+                  const overdue = daysLeft < 0;
+                  return (
+                    <div className={`mt-1 p-2.5 rounded-lg text-xs leading-relaxed border ${
+                      overdue ? "bg-red-50 border-red-200 text-red-700" : "bg-amber-50 border-amber-200 text-amber-800"
+                    }`}>
+                      {overdue
+                        ? `⚠️ Hợp đồng đã quá hạn ${-daysLeft} ngày. Hãy gia hạn (Sửa HĐ) nếu khách ở tiếp, hoặc Kết thúc hợp đồng nếu khách đã trả phòng.`
+                        : daysLeft === 0
+                          ? "⏰ Hợp đồng hết hạn hôm nay. Nhớ chốt số điện nước và xuất bill cuối, hoặc gia hạn nếu khách ở tiếp."
+                          : `⏰ Hợp đồng còn ${daysLeft} ngày. Nhớ chốt số điện nước và xuất bill cuối, hoặc gia hạn nếu khách ở tiếp.`}
+                    </div>
+                  );
+                })()}
 
 
                 {contract.current_rate && (
@@ -632,6 +659,9 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
             setShowGenerateBill(false);
             onContractChanged();
           }}
+          // Chỉ chủ trọ mới có quyền Sửa HĐ (gia hạn) / Kết thúc hợp đồng
+          onRequestEditContract={isOwner ? () => { setShowGenerateBill(false); setShowEditContract(true); } : undefined}
+          onRequestEndContract={isOwner ? () => { setShowGenerateBill(false); setShowEndContract(true); } : undefined}
         />
       )}
       

@@ -41,6 +41,8 @@ class HouseFinancialReport(BaseModel):
     
     rent_tab: ReportCategory      
     other_revenue_tab: ReportCategory
+    cleaning_rev_tab: ReportCategory
+    internet_rev_tab: ReportCategory
     utilities_tab: ReportCategory 
     maintenance_tab: ReportCategory 
     management_tab: ReportCategory 

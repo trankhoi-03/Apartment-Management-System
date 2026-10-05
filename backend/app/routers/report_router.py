@@ -23,6 +23,22 @@ from app.schemas.report_schema import (
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
+def _contracts_billed_in_month(db: Session, room_id: int, month: str):
+    """Các hợp đồng của phòng có bill trong tháng `month` (kể cả hợp đồng đã kết thúc trong tháng đó).
+
+    Dùng để chia tiền nước theo số người cho các phòng thực sự được tính tiền trong tháng,
+    khớp với cách chia tiền điện (theo bill của tháng) thay vì theo hợp đồng đang 'active' hiện tại."""
+    contract_ids = {
+        cid for (cid,) in db.query(Bill.contract_id)
+        .join(Contract, Bill.contract_id == Contract.id)
+        .filter(Contract.room_id == room_id, Bill.billing_month == month)
+        .all()
+    }
+    if not contract_ids:
+        return []
+    return db.query(Contract).filter(Contract.id.in_(contract_ids)).all()
+
+
 @router.get("/financial/all", response_model=HouseFinancialReport)
 def get_all_houses_financial_report(
     month: str, 
@@ -98,8 +114,8 @@ def get_all_houses_financial_report(
         if internet_cost > 0 and len(house.rooms) > 0:
             internet_fee_per_room = internet_cost / Decimal(str(len(house.rooms)))
 
-        active_contracts = db.query(Contract).join(Room).filter(Room.house_id == house.id, Contract.status == "active").all()
-        total_tenants_in_house = sum(c.num_tenants for c in active_contracts) or 1 
+        billed_contracts = [c for r in house.rooms for c in _contracts_billed_in_month(db, r.id, month)]
+        total_tenants_in_house = sum(c.num_tenants for c in billed_contracts) or 1 
 
         allocated_house_elec_cost = Decimal("0")
         allocated_house_water_cost = Decimal("0")
@@ -175,7 +191,7 @@ def get_all_houses_financial_report(
             if room.is_water_meter: 
                 water_cost = (total_room_water_cube / calc_water_cube) * calc_water_bill
             else:
-                r_contracts = db.query(Contract).filter(Contract.room_id == room.id, Contract.status == "active").all()
+                r_contracts = _contracts_billed_in_month(db, room.id, month)
                 r_tenants = sum(c.num_tenants for c in r_contracts)
                 water_cost = (Decimal(str(r_tenants)) / Decimal(str(total_tenants_in_house))) * calc_water_bill
 
@@ -363,7 +379,7 @@ def get_house_financial_report(
                 allocated_water_meter_bill += Decimal(str(r_bill.water_consumed)) * water_unit_price
 
         if not r.is_water_meter:
-            r_contracts = db.query(Contract).filter(Contract.room_id == r.id, Contract.status == "active").all()
+            r_contracts = _contracts_billed_in_month(db, r.id, month)
             for c in r_contracts:
                 tenants_no_meter += c.num_tenants
 
@@ -483,7 +499,7 @@ def get_house_financial_report(
         if room.is_water_meter: 
             water_cost = total_room_water_cube * water_unit_price
         else:
-            r_contracts = db.query(Contract).filter(Contract.room_id == room.id, Contract.status == "active").all()
+            r_contracts = _contracts_billed_in_month(db, room.id, month)
             r_tenants = sum(c.num_tenants for c in r_contracts)
             water_cost = (Decimal(str(r_tenants)) / calc_tenants_no_meter) * remaining_water_bill
 

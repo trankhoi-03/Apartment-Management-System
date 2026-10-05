@@ -183,7 +183,23 @@ function calculateDueDate(monthStr, paymentDay, startDateStr, isFirstBill) {
   };
 }
 
-export default function GenerateBillModal({ room, contract, onClose, onGenerated }) {
+// Tháng của bill CUỐI CÙNG theo thời hạn hợp đồng.
+// Mỗi bill tương ứng 1 kỳ thuê tròn tháng tính từ ngày bắt đầu (vd: bắt đầu 04/10 -> kỳ 04/10-04/11 là bill T10, kỳ 04/11-04/12 là bill T11).
+// Bill cuối là bill có kỳ thuê chạm tới ngày kết thúc: nếu ngày kết thúc <= ngày bắt đầu trong tháng thì kỳ cuối nằm ở tháng liền trước.
+function getFinalBillingMonth(startDateStr, endDateStr) {
+  if (!startDateStr || !endDateStr) return "";
+  const startDay = Number(startDateStr.slice(8, 10));
+  const [ey, em, ed] = endDateStr.slice(0, 10).split("-").map(Number);
+  if (!startDay || !ey || !em || !ed) return "";
+  let y = ey, m = em;
+  if (ed <= startDay) {
+    m -= 1;
+    if (m === 0) { m = 12; y -= 1; }
+  }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+export default function GenerateBillModal({ room, contract, onClose, onGenerated, onRequestEditContract, onRequestEndContract }) {
   const [billingMonth, setBillingMonth] = useState(""); 
   const [isFirstBill, setIsFirstBill]   = useState(false);
   const [rentAmount, setRentAmount]     = useState("");
@@ -210,11 +226,22 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
   const [preview, setPreview]           = useState(null);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState("");
+  // Tháng mà chủ trọ đã xác nhận "khách vẫn ở quá hạn hợp đồng" (gắn với đúng tháng, đổi tháng thì phải xác nhận lại)
+  const [overdueAckMonth, setOverdueAckMonth] = useState("");
 
   const paymentDay = contract?.payment_day || 5;
   const currentMonthStr = billingMonth || new Date().toISOString().slice(0, 7);
   // Truyền thêm isFirstBill vào hàm calculateDueDate
   const estimatedDueDate = calculateDueDate(currentMonthStr, paymentDay, contract?.start_date, isFirstBill);
+
+  // So sánh tháng xuất bill với THÁNG BILL CUỐI của hợp đồng (chuỗi YYYY-MM so sánh trực tiếp được)
+  const finalBillingMonth = getFinalBillingMonth(contract?.start_date, contract?.end_date);
+  const contractEndDateVN = contract?.end_date ? contract.end_date.slice(0, 10).split("-").reverse().join("/") : "";
+  const billingPhase =
+    !finalBillingMonth || !billingMonth ? null
+    : billingMonth > finalBillingMonth ? "overdue"   // nằm ngoài thời hạn hợp đồng
+    : billingMonth === finalBillingMonth ? "final"   // bill cuối của hợp đồng
+    : null;
 
   useEffect(() => {
     if (!contract?.id) return;
@@ -369,6 +396,12 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
     e.preventDefault();
     setError("");
 
+    // Cảnh báo mềm: xuất bill cho tháng nằm sau ngày kết thúc hợp đồng thì phải xác nhận có chủ đích
+    if (billingPhase === "overdue" && overdueAckMonth !== billingMonth) {
+      setError(`Hợp đồng kết thúc ngày ${contractEndDateVN}, tháng ${billingMonth} nằm ngoài thời hạn. Hãy gia hạn hợp đồng, hoặc tick xác nhận "khách vẫn đang ở" bên dưới tháng xuất bill để tiếp tục.`);
+      return;
+    }
+
     if (Number(electricNew) < Number(electricOld)) { 
       setError("Lỗi: Số điện mới không được nhỏ hơn số điện cũ."); 
       return; 
@@ -502,6 +535,67 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                 />
                 <p className={`text-xs mt-1 ${isFirstBill ? "text-blue-500 font-medium" : "text-gray-400"}`}>{isFirstBill ? " Đây là hoá đơn đầu tiên, bạn có thể tuỳ chỉnh tháng." : "Tháng đã được tính toán tự động."}</p>
               </div>
+
+              {/* Cảnh báo theo ngày kết thúc hợp đồng */}
+              {billingPhase === "final" && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-2">
+                  <p>
+                    📌 Đây là <strong>hoá đơn cuối</strong> của hợp đồng (kết thúc <strong>{contractEndDateVN}</strong>).
+                    Nếu khách trả phòng, hãy dùng <strong>Kết thúc hợp đồng</strong> để chốt bill cuối và đóng hợp đồng.
+                    Nếu khách ở tiếp, hãy <strong>gia hạn</strong> hợp đồng trước.
+                  </p>
+                  {(onRequestEditContract || onRequestEndContract) && (
+                    <div className="flex gap-2">
+                      {onRequestEditContract && (
+                        <button type="button" onClick={onRequestEditContract}
+                          className="flex-1 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg font-medium hover:bg-amber-100 transition">
+                          ✏️ Gia hạn (Sửa HĐ)
+                        </button>
+                      )}
+                      {onRequestEndContract && (
+                        <button type="button" onClick={onRequestEndContract}
+                          className="flex-1 px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg font-medium hover:bg-amber-100 transition">
+                          🔚 Kết thúc hợp đồng
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {billingPhase === "overdue" && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 space-y-2">
+                  <p>
+                    ⚠️ Hợp đồng <strong>kết thúc ngày {contractEndDateVN}</strong>, tháng {billingMonth.split("-")[1]}/{billingMonth.split("-")[0]} nằm ngoài thời hạn hợp đồng.
+                    Nếu khách ở tiếp, hãy <strong>gia hạn</strong> hợp đồng trước; nếu khách đã trả phòng, hãy <strong>kết thúc</strong> hợp đồng.
+                  </p>
+                  {(onRequestEditContract || onRequestEndContract) && (
+                    <div className="flex gap-2">
+                      {onRequestEditContract && (
+                        <button type="button" onClick={onRequestEditContract}
+                          className="flex-1 px-2.5 py-1.5 bg-white border border-red-300 rounded-lg font-medium hover:bg-red-100 transition">
+                          ✏️ Gia hạn (Sửa HĐ)
+                        </button>
+                      )}
+                      {onRequestEndContract && (
+                        <button type="button" onClick={onRequestEndContract}
+                          className="flex-1 px-2.5 py-1.5 bg-white border border-red-300 rounded-lg font-medium hover:bg-red-100 transition">
+                          🔚 Kết thúc hợp đồng
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <label className="flex items-start gap-2 pt-2 border-t border-red-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={overdueAckMonth === billingMonth}
+                      onChange={(e) => setOverdueAckMonth(e.target.checked ? billingMonth : "")}
+                      className="w-4 h-4 mt-0.5 rounded border-red-300 accent-red-600"
+                    />
+                    <span>Khách vẫn đang ở (quá hạn / chờ gia hạn), tôi vẫn muốn xuất bill tháng này.</span>
+                  </label>
+                </div>
+              )}
 
               {/* Field Tiền thuê nhà & Chức năng Điều chỉnh */}
               <div>
