@@ -21,6 +21,18 @@ function FormattedNumberInput({ name, value, onChange, placeholder, required, cl
   );
 }
 
+
+function formatBillingMonth(monthStr) {
+  if (!monthStr) return "";
+  if (monthStr.includes("-")) {
+    const parts = monthStr.split("-");
+    if (parts.length >= 2) {
+      return `${parts[1]}/${parts[0]}`; 
+    }
+  }
+  return monthStr;
+}
+
 function VietnameseMonthPicker({ value, onChange, className }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -434,6 +446,8 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                        + `- Phí internet: ${internetFee ? Number(internetFee).toLocaleString("vi-VN") : "0"} đ\n`
                        + `- Phí phát sinh: ${additionalFee ? Number(additionalFee).toLocaleString("vi-VN") : "0"} đ\n`
                        + (additionalFeeReason ? `- Lý do phát sinh: ${additionalFeeReason}\n` : "")
+                       + `- Giảm trừ: ${discountAmount ? Number(discountAmount).toLocaleString("vi-VN") : "0"} đ\n`
+                        + (discountReason ? `- Lý do giảm trừ: ${discountReason}\n` : "")
                        + `- Hạn thanh toán: ${estimatedDueDate.formattedVN} (Ngày ${paymentDay} hàng tháng)\n\n`
                        + `Vui lòng kiểm tra kỹ. Bấm "OK" để tính tiền.`;
                          
@@ -668,7 +682,6 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
               </div>
 
               {/* Điện */}
-              {/* Điện */}
               <div className="space-y-3 p-3.5 bg-gray-50/80 rounded-2xl border border-gray-200">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
@@ -883,7 +896,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                <Row label="Tháng" value={preview.billing_month} />
+                <Row label="Tháng" value={formatBillingMonth(preview.billing_month)} />
                 <Row label="Hạn thanh toán" value={<span className="text-red-600 font-semibold">{displayDueDate}</span>} />
                 <Row 
                   label={<span>Tiền thuê{daysInfo && <span className="text-gray-400 font-medium ml-1 text-xs">{daysInfo}</span>}</span>} 

@@ -21,6 +21,17 @@ function FormattedNumberInput({ name, value, onChange, placeholder, required, cl
   );
 }
 
+function formatBillingMonth(monthStr) {
+  if (!monthStr) return "";
+  if (monthStr.includes("-")) {
+    const parts = monthStr.split("-");
+    if (parts.length >= 2) {
+      return `${parts[1]}/${parts[0]}`; 
+    }
+  }
+  return monthStr;
+}
+
 function VietnameseMonthPicker({ value, onChange, className }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -637,7 +648,7 @@ export default function EndContractModal({ room, contract, roomNumber, onClose, 
 
               {preview.mode === "checkout" && (
                 <div className="bg-gray-50 rounded-xl p-4 space-y-2 animate-fade-in">
-                  <Row label="Tháng chốt" value={preview.billing_month} />
+                  <Row label="Tháng chốt" value={formatBillingMonth(preview.billing_month)} />
                   <Row 
                     label={<span>Tiền thuê{daysInfo && <span className="text-gray-400 font-medium ml-1 text-xs">{daysInfo}</span>}</span>} 
                     value={`${Number(preview.rent_amount).toLocaleString("vi-VN")}đ`} 
