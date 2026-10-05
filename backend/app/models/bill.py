@@ -9,9 +9,9 @@ if TYPE_CHECKING:
 
 class Bill(Base):
     __tablename__ = "bills"
-    __table_args__ = (
-        UniqueConstraint("contract_id", "billing_month", name="uq_contract_month"),
-    )
+    # __table_args__ = (
+    #     UniqueConstraint("contract_id", "billing_month", name="uq_contract_month"),
+    # )
 
     id: Mapped[int] = mapped_column(primary_key=True)
 

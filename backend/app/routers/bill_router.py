@@ -172,17 +172,7 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
         electric_total_cost=payload.electric_total_cost if payload.electric_calc_method == "split_ratio" else None,
     )
     db.add(new_bill)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Hợp đồng id={payload.contract_id} đã có bill "
-                f"cho tháng {payload.billing_month}"
-            ),
-        )
+    db.commit()
     db.refresh(new_bill)
     return new_bill
 
@@ -283,16 +273,16 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     # 2. Xử lý việc đổi tháng (nếu có)
     new_billing_month = getattr(payload, 'billing_month', None)
     if new_billing_month and new_billing_month != bill.billing_month:
-        existing_bill = db.query(Bill).filter(
-            Bill.contract_id == contract.id,
-            Bill.billing_month == new_billing_month
-        ).first()
+        # existing_bill = db.query(Bill).filter(
+        #     Bill.contract_id == contract.id,
+        #     Bill.billing_month == new_billing_month
+        # ).first()
         
-        if existing_bill:
-            raise HTTPException(
-                status_code=409, 
-                detail=f"Phòng này đã có hóa đơn cho tháng {new_billing_month}. Không thể đổi sang tháng này."
-            )
+        # if existing_bill:
+        #     raise HTTPException(
+        #         status_code=409, 
+        #         detail=f"Phòng này đã có hóa đơn cho tháng {new_billing_month}. Không thể đổi sang tháng này."
+        #     )
             
         existing_reading = db.query(UtilityReading).filter(
             UtilityReading.room_id == contract.room_id,

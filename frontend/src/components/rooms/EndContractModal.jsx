@@ -401,9 +401,9 @@ export default function EndContractModal({ room, contract, roomNumber, onClose, 
     }
   }
 
-  const displayDueDate = preview?.due_date 
-    ? new Date(preview.due_date).toLocaleDateString("vi-VN") 
-    : estimatedDueDate.formattedVN;
+  // const displayDueDate = preview?.due_date 
+  //   ? new Date(preview.due_date).toLocaleDateString("vi-VN") 
+  //   : estimatedDueDate.formattedVN;
 
   let daysInfo = "";
   if (preview && preview.mode === "checkout") {
