@@ -476,7 +476,9 @@ export default function BillsPage() {
     .filter((b) => b.status !== "paid")
     .reduce((sum, b) => sum + Number(b.total_amount), 0);
 
-  const sendableBills = houseFilteredBills;
+  // "Gửi tất cả" chỉ gửi các hoá đơn có trạng thái "Chưa gửi" trong danh sách đang hiển thị.
+  // Không còn hoá đơn nào "Chưa gửi" (tất cả đã gửi hoặc đã thanh toán) thì nút được ẩn.
+  const sendableBills = finalDisplayedBills.filter((b) => b.status === "pending");
 
   if (loading) {
     return (
