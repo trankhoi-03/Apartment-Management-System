@@ -125,7 +125,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
     discount_reason: "",
     electric_calc_method: "fixed_price",
     electric_total_consumed: "",
-    electric_total_cost: ""
+    electric_total_cost: "",
+    due_date: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -167,7 +168,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
           discount_reason: bill.discount_reason ?? "",
           electric_calc_method: bill.electric_calc_method || bill.computed_contract?.electric_calc_method || "fixed_price",
           electric_total_consumed: bill.electric_total_consumed ? String(bill.electric_total_consumed) : "",
-          electric_total_cost: bill.electric_total_cost ? String(bill.electric_total_cost) : ""
+          electric_total_cost: bill.electric_total_cost ? String(bill.electric_total_cost) : "",
+          due_date: bill.due_date ? bill.due_date.slice(0, 10) : "",
         });
         
         // REVERSE-CALCULATION: Tự động nhận diện Hóa đơn gộp/Tiền lẻ
@@ -254,6 +256,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
       // Chèn billingMonth vào payload
       if (billingMonth !== "") payload.billing_month = billingMonth;
 
+      if (form.due_date !== "") payload.due_date = form.due_date;
+
       // Ép các trường số về 0 nếu user xóa trắng (value === "")
       payload.rent_amount = form.rent_amount !== "" ? Number(form.rent_amount) : 0;
       
@@ -306,6 +310,20 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
               value={billingMonth} 
               onChange={setBillingMonth} 
               className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:border-blue-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Hạn thanh toán <span className="text-red-500">*</span>
+            </label>
+            <input 
+              name="due_date"
+              type="date"
+              value={form.due_date}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             />
           </div>
 

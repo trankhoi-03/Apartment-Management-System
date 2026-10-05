@@ -18,12 +18,25 @@ const STATUS_ORDER = {
 const FILTERS = [
   { key: "all",     label: "Tất cả"           },
   { key: "unpaid",  label: "Chưa thanh toán"  },
+  { key: "overdue", label: "Quá hạn"          },
   { key: "paid",    label: "Đã thanh toán"    },
 ];
+
 
 function matches(bill, filter) {
   if (filter === "paid")   return bill.status === "paid";
   if (filter === "unpaid") return bill.status !== "paid";
+  if (filter === "overdue") {
+    if (bill.status === "paid") return false; // Đã trả thì không tính là quá hạn
+    if (!bill.due_date) return false;
+    
+    // So sánh hạn thanh toán (cuối ngày) với ngày hiện tại (đầu ngày)
+    const dueDate = new Date(bill.due_date);
+    dueDate.setHours(23, 59, 59, 999);
+    const now = new Date();
+    
+    return dueDate < now;
+  }
   return true;
 }
 
@@ -264,6 +277,14 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
             {Number(bill.total_amount).toLocaleString("vi-VN")}đ
           </span>
         </div>
+        {bill.due_date && (
+          <div className="flex justify-between items-start mb-2 bg-amber-50/50 p-1.5 rounded-lg border border-amber-100/50">
+            <span className="text-amber-800 font-medium">Hạn thanh toán</span>
+            <span className="text-red-600 font-bold whitespace-nowrap">
+              {new Date(bill.due_date).toLocaleDateString("vi-VN")}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 pt-4 border-t border-gray-100">
