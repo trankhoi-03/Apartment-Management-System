@@ -11,7 +11,18 @@ import ContractTemplateSettings from "../components/houses/ContractTemplateSetti
 const STATUS_TAGS = [
   { id: "status_vacant", label: "Trống" },
   { id: "status_occupied", label: "Đang thuê" },
+  { id: "status_expiring", label: "Sắp hết hạn HĐ" },
 ];
+
+const isRoomExpiring = (room) => {
+  if (!room.computed_active_contract?.end_date) return false;
+  const endDate = new Date(room.computed_active_contract.end_date);
+  endDate.setHours(0, 0, 0, 0);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+  return diffDays <= 30; 
+};
 
 export default function RoomsPage() {
   const userRole = localStorage.getItem("user_role") || "staff";
@@ -193,7 +204,11 @@ export default function RoomsPage() {
       let isStatusMatch = true;
       if (selectedStatusIds.length > 0) {
         const roomStatusId = `status_${r.status}`;
-        isStatusMatch = selectedStatusIds.includes(roomStatusId);
+        const hasExpiringSelected = selectedStatusIds.includes("status_expiring");
+        const expiringMatch = hasExpiringSelected && isRoomExpiring(r);
+        
+        // Match nếu chọn trúng status gốc của phòng, HOẶC thoả điều kiện sắp hết hạn HĐ
+        isStatusMatch = selectedStatusIds.includes(roomStatusId) || expiringMatch;
       }
 
       let isFurnitureMatch = true;
@@ -306,7 +321,10 @@ export default function RoomsPage() {
               >
                 {tag.label}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-blue-200/70 text-blue-800' : 'bg-gray-100 text-gray-500'}`}>
-                  {houseFilteredRooms.filter(r => r.status === tag.id.replace('status_', '')).length}
+                  {houseFilteredRooms.filter(r => {
+                    if (tag.id === "status_expiring") return isRoomExpiring(r);
+                    return r.status === tag.id.replace('status_', '');
+                  }).length}
                 </span>
               </button>
             );
