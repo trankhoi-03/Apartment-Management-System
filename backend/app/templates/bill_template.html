@@ -98,6 +98,23 @@
                 <td>—</td>
                 <td class="amount">{{ "{:,.0f}".format(service_fee) }}</td>
             </tr>
+            
+            {% if cleaning_fee > 0 %}
+            <tr>
+                <td>Phí vệ sinh</td>
+                <td>—</td>
+                <td class="amount">{{ "{:,.0f}".format(cleaning_fee) }}</td>
+            </tr>
+            {% endif %}
+
+            {% if internet_fee > 0 %}
+            <tr>
+                <td>Phí internet</td>
+                <td>—</td>
+                <td class="amount">{{ "{:,.0f}".format(internet_fee) }}</td>
+            </tr>
+            {% endif %}
+            
             {% if additional_fee and additional_fee > 0 %}
             <tr>
                 <td>Phí phát sinh</td>
@@ -105,6 +122,15 @@
                 <td class="amount">{{ "{:,.0f}".format(additional_fee) }}</td>
             </tr>
             {% endif %}
+
+            {% if discount_amount > 0 %}
+            <tr>
+                <td>Giảm trừ</td>
+                <td>{{ discount_reason if discount_reason else "—" }}</td>
+                <td class="amount">-{{ "{:,.0f}".format(discount_amount) }}</td>
+            </tr>
+            {% endif %}
+
             <tr class="total-row">
                 <td colspan="2">TỔNG CỘNG</td>
                 <td class="amount">{{ "{:,.0f}".format(total_amount) }}</td>

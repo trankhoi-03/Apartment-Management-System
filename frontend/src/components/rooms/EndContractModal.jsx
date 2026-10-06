@@ -194,6 +194,8 @@ export default function EndContractModal({ room, contract, roomNumber, onClose, 
   const [additionalFeeReason, setAdditionalFeeReason] = useState("");
   const [discountAmount, setDiscountAmount] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  const [electricTotalConsumed, setElectricTotalConsumed] = useState(""); 
+  const [electricTotalCost, setElectricTotalCost] = useState("");
   const [electricOld, setElectricOld]   = useState("");
   const [electricNew, setElectricNew]   = useState("");
   const [waterOld, setWaterOld]         = useState("");
@@ -352,7 +354,14 @@ export default function EndContractModal({ room, contract, roomNumber, onClose, 
                        + (isWaterMeter 
                            ? `- Số nước mới: ${waterNew}\n` 
                            : `- Tiền nước (cố định): ${fixedWaterAmount ? Number(fixedWaterAmount).toLocaleString("vi-VN") : "0"} đ\n`)
-                       + `- Các phụ phí và giảm trừ đã được ghi nhận.\n\n`
+                       + `- Phí dịch vụ: ${serviceFee ? Number(serviceFee).toLocaleString("vi-VN") : "0"} đ\n`
+                       + `- Phí vệ sinh: ${cleaningFee ? Number(cleaningFee).toLocaleString("vi-VN") : "0"} đ\n`
+                       + `- Phí internet: ${internetFee ? Number(internetFee).toLocaleString("vi-VN") : "0"} đ\n`
+                       + `- Phí phát sinh: ${additionalFee ? Number(additionalFee).toLocaleString("vi-VN") : "0"} đ\n`
+                       + (additionalFeeReason ? `- Lý do phát sinh: ${additionalFeeReason}\n` : "")
+                       + `- Giảm trừ: ${discountAmount ? Number(discountAmount).toLocaleString("vi-VN") : "0"} đ\n`
+                       + (discountReason ? `- Lý do giảm trừ: ${discountReason}\n` : "")
+                       + `- Hạn thanh toán: ${estimatedDueDate.formattedVN} (Ngày ${paymentDay} hàng tháng)\n\n`
                        + `⚠️ Hành động này sẽ kết thúc hợp đồng, chuyển phòng về trạng thái Trống và tạo một hóa đơn chốt.\n`
                        + `Vui lòng kiểm tra kỹ. Bấm "OK" để hoàn tất.`;
                          
@@ -384,7 +393,10 @@ export default function EndContractModal({ room, contract, roomNumber, onClose, 
         additional_fee_reason: additionalFeeReason,
         discount_amount:    discountAmount ? Number(discountAmount) : 0,
         discount_reason:    discountReason,
-        due_date:           estimatedDueDate.isoDate
+        due_date:           estimatedDueDate.isoDate,
+        electric_calc_method: contract?.electric_calc_method || "fixed_price",
+        electric_total_consumed: contract?.electric_calc_method === "split_ratio" ? Number(electricTotalConsumed) : null,
+        electric_total_cost: contract?.electric_calc_method === "split_ratio" ? Number(electricTotalCost) : null,
       });
       
       await api.patch(`/contracts/${contract.id}`, {
@@ -543,8 +555,16 @@ export default function EndContractModal({ room, contract, roomNumber, onClose, 
                   </div>
 
                   {/* Điện */}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-2">⚡ Điện (kWh)</p>
+                  <div className="space-y-3 p-3.5 bg-gray-50/80 rounded-2xl border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                        <span>⚡</span> Điện (kWh)
+                      </p>
+                      <span className="text-xs px-2 py-1 bg-white border border-gray-200 rounded-md text-gray-600 font-medium shadow-sm">
+                        {contract?.electric_calc_method === "split_ratio" ? "Chia bill tổng" : "Đơn giá cố định"}
+                      </span>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Số cũ {loadingPrev && <span className="text-orange-400">(đang tải...)</span>}</label>
@@ -555,6 +575,44 @@ export default function EndContractModal({ room, contract, roomNumber, onClose, 
                         <FormattedNumberInput name="electric_new" value={electricNew} onChange={(e) => setElectricNew(e.target.value)} placeholder="vd: 150" className={INPUT} />
                       </div>
                     </div>
+
+                    {/* Chỉ hiện phần nhập bill tổng nếu hợp đồng đang cài là split_ratio */}
+                    {contract?.electric_calc_method === "split_ratio" && (
+                      <div className="pt-3 border-t border-gray-200/80 space-y-3 animate-fade-in">
+                        <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide flex items-center gap-1">
+                          <span>📊</span> Thông tin hóa đơn điện tổng (EVN)
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Tổng kWh cả nhà <span className="text-red-500">*</span>
+                            </label>
+                            <FormattedNumberInput
+                              name="electric_total_consumed"
+                              value={electricTotalConsumed}
+                              onChange={(e) => setElectricTotalConsumed(e.target.value)}
+                              placeholder="vd: 800"
+                              required
+                              className={INPUT}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Tổng tiền bill tổng (đ) <span className="text-red-500">*</span>
+                            </label>
+                            <FormattedNumberInput
+                              name="electric_total_cost"
+                              value={electricTotalCost}
+                              onChange={(e) => setElectricTotalCost(e.target.value)}
+                              placeholder="vd: 2,500,000"
+                              required
+                              className={INPUT}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Nước */}

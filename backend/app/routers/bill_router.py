@@ -469,6 +469,9 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
             detail=f"Lỗi khi sinh PDF: {str(e)}",
         )
 
+    # Định dạng hạn thanh toán để gửi vào email
+    formatted_due_date = bill.due_date.strftime("%d/%m/%Y") if getattr(bill, "due_date", None) else None
+
     # Gửi email kèm thông tin phòng và nhà
     try:
         send_bill_email(
@@ -478,7 +481,8 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
             total_amount=float(bill.total_amount),
             pdf_path=pdf_path,
             room_number=bill.contract.room.room_number,
-            house_name=bill.contract.room.house.name
+            house_name=bill.contract.room.house.name,
+            due_date=formatted_due_date 
         )
     except Exception as e:
         raise HTTPException(

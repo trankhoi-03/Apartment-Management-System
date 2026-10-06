@@ -447,7 +447,7 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
                        + `- Phí phát sinh: ${additionalFee ? Number(additionalFee).toLocaleString("vi-VN") : "0"} đ\n`
                        + (additionalFeeReason ? `- Lý do phát sinh: ${additionalFeeReason}\n` : "")
                        + `- Giảm trừ: ${discountAmount ? Number(discountAmount).toLocaleString("vi-VN") : "0"} đ\n`
-                        + (discountReason ? `- Lý do giảm trừ: ${discountReason}\n` : "")
+                       + (discountReason ? `- Lý do giảm trừ: ${discountReason}\n` : "")
                        + `- Hạn thanh toán: ${estimatedDueDate.formattedVN} (Ngày ${paymentDay} hàng tháng)\n\n`
                        + `Vui lòng kiểm tra kỹ. Bấm "OK" để tính tiền.`;
                          
@@ -682,37 +682,15 @@ export default function GenerateBillModal({ room, contract, onClose, onGenerated
               </div>
 
               {/* Điện */}
+              {/* Điện */}
               <div className="space-y-3 p-3.5 bg-gray-50/80 rounded-2xl border border-gray-200">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
                     <span>⚡</span> Điện
                   </p>
-
-                  {/* Nút bấm chuyển đổi phương thức tính */}
-                  <div className="flex bg-gray-200/70 p-0.5 rounded-lg text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setElectricCalcMethod("fixed_price")}
-                      className={`px-2.5 py-1 rounded-md transition font-medium ${
-                        electricCalcMethod === "fixed_price"
-                          ? "bg-white text-blue-700 shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      Đơn giá cố định
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setElectricCalcMethod("split_ratio")}
-                      className={`px-2.5 py-1 rounded-md transition font-medium ${
-                        electricCalcMethod === "split_ratio"
-                          ? "bg-white text-blue-700 shadow-sm"
-                          : "text-gray-600 hover:text-gray-900"
-                      }`}
-                    >
-                      Chia bill tổng
-                    </button>
-                  </div>
+                  <span className="text-xs px-2 py-1 bg-white border border-gray-200 rounded-md text-gray-600 font-medium shadow-sm">
+                    {electricCalcMethod === "split_ratio" ? "Chia bill tổng" : "Đơn giá cố định"}
+                  </span>
                 </div>
 
                 {/* Nhập chỉ số đồng hồ phòng */}

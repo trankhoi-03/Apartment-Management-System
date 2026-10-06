@@ -22,13 +22,18 @@ def generate_bill_pdf(bill: Bill, contract: Contract) -> str:
     year_str, month_str = bill.billing_month.split('-')
     formatted_month = f"{month_str}/{year_str}"
 
-    # 2. Tính toán hạn thanh toán an toàn
+    # 2. Lấy hạn thanh toán từ bill, nếu không có (bill cũ) thì tính từ hợp đồng
     payment_day = contract.payment_day
-    year, month = int(year_str), int(month_str)
-    last_day_of_month = calendar.monthrange(year, month)[1]
-    
-    actual_day = payment_day if payment_day <= last_day_of_month else last_day_of_month
-    due_date = f"{actual_day:02d}/{month:02d}/{year}"
+    if getattr(bill, "due_date", None):
+        # Nếu bill đã lưu due_date thì dùng trực tiếp
+        due_date = bill.due_date.strftime("%d/%m/%Y")
+    else:
+        # Fallback cho các hóa đơn cũ chưa có cột due_date
+        year, month = int(year_str), int(month_str)
+        last_day_of_month = calendar.monthrange(year, month)[1]
+        
+        actual_day = payment_day if payment_day <= last_day_of_month else last_day_of_month
+        due_date = f"{actual_day:02d}/{month:02d}/{year}"
 
     # 3. Truyền dữ liệu vào template
     html_content = template.render(
@@ -45,6 +50,10 @@ def generate_bill_pdf(bill: Bill, contract: Contract) -> str:
         water_amount=float(bill.water_amount),
         water_consumed=float(bill.water_consumed),
         service_fee=float(bill.service_fee),
+        cleaning_fee=float(bill.cleaning_fee) if getattr(bill, "cleaning_fee", None) else 0.0,
+        internet_fee=float(bill.internet_fee) if getattr(bill, "internet_fee", None) else 0.0,
+        discount_amount=float(bill.discount_amount) if getattr(bill, "discount_amount", None) else 0.0,
+        discount_reason=getattr(bill, "discount_reason", ""),
         additional_fee=float(bill.additional_fee) if bill.additional_fee else 0.0,
         additional_fee_reason=bill.additional_fee_reason,
         total_amount=float(bill.total_amount),
