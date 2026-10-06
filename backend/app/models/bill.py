@@ -1,6 +1,7 @@
-from sqlalchemy import ForeignKey, String, Numeric, UniqueConstraint, Float
+from sqlalchemy import ForeignKey, String, Numeric, UniqueConstraint, Float, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
+from datetime import date
 from .base import Base
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ class Bill(Base):
     # pending = chưa gửi, sent = đã gửi mail, paid = đã thanh toán
 
     pdf_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     electric_calc_method: Mapped[str] = mapped_column(
         String(20), default="fixed_price", nullable=False

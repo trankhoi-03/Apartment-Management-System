@@ -153,6 +153,7 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
     new_bill = Bill(
         contract_id=payload.contract_id,
         billing_month=payload.billing_month,
+        due_date=payload.due_date,
         rent_amount=rent_amount,
         discount_amount=payload.discount_amount,
         discount_reason=payload.discount_reason,
@@ -252,7 +253,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     if bill is None:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy bill id={bill_id}")
     
-    if bill.status != "pending":
+    if bill.status not in ["pending", "sent", "paid"]:
         raise HTTPException(
             status_code=422,
             detail=f"Hóa đơn đang ở trạng thái '{bill.status}', không thể sửa."
@@ -398,6 +399,9 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     reading.electric_new = electric_new_val
     if room.is_water_meter:
         reading.water_new = water_new_val
+
+    if payload.due_date is not None: 
+        bill.due_date = payload.due_date
 
     bill.rent_amount = float(rent_amt)
     bill.electric_consumed = float(electric_consumed)

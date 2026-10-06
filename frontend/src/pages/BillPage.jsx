@@ -293,51 +293,79 @@ function BillCard({ bill, onMarkPaid, onSendEmail, sendingId, onEdit, userRole }
             {userRole === "owner" && 
               <button
                 onClick={() => onEdit(bill)}
-                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition"
+                className="flex-1 px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
               >
                 ✏️ Sửa
               </button>
             }
-            
             <button
               onClick={() => onSendEmail(bill)}
               disabled={sendingId === bill.id}
-              className={`${userRole === "owner" ? "flex-[2]" : "w-full"} px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2`}
+              className={`${userRole === "owner" ? "flex-[2]" : "w-full"} px-3 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2`}
             >
-              {sendingId === bill.id ? "Đang gửi..." : "📧 Gửi Email"}
+              {sendingId === bill.id ? "⏳ Đang gửi..." : "📧 Gửi Email"}
             </button>
           </div>
         )}
+
+        {/* TRẠNG THÁI: ĐÃ GỬI (SENT) */}
         {bill.status === "sent" && (
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2.5">
+            {/* Nút hành động chính - Full width */}
             <button
               onClick={() => onMarkPaid(bill)}
-              className="flex-[2] px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
+              className="w-full px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm"
             >
-              Đã thanh toán
+              ✅ Xác nhận đã thanh toán
             </button>
-            <button
-              onClick={() => onSendEmail(bill)}
-              disabled={sendingId === bill.id}
-              className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
-            >
-              {sendingId === bill.id ? "Đang gửi..." : "📧 Gửi lại"}
-            </button>
+            
+            {/* 2 nút hành động phụ - Chia đôi */}
+            <div className="flex gap-2">
+              {userRole === "owner" && 
+                <button
+                  onClick={() => onEdit(bill)}
+                  className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+                >
+                  ✏️ Sửa
+                </button>
+              }
+              <button
+                onClick={() => onSendEmail(bill)}
+                disabled={sendingId === bill.id}
+                className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 disabled:opacity-50 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+              >
+                {sendingId === bill.id ? "⏳ Đang gửi..." : "📧 Gửi lại"}
+              </button>
+            </div>
           </div>
         )}
+
+        {/* TRẠNG THÁI: ĐÃ THANH TOÁN (PAID) */}
         {bill.status === "paid" && (
-          <div className="flex gap-2">
-            <div className="flex-[2] px-4 py-2 bg-gray-50 text-gray-500 border border-gray-100 rounded-xl text-sm font-medium text-center flex items-center justify-center">
+          <div className="flex flex-col gap-2.5">
+            {/* Dòng trạng thái - Full width */}
+            <div className="w-full px-4 py-2.5 bg-gray-50 text-gray-500 border border-gray-100 rounded-xl text-sm font-medium text-center flex items-center justify-center">
               Hóa đơn đã hoàn tất
             </div>
-            <button
-              onClick={() => onSendEmail(bill)}
-              disabled={sendingId === bill.id}
-              className="flex-1 px-4 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2"
-              title="Gửi lại hóa đơn qua email"
-            >
-              {sendingId === bill.id ? "Đang gửi..." : "📧 Gửi lại"}
-            </button>
+            
+            {/* 2 nút hành động phụ - Chia đôi */}
+            <div className="flex gap-2">
+              {userRole === "owner" && 
+                <button
+                  onClick={() => onEdit(bill)}
+                  className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+                >
+                  ✏️ Sửa
+                </button>
+              }
+              <button
+                onClick={() => onSendEmail(bill)}
+                disabled={sendingId === bill.id}
+                className="flex-1 px-3 py-2 bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 disabled:opacity-50 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1.5"
+              >
+                {sendingId === bill.id ? "⏳ Đang gửi..." : "📧 Gửi lại"}
+              </button>
+            </div>
           </div>
         )}
       </div>

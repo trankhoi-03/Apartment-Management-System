@@ -107,6 +107,74 @@ function formatBillingMonth(monthStr) {
   }
   return monthStr;
 }
+const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white`;
+
+// eslint-disable-next-line no-unused-vars
+function VNDateInput({ name, value, onChange, required, className }) {
+  const hiddenDateInputRef = useRef(null);
+
+  const toDisplay = (val) => {
+    if (!val) return "";
+    if (val.includes("-")) {
+      const parts = val.split("-");
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return val;
+  };
+
+  const toStandard = (val) => {
+    if (!val) return "";
+    const parts = val.split("/");
+    if (parts.length === 3 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    return val;
+  };
+
+  const handleTextChange = (e) => {
+    let raw = e.target.value.replace(/\D/g, ""); 
+    if (raw.length > 8) raw = raw.slice(0, 8);
+
+    let formatted = raw;
+    if (raw.length > 4) {
+      formatted = `${raw.slice(0, 2)}/${raw.slice(2, 4)}/${raw.slice(4)}`;
+    } else if (raw.length > 2) {
+      formatted = `${raw.slice(0, 2)}/${raw.slice(2)}`;
+    }
+
+    const standardValue = formatted.length === 10 ? toStandard(formatted) : formatted;
+    onChange({ target: { name, value: standardValue } });
+  };
+
+  const handleCalendarPick = (e) => {
+    const selectedDate = e.target.value; 
+    if (selectedDate) {
+      onChange({ target: { name, value: selectedDate } });
+    }
+  };
+
+  const openCalendar = () => {
+    if (hiddenDateInputRef.current) {
+      if (typeof hiddenDateInputRef.current.showPicker === "function") {
+        hiddenDateInputRef.current.showPicker();
+      } else {
+        hiddenDateInputRef.current.focus();
+      }
+    }
+  };
+
+  return (
+    <div className="relative flex items-center">
+      <input type="text" name={name} value={toDisplay(value)} onChange={handleTextChange} placeholder="dd/mm/yyyy" maxLength={10} required={required} className={`${INPUT} pr-10`} />
+      <button type="button" onClick={openCalendar} className="absolute right-2.5 text-gray-400 hover:text-blue-600 focus:outline-none p-1" tabIndex={-1} title="Chọn ngày">
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </button>
+      <input ref={hiddenDateInputRef} type="date" value={value && value.includes("-") ? value : ""} onChange={handleCalendarPick} tabIndex={-1} className="absolute opacity-0 pointer-events-none w-0 h-0 bottom-0 right-0" />
+    </div>
+  );
+}
 
 export default function EditBillModal({ bill, onClose, onSaved }) {
   const [billingMonth, setBillingMonth] = useState("");
@@ -251,30 +319,42 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
     setLoading(true);
 
     try {
-      const payload = {};
-      
-      // Chèn billingMonth vào payload
-      if (billingMonth !== "") payload.billing_month = billingMonth;
+      // 1. Luôn gửi các thông tin cơ bản
+      const payload = {
+        billing_month: billingMonth,
+        due_date: form.due_date,
+        rent_amount: Number(form.rent_amount) || 0,
+        electric_calc_method: form.electric_calc_method,
+      };
 
-      if (form.due_date !== "") payload.due_date = form.due_date;
+      // 2. Xử lý điện
+      if (form.electric_calc_method === "split_ratio") {
+        payload.electric_total_consumed = Number(form.electric_total_consumed) || 0;
+        payload.electric_total_cost = Number(form.electric_total_cost) || 0;
+        payload.electric_new = Number(form.electric_new) || 0; // Vẫn cần gửi số chỉ đồng hồ phòng
+      } else {
+        payload.electric_new = Number(form.electric_new) || 0;
+      }
 
-      // Ép các trường số về 0 nếu user xóa trắng (value === "")
-      payload.rent_amount = form.rent_amount !== "" ? Number(form.rent_amount) : 0;
+      // 3. Xử lý nước
+      if (isWaterMeter) {
+        payload.water_new = Number(form.water_new) || 0;
+      } else {
+        payload.default_water_amount = Number(form.default_water_amount) || 0;
+      }
+
+      // 4. Các khoản phí dịch vụ (Nếu xóa trắng thì mặc định là 0)
+      payload.service_fee = Number(form.service_fee) || 0;
+      payload.cleaning_fee = Number(form.cleaning_fee) || 0;
+      payload.internet_fee = Number(form.internet_fee) || 0;
       
-      if (form.electric_new !== "") payload.electric_new = Number(form.electric_new);
-      if (form.water_new !== "") payload.water_new = Number(form.water_new);
-      if (form.default_water_amount !== "") payload.default_water_amount = Number(form.default_water_amount);
-      
-      payload.service_fee = form.service_fee !== "" ? Number(form.service_fee) : 0;
-      payload.cleaning_fee = form.cleaning_fee !== "" ? Number(form.cleaning_fee) : 0;
-      payload.internet_fee = form.internet_fee !== "" ? Number(form.internet_fee) : 0;
-      
-      payload.additional_fee = form.additional_fee !== "" ? Number(form.additional_fee) : 0;
+      payload.additional_fee = Number(form.additional_fee) || 0;
       payload.additional_fee_reason = (form.additional_fee_reason || "").trim() === "" ? null : form.additional_fee_reason;
       
-      payload.discount_amount = form.discount_amount !== "" ? Number(form.discount_amount) : 0;
+      payload.discount_amount = Number(form.discount_amount) || 0;
       payload.discount_reason = (form.discount_reason || "").trim() === "" ? null : form.discount_reason;
 
+      // Gửi request PATCH tới API
       await api.patch(`/bills/${bill.id}/edit`, payload);
       onSaved();
     } catch (err) {
@@ -304,7 +384,7 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
           {/* 0. Tháng xuất bill */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tháng xuất bill <span className="text-red-500">*</span>
+              Tháng xuất bill <span className="text-red-500"></span>
             </label>
             <VietnameseMonthPicker 
               value={billingMonth} 
@@ -315,29 +395,25 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Hạn thanh toán <span className="text-red-500">*</span>
+              Hạn thanh toán <span className="text-red-500"></span>
             </label>
-            <input 
+            <VNDateInput 
               name="due_date"
-              type="date"
               value={form.due_date}
               onChange={handleChange}
-              required
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             />
           </div>
 
           {/* 1. Tiền thuê nhà & Chức năng Điều chỉnh */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tiền thuê nhà (đ) <span className="text-red-500">*</span>
+              Tiền thuê nhà (đ) <span className="text-red-500"></span>
             </label>
             <FormattedNumberInput 
               name="rent_amount" 
               value={form.rent_amount} 
               onChange={handleChange} 
               placeholder="Nhập tiền thuê nhà..." 
-              required 
               className={`w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${isAdjustingRent ? 'bg-gray-100 pointer-events-none opacity-80' : ''}`} 
             />
             
@@ -469,27 +545,25 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">
-                        Tổng kWh cả nhà <span className="text-red-500">*</span>
+                        Tổng kWh cả nhà <span className="text-red-500"></span>
                       </label>
                       <FormattedNumberInput
                         name="electric_total_consumed"
                         value={form.electric_total_consumed}
                         onChange={handleChange}
                         placeholder="vd: 800"
-                        required
                         className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       />
                     </div>
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">
-                        Tổng tiền bill tổng (đ) <span className="text-red-500">*</span>
+                        Tổng tiền bill tổng (đ) <span className="text-red-500"></span>
                       </label>
                       <FormattedNumberInput
                         name="electric_total_cost"
                         value={form.electric_total_cost}
                         onChange={handleChange}
                         placeholder="vd: 2,500,000"
-                        required
                         className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                       />
                     </div>
