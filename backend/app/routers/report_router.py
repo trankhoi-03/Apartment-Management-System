@@ -39,6 +39,82 @@ def _contracts_billed_in_month(db: Session, room_id: int, month: str):
     return db.query(Contract).filter(Contract.id.in_(contract_ids)).all()
 
 
+def _allocate_house_water_cost(db: Session, rooms, month: str, total_cube, total_bill):
+    """Phân bổ CHI PHÍ trả công ty nước, không ảnh hưởng doanh thu từ khách.
+
+    Chỉ tính các phòng có Bill của tháng; kiểm tra toàn bộ theo 3 loại nhà:
+    - Toàn không đồng hồ: theo người.
+    - Toàn đồng hồ: theo m³; chênh lệch dương của đồng hồ tổng là hao hụt.
+    - Hỗn hợp: nếu tổng m³ > m³ nhóm có đồng hồ, nhóm đồng hồ tính
+      theo tổng m³, phần còn lại chia theo người nhóm không đồng hồ;
+      nếu thiếu tổng m³ hoặc tổng <= m³ nhóm đồng hồ, chia theo người
+      toàn nhà để tránh phân bổ vượt bill hoặc bỏ sót nhóm không đồng hồ.
+    Kết quả trả về: {room_id: Decimal}, Decimal hao hụt/chưa phân bổ.
+    """
+    total_cube = Decimal(str(total_cube or 0))
+    total_bill = Decimal(str(total_bill or 0))
+    room_usage = {}
+    room_people = {}
+    eligible = []
+
+    for room in rooms:
+        bills = (db.query(Bill).join(Contract, Bill.contract_id == Contract.id)
+                 .filter(Contract.room_id == room.id, Bill.billing_month == month).all())
+        if not bills:
+            continue
+        eligible.append(room)
+        room_usage[room.id] = sum(
+            (max(Decimal(str(b.water_consumed or 0)), Decimal("0")) for b in bills),
+            Decimal("0")
+        )
+        contracts = _contracts_billed_in_month(db, room.id, month)
+        room_people[room.id] = sum(
+            (Decimal(str(c.num_tenants or 0)) for c in contracts), Decimal("0")
+        )
+
+    allocation = {room.id: Decimal("0") for room in rooms}
+    if total_bill <= 0 or not eligible:
+        return allocation, max(total_bill, Decimal("0"))
+
+    def share(amount, weights):
+        weights = {rid: max(w, Decimal("0")) for rid, w in weights.items()}
+        denominator = sum(weights.values(), Decimal("0"))
+        if denominator <= 0:
+            return
+        for rid, weight in weights.items():
+            allocation[rid] += amount * weight / denominator
+
+    meter_rooms = [r for r in eligible if r.is_water_meter]
+    no_meter_rooms = [r for r in eligible if not r.is_water_meter]
+    metered_cube = sum((room_usage[r.id] for r in meter_rooms), Decimal("0"))
+
+    if not meter_rooms:
+        share(total_bill, {r.id: room_people[r.id] for r in eligible})
+    elif not no_meter_rooms:
+        if metered_cube > 0:
+            # Nếu số tổng < tổng phòng, chuẩn hóa theo tổng phòng (không âm).
+            denominator = max(total_cube, metered_cube)
+            for r in meter_rooms:
+                allocation[r.id] = total_bill * room_usage[r.id] / denominator
+        else:
+            # Chưa ghi bất kỳ chỉ số nước nào: dự phòng theo số người.
+            share(total_bill, {r.id: room_people[r.id] for r in eligible})
+    elif total_cube > metered_cube:
+        for r in meter_rooms:
+            allocation[r.id] = total_bill * room_usage[r.id] / total_cube
+        remainder = total_bill - sum(allocation.values(), Decimal("0"))
+        share(remainder, {r.id: room_people[r.id] for r in no_meter_rooms})
+    else:
+        # Thiếu tổng m³ hoặc tổng <= chỉ số của nhóm có đồng hồ.
+        share(total_bill, {r.id: room_people[r.id] for r in eligible})
+
+    unallocated = total_bill - sum(allocation.values(), Decimal("0"))
+    # Loại bỏ sai số cực nhỏ của Decimal khi chia tỷ lệ.
+    if abs(unallocated) < Decimal("0.00000001"):
+        unallocated = Decimal("0")
+    return allocation, max(unallocated, Decimal("0"))
+
+
 @router.get("/financial/all", response_model=HouseFinancialReport)
 def get_all_houses_financial_report(
     month: str, 
@@ -114,8 +190,9 @@ def get_all_houses_financial_report(
         if internet_cost > 0 and len(house.rooms) > 0:
             internet_fee_per_room = internet_cost / Decimal(str(len(house.rooms)))
 
-        billed_contracts = [c for r in house.rooms for c in _contracts_billed_in_month(db, r.id, month)]
-        total_tenants_in_house = sum(c.num_tenants for c in billed_contracts) or 1 
+        room_water_costs, house_unallocated_water = _allocate_house_water_cost(
+            db, house.rooms, month, ui_water_cube, calc_water_bill
+        )
 
         allocated_house_elec_cost = Decimal("0")
         allocated_house_water_cost = Decimal("0")
@@ -187,13 +264,7 @@ def get_all_houses_financial_report(
             else:
                 elec_cost = (total_room_elec_kwh / calc_rooms_elec_kwh_house) * calc_elec_bill
                 
-            water_cost = Decimal("0")
-            if room.is_water_meter: 
-                water_cost = (total_room_water_cube / calc_water_cube) * calc_water_bill
-            else:
-                r_contracts = _contracts_billed_in_month(db, room.id, month)
-                r_tenants = sum(c.num_tenants for c in r_contracts)
-                water_cost = (Decimal(str(r_tenants)) / Decimal(str(total_tenants_in_house))) * calc_water_bill
+            water_cost = room_water_costs.get(room.id, Decimal("0"))
 
             allocated_house_elec_cost += elec_cost
             allocated_house_water_cost += water_cost
@@ -231,7 +302,7 @@ def get_all_houses_financial_report(
                 internet_cost_details.append({"item": f"Phòng {room.room_number} - {house.name}", "amount": float(internet_fee_per_room)})
 
         unallocated_elec = calc_elec_bill - allocated_house_elec_cost
-        unallocated_water = calc_water_bill - allocated_house_water_cost
+        unallocated_water = house_unallocated_water
         
         if unallocated_elec > 0:
             util_details.append({"room_name": f"[{house.name}] Hao hụt điện", "electric_cost": float(unallocated_elec), "water_cost": 0.0})
@@ -366,29 +437,16 @@ def get_house_financial_report(
     rooms = house.rooms
 
     total_rooms_electric_kwh = Decimal("0")
-    tenants_no_meter = 0
-    allocated_water_meter_bill = Decimal("0")
-    water_unit_price = calc_water_bill / calc_water_cube if ui_water_cube > 0 else Decimal("0")
-
     for r in rooms:
         r_bills = db.query(Bill).join(Contract).filter(Contract.room_id == r.id, Bill.billing_month == month).all()
         for r_bill in r_bills:
             if r_bill.electric_consumed:
                 total_rooms_electric_kwh += Decimal(str(r_bill.electric_consumed))
-            if r.is_water_meter and r_bill.water_consumed:
-                allocated_water_meter_bill += Decimal(str(r_bill.water_consumed)) * water_unit_price
-
-        if not r.is_water_meter:
-            r_contracts = _contracts_billed_in_month(db, r.id, month)
-            for c in r_contracts:
-                tenants_no_meter += c.num_tenants
 
     calc_rooms_elec_kwh = total_rooms_electric_kwh if total_rooms_electric_kwh > 0 else Decimal("1")
-    calc_tenants_no_meter = Decimal(str(tenants_no_meter)) if tenants_no_meter > 0 else Decimal("1")
-
-    remaining_water_bill = calc_water_bill - allocated_water_meter_bill
-    if remaining_water_bill < 0:
-        remaining_water_bill = Decimal("0")
+    room_water_costs, house_unallocated_water = _allocate_house_water_cost(
+        db, rooms, month, ui_water_cube, calc_water_bill
+    )
 
     rent_details = []
     other_revenue_details = []
@@ -495,13 +553,7 @@ def get_house_financial_report(
         else:
             elec_cost = (total_room_elec_kwh / calc_rooms_elec_kwh) * calc_elec_bill
         
-        water_cost = Decimal("0")
-        if room.is_water_meter: 
-            water_cost = total_room_water_cube * water_unit_price
-        else:
-            r_contracts = _contracts_billed_in_month(db, room.id, month)
-            r_tenants = sum(c.num_tenants for c in r_contracts)
-            water_cost = (Decimal(str(r_tenants)) / calc_tenants_no_meter) * remaining_water_bill
+        water_cost = room_water_costs.get(room.id, Decimal("0"))
 
         allocated_house_elec_cost += elec_cost
         allocated_house_water_cost += water_cost
@@ -540,7 +592,7 @@ def get_house_financial_report(
             internet_cost_details.append({"item": f"Phòng {room.room_number}", "amount": float(internet_fee_per_room)})
 
     unallocated_elec = calc_elec_bill - allocated_house_elec_cost
-    unallocated_water = calc_water_bill - allocated_house_water_cost
+    unallocated_water = house_unallocated_water
     
     if unallocated_elec > 0:
         util_details.append({"room_name": f"Khu vực chung", "electric_cost": float(unallocated_elec), "water_cost": 0.0})

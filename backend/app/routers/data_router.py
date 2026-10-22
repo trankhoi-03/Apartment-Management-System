@@ -1,5 +1,6 @@
 import io
 import pandas as pd
+from openpyxl.worksheet.datavalidation import DataValidation
 from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from fastapi.responses import StreamingResponse
@@ -11,6 +12,7 @@ from app.models.room import Room
 from app.models.contract import Contract
 from app.models.houses import House
 from app.models.user import User
+from app.models.utility_rate import UtilityRate
 from app.core.dependencies import get_current_user
 from app.routers.report_router import get_house_financial_report, get_all_houses_financial_report
 
@@ -41,19 +43,18 @@ def export_excel(
     for r in rooms:
         # Lấy giá trị Nội thất an toàn
         furnitures = getattr(r, "feature_and_furniture", [])
-        furnitures_str = ", ".join(furnitures) if furnitures else ""
-        
+        furnitures_str = ", ".join(furnitures) if isinstance(furnitures, list) else str(furnitures or "")
         # Lấy cost_price
         cost_price = getattr(r, "cost_price", 0)
 
         room_data.append({
             "Tên nhà": r.house.name if r.house else "Không xác định",
             "Số Phòng": r.room_number,
-            "Diện tích (m2)": r.area_sqm,
             "Giá vốn (VNĐ)": float(cost_price) if cost_price else 0,
+            "Diện tích (m2)": r.area_sqm,
             "Trạng thái (Trống hoặc Đang thuê)": room_status_map.get(r.status, r.status),
             "Đồng hồ nước (Có hoặc Không)": "Có" if r.is_water_meter else "Không",
-            "Nội thất": furnitures_str
+            "Đặc điểm & Nội thất": furnitures_str
         })
         
     # Dữ liệu Sheet "Hợp đồng"
@@ -65,18 +66,62 @@ def export_excel(
     
     contract_data = []
     for c in contracts:
+        # 1. Lấy thông tin người ở cùng (co_tenants)
+        co_tenants_names = []
+        if getattr(c, "co_tenants", None):
+            for ct in c.co_tenants:
+                if getattr(ct, "full_name", None):
+                    co_tenants_names.append(ct.full_name.strip())
+                    
+        co_tenants_str = ", ".join(co_tenants_names)
+
+        # 2. Lấy đơn giá điện nước tương ứng với phòng
+        electric_price_val = 0
+        water_price_val = 0
+        default_water_val = 0
+
+        latest_rate = db.query(UtilityRate).filter(
+            UtilityRate.room_id == c.room_id
+        ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
+
+        is_water_meter = c.room.is_water_meter if c.room else False
+
+        if latest_rate:
+            if getattr(c, "electric_calc_method", "") == "split_ratio":
+                electric_display = "Chia theo bill tổng"
+            else:
+                electric_display = float(latest_rate.electric_price or 0)
+            
+            if is_water_meter:
+                water_price_val = float(latest_rate.water_price or 0)
+                default_water_val = 0
+            else:
+                water_price_val = 0
+                default_water_val = float(latest_rate.default_water_amount or 0)
+        else:
+            electric_display = 0
+
         contract_data.append({
             "Tên nhà": c.room.house.name if c.room and c.room.house else "Không xác định",
             "Số phòng": c.room.room_number if c.room else "Không xác định",
             "Khách thuê": c.tenant.full_name if c.tenant else "Không xác định",
+            "Số điện thoại": c.tenant.phone if c.tenant else "",
+            "Email": c.tenant.email if c.tenant and c.tenant.email else "",
             "Ngày bắt đầu": c.start_date.strftime("%d/%m/%Y") if c.start_date else None,
             "Ngày kết thúc": c.end_date.strftime("%d/%m/%Y") if c.end_date else None,
             "Tiền thuê": float(c.monthly_rent) if getattr(c, "monthly_rent", None) else 0,
             "Tiền cọc": float(c.deposit) if getattr(c, "deposit", None) else 0,
+            "Phí dịch vụ": float(getattr(c, "service_fee", 0) or 0),
+            "Phí vệ sinh": float(getattr(c, "cleaning_fee", 0) or 0),
+            "Phí internet": float(getattr(c, "internet_fee", 0) or 0),
+            "Giá điện (đ/kWh)": electric_display,
+            "Giá nước (đ/m3)": water_price_val if is_water_meter else "—",
+            "Tiền nước cố định (đ/tháng)": default_water_val if not is_water_meter else "—",
             "Số người": c.num_tenants,
+            "Người ở cùng": co_tenants_str,
             "Số xe": c.num_vehicles,            
             "Trạng thái (Đang thuê hoặc Đã kết thúc)": contract_status_map.get(c.status, c.status),
-            "Ghi chú": c.notes
+            "Ghi chú": c.notes or ""
         })
 
     output = io.BytesIO()
@@ -156,7 +201,7 @@ async def import_excel(
             
             allowed_house_ids.append(house.id) 
             
-        furnitures_str = row.get("Nội thất")
+        furnitures_str = row.get("Đặc điểm & Nội thất")
         furnitures_arr = [f.strip() for f in str(furnitures_str).split(",")] if furnitures_str else []
         
         raw_water = row.get("Đồng hồ nước (Có hoặc Không)")
@@ -213,20 +258,73 @@ async def import_excel(
 @router.get("/template")
 def download_template():    
     room_columns = [
-        "Tên nhà", "Số Phòng", "Diện tích (m2)", 
-        "Giá vốn (VNĐ)", "Trạng thái (Trống hoặc Đang thuê)", "Đồng hồ nước (Có hoặc Không)", "Nội thất"
+        "Tên nhà", 
+        "Số Phòng", 
+        "Giá vốn (VNĐ)", 
+        "Diện tích (m2)", 
+        "Trạng thái (Trống hoặc Đang thuê)", 
+        "Đồng hồ nước (Có hoặc Không)", 
+        "Đặc điểm & Nội thất"
     ]
     
     contract_columns = [
-        "Tên nhà", "Số phòng", "Khách thuê", 
-        "Ngày bắt đầu", "Ngày kết thúc", "Tiền thuê", 
-        "Tiền cọc", "Số người", "Số xe", "Trạng thái (Đang thuê hoặc Đã kết thúc)", "Ghi chú"
+        "Tên nhà", "Số phòng", "Khách thuê", "Số điện thoại", "Email",
+        "Ngày bắt đầu", "Ngày kết thúc", "Tiền thuê", "Tiền cọc",
+        "Phí dịch vụ", "Phí vệ sinh", "Phí internet",
+        "Giá điện (đ/kWh)", "Giá nước (đ/m3)", "Tiền nước cố định (đ/tháng)",
+        "Số người", "Người ở cùng", "Số xe", 
+        "Trạng thái (Đang thuê hoặc Đã kết thúc)", "Ghi chú"
     ]
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         pd.DataFrame(columns=room_columns).to_excel(writer, sheet_name="Phòng", index=False)
         pd.DataFrame(columns=contract_columns).to_excel(writer, sheet_name="Hợp đồng", index=False)
+
+        workbook = writer.book
+        
+        # 1. Xử lý Sheet "Phòng"
+        ws_room = workbook["Phòng"]
+        
+        dv_room_status = DataValidation(
+            type="list", 
+            formula1='"Trống,Đang thuê"', 
+            allow_blank=True
+        )
+        dv_room_status.error ='Vui lòng chọn từ danh sách thả xuống.'
+        dv_room_status.errorTitle = 'Lỗi nhập liệu'
+        
+        dv_water_meter = DataValidation(
+            type="list", 
+            formula1='"Có,Không"', 
+            allow_blank=True
+        )
+        dv_water_meter.error ='Vui lòng chọn "Có" hoặc "Không".'
+        dv_water_meter.errorTitle = 'Lỗi nhập liệu'
+        
+        ws_room.add_data_validation(dv_room_status)
+        ws_room.add_data_validation(dv_water_meter)
+        dv_room_status.add("E2:E1000")
+        dv_water_meter.add("F2:F1000")
+
+
+        # 2. Xử lý Sheet "Hợp đồng"
+        ws_contract = workbook["Hợp đồng"]
+        
+        dv_contract_status = DataValidation(
+            type="list", 
+            formula1='"Đang thuê,Đã kết thúc"', 
+            allow_blank=True
+        )
+        dv_contract_status.error ='Vui lòng chọn trạng thái hợp lệ.'
+        dv_contract_status.errorTitle = 'Lỗi nhập liệu'
+        
+        ws_contract.add_data_validation(dv_contract_status)
+        dv_contract_status.add("S2:S1000")
+
+        ws_room.column_dimensions['E'].width = 30
+        ws_room.column_dimensions['F'].width = 30
+        ws_contract.column_dimensions['S'].width = 40
     
     output.seek(0)
     

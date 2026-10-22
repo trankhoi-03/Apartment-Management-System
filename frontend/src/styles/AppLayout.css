@@ -1,0 +1,111 @@
+/* App shell: desktop sidebar, mobile drawer. Uses existing semantic CSS tokens. */
+.app-shell {
+  --app-sidebar-width: 240px;
+  min-height: 100dvh;
+  background: var(--semantic-background-secondary, #f8fafc);
+}
+
+.app-shell__main {
+  min-width: 0;
+  min-height: 100dvh;
+  margin-left: var(--app-sidebar-width);
+  /* Keep page-specific spacing in each page; avoid double padding. */
+}
+
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--app-sidebar-width);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--semantic-background-primary, #fff);
+  border-right: var(--semantic-stroke-0-25, 1px) solid var(--semantic-stroke-tertiary, #e5e7eb);
+  z-index: 60;
+}
+
+.app-sidebar__brand-row {
+  min-height: 76px;
+  padding: var(--semantic-spacing-6, 24px) var(--semantic-spacing-4, 16px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.app-sidebar__brand {
+  color: var(--semantic-foreground-brand-primary, #155eef);
+  font-weight: 800;
+  font-size: 20px;
+  white-space: nowrap;
+}
+.app-sidebar__menu-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--semantic-spacing-4, 16px);
+}
+.app-sidebar__section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  color: var(--semantic-foreground-tertiary, #667085);
+  margin-bottom: var(--semantic-spacing-3, 12px);
+}
+.app-sidebar__nav { display: flex; flex-direction: column; gap: var(--semantic-spacing-1, 4px); }
+.app-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--semantic-spacing-3, 12px);
+  min-height: 44px;
+  padding: var(--semantic-spacing-3, 12px);
+  border-radius: var(--semantic-radius-2, 8px);
+  color: var(--semantic-foreground-secondary, #475467);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color .15s, color .15s;
+}
+.app-sidebar__link:hover { background: var(--semantic-background-neutral-primary-hover, #f2f4f7); }
+.app-sidebar__link--active {
+  background: var(--semantic-background-brand-primary, #eff8ff);
+  color: var(--semantic-foreground-brand-primary, #155eef);
+}
+.app-sidebar__icon { flex: 0 0 24px; text-align: center; font-size: 19px; }
+.app-sidebar__footer {
+  padding: var(--semantic-spacing-4, 16px);
+  border-top: var(--semantic-stroke-0-25, 1px) solid var(--semantic-stroke-tertiary, #e5e7eb);
+}
+.app-sidebar__user { display: flex; gap: var(--semantic-spacing-3, 12px); align-items: center; margin-bottom: var(--semantic-spacing-3, 12px); }
+.app-sidebar__avatar { width: 38px; height: 38px; border-radius: var(--semantic-radius-full, 99999px); background: var(--semantic-background-secondary, #f2f4f7); display: grid; place-items: center; }
+.app-sidebar__user-info { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
+.app-sidebar__user-info strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.app-sidebar__user-info span { color: var(--semantic-foreground-secondary, #667085); }
+.app-sidebar__logout {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: var(--semantic-spacing-3, 12px);
+  border-radius: var(--semantic-radius-2, 8px);
+  color: var(--semantic-foreground-secondary, #475467);
+  background: transparent; cursor: pointer; border: 0; text-align: left;
+}
+.app-sidebar__logout:hover { background: var(--semantic-background-neutral-primary-hover, #f2f4f7); }
+.app-sidebar__close, .app-mobile-header, .app-sidebar-backdrop { display: none; }
+.app-sidebar__link:focus-visible, .app-sidebar__logout:focus-visible, .app-sidebar__close:focus-visible, .app-mobile-header__menu:focus-visible { outline: 2px solid var(--semantic-foreground-brand-primary, #155eef); outline-offset: 2px; }
+
+@media (max-width: 1023px) {
+  .app-shell__main { margin-left: 0; min-height: calc(100dvh - 56px); }
+  .app-mobile-header {
+    height: 56px; position: sticky; top: 0; z-index: 40;
+    display: flex; align-items: center; gap: var(--semantic-spacing-3, 12px);
+    padding: 0 var(--semantic-spacing-4, 16px);
+    background: var(--semantic-background-primary, #fff);
+    border-bottom: var(--semantic-stroke-0-25, 1px) solid var(--semantic-stroke-tertiary, #e5e7eb);
+  }
+  .app-mobile-header__brand { font-weight: 800; color: var(--semantic-foreground-brand-primary, #155eef); }
+  .app-mobile-header__menu { border: 0; background: transparent; font-size: 23px; cursor: pointer; padding: 4px 8px; }
+  .app-sidebar { transform: translateX(-100%); transition: transform .2s ease; z-index: 70; width: min(280px, 85vw); visibility: hidden; }
+  .app-sidebar--open { transform: translateX(0); visibility: visible; }
+  .app-sidebar__close { display: inline-flex; background: transparent; border: 0; cursor: pointer; font-size: 20px; }
+  .app-sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 65; border: 0; background: rgba(0,0,0,.4); cursor: pointer; }
+}
+@media (prefers-reduced-motion: reduce) { .app-sidebar, .app-sidebar__link { transition: none; } }
+
+

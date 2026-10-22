@@ -1,0 +1,48 @@
+:root {
+  /* Figma: Spacing/0 -> Scale/0 */
+  --semantic-spacing-0: var(--primitive-scale-0);
+  /* Figma: Spacing/1 -> Scale/1 */
+  --semantic-spacing-1: var(--primitive-scale-1);
+  /* Figma: Spacing/2 -> Scale/2 */
+  --semantic-spacing-2: var(--primitive-scale-2);
+  /* Figma: Spacing/3 -> Scale/3 */
+  --semantic-spacing-3: var(--primitive-scale-3);
+  /* Figma: Spacing/4 -> Scale/4 */
+  --semantic-spacing-4: var(--primitive-scale-4);
+  /* Figma: Spacing/5 -> Scale/5 */
+  --semantic-spacing-5: var(--primitive-scale-5);
+  /* Figma: Spacing/6 -> Scale/6 */
+  --semantic-spacing-6: var(--primitive-scale-6);
+  /* Figma: Spacing/8 -> Scale/8 */
+  --semantic-spacing-8: var(--primitive-scale-8);
+  /* Figma: Spacing/9 -> Scale/9 */
+  --semantic-spacing-9: var(--primitive-scale-9);
+  /* Figma: Spacing/10 -> Scale/10 */
+  --semantic-spacing-10: var(--primitive-scale-10);
+  /* Figma: Spacing/11 -> Scale/11 */
+  --semantic-spacing-11: var(--primitive-scale-11);
+  /* Figma: Spacing/12 -> Scale/12 */
+  --semantic-spacing-12: var(--primitive-scale-12);
+  /* Figma: Spacing/16 -> Scale/16 */
+  --semantic-spacing-16: var(--primitive-scale-16);
+  /* Figma: Spacing/20 -> Scale/20 */
+  --semantic-spacing-20: var(--primitive-scale-20);
+  /* Figma: Spacing/24 -> Scale/24 */
+  --semantic-spacing-24: var(--primitive-scale-24);
+  /* Figma: Spacing/32 -> Scale/32 */
+  --semantic-spacing-32: var(--primitive-scale-32);
+  /* Figma: Spacing/40 -> Scale/40 */
+  --semantic-spacing-40: var(--primitive-scale-40);
+  /* Figma: Spacing/0,5 -> Scale/0,5 */
+  --semantic-spacing-0-5: var(--primitive-scale-0-5);
+  /* Figma: Spacing/0,75 -> Scale/0,75 */
+  --semantic-spacing-0-75: var(--primitive-scale-0-75);
+  /* Figma: Spacing/1,25 -> Scale/1,25 */
+  --semantic-spacing-1-25: var(--primitive-scale-1-25);
+  /* Figma: Spacing/1,5 -> Scale/1,5 */
+  --semantic-spacing-1-5: var(--primitive-scale-1-5);
+  /* Figma: Spacing/2,5 -> Scale/2,5 */
+  --semantic-spacing-2-5: var(--primitive-scale-2-5);
+  /* Figma: Spacing/3,5 -> Scale/3,5 */
+  --semantic-spacing-3-5: var(--primitive-scale-3-5);
+}

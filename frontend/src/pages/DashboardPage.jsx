@@ -192,34 +192,53 @@ export default function DashboardPage() {
       .sort((a, b) => a.days_left - b.days_left); 
   }, [contracts, rooms, houses, selectedHouse]);
 
-  const expiringResidences = useMemo(() => {
+  // Gộp danh sách cảnh báo tạm trú: Chưa đăng ký + Sắp hết hạn tạm trú
+  const temporaryResidenceAlerts = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return contracts
-      .filter((c) => {
-        if (c.status !== "active" || !c.temp_residence_reg || !c.temp_residence_expiry) return false;
-        
-        const room = rooms.find(r => r.id === c.room_id);
-        if (selectedHouse !== "all" && room?.house_id !== Number(selectedHouse)) return false;
+    const alerts = [];
 
-        const expiryDate = new Date(c.temp_residence_expiry);
-        expiryDate.setHours(0, 0, 0, 0);
-        
-        const diffTime = expiryDate - today;
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays <= 30; 
-      })
-      .map((c) => {
-        const room = rooms.find(r => r.id === c.room_id);
-        const house = houses.find(h => h.id === room?.house_id);
+    contracts.forEach((c) => {
+      if (c.status !== "active") return;
+      const room = rooms.find((r) => r.id === c.room_id);
+      if (selectedHouse !== "all" && room?.house_id !== Number(selectedHouse)) return;
+
+      const house = houses.find((h) => h.id === room?.house_id);
+
+      // Trường hợp 1: Chưa đăng ký tạm trú
+      if (!c.temp_residence_reg) {
+        alerts.push({
+          ...c,
+          computed_room: room,
+          computed_house: house,
+          alert_type: "unregistered",
+          sort_priority: 1, // Ưu tiên xếp đầu
+        });
+      } 
+      // Trường hợp 2: Đã đăng ký nhưng sắp hết hạn (<= 30 ngày) hoặc đã quá hạn
+      else if (c.temp_residence_expiry) {
         const expiryDate = new Date(c.temp_residence_expiry);
         expiryDate.setHours(0, 0, 0, 0);
         const diffDays = Math.round((expiryDate - today) / (1000 * 60 * 60 * 24));
-        
-        return { ...c, computed_room: room, computed_house: house, res_days_left: diffDays };
-      })
-      .sort((a, b) => a.res_days_left - b.res_days_left);
+
+        if (diffDays <= 30) {
+          alerts.push({
+            ...c,
+            computed_room: room,
+            computed_house: house,
+            alert_type: "expiring",
+            res_days_left: diffDays,
+            sort_priority: diffDays < 0 ? 2 : 3, 
+          });
+        }
+      }
+    });
+
+    return alerts.sort((a, b) => {
+      if (a.sort_priority !== b.sort_priority) return a.sort_priority - b.sort_priority;
+      return (a.res_days_left ?? 0) - (b.res_days_left ?? 0);
+    });
   }, [contracts, rooms, houses, selectedHouse]);
 
   // Lọc các sự cố cần xử lý (status: received hoặc processing)
@@ -384,7 +403,7 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-700">Tài chính tháng {revenueStats.currentMonthStr.slice(-2)}/{revenueStats.currentMonthStr.slice(0,4)}</h2>
-            <Link to="/bills" className="text-sm font-medium text-blue-600 hover:underline">Quản lý hoá đơn &rarr;</Link>
+            <Link to="/bills" className="text-sm font-medium text-blue-600 hover:underline mr-5">Quản lý hoá đơn &rarr;</Link>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -393,7 +412,7 @@ export default function DashboardPage() {
               <div className="flex justify-between items-start relative z-10">
                 <div>
                   <p className="text-emerald-700 text-sm font-semibold mb-1 flex items-center gap-1.5">
-                    💰 Doanh thu
+                    💰 Đã thu
                   </p>
                   <h3 className="text-3xl font-extrabold text-emerald-900 tracking-tight">
                     {revenueStats.collectedThisMonth.toLocaleString("vi-VN")}đ
@@ -413,7 +432,7 @@ export default function DashboardPage() {
               <div className="flex justify-between items-start relative z-10">
                 <div>
                   <p className="text-rose-700 text-sm font-semibold mb-1 flex items-center gap-1.5">
-                    ⏳ Cần thu (Tổng nợ)
+                    ⏳ Chưa thu (Tổng nợ)
                   </p>
                   <h3 className="text-3xl font-extrabold text-rose-900 tracking-tight">
                     {revenueStats.uncollectedTotal.toLocaleString("vi-VN")}đ
@@ -421,7 +440,7 @@ export default function DashboardPage() {
                 </div>
                 {revenueStats.unpaidCountTotal > 0 && (
                   <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-200 text-rose-800 shadow-sm whitespace-nowrap">
-                    ⚠️ {revenueStats.unpaidCountTotal} hoá đơn nợ
+                    ⚠️ {revenueStats.unpaidCountTotal} hoá đơn chưa thanh toán
                   </span>
                 )}
               </div>
@@ -479,53 +498,79 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3 text-right">
             <Link to="/rooms" className="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline">
-              Tới trang Quản lý phòng &rarr;
+              Quản lý phòng &rarr;
             </Link>
           </div>
         </div>
       )}
 
-      {expiringResidences.length > 0 && (
-        <div className="bg-yellow-50 border border-amber-200 rounded-2xl p-5 mb-8 shadow-sm">
-          <h3 className="text-amber-800 font-bold mb-3 flex items-center gap-2">
-            <span className="animate-pulse">⏳</span> Cảnh báo: Có {expiringResidences.length} đăng ký tạm trú sắp hết hạn
+      {/* ================= SECTION GỘP: CẢNH BÁO TẠM TRÚ ================= */}
+      {temporaryResidenceAlerts.length > 0 && (
+        <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-5 mb-8 shadow-sm">
+          <h3 className="text-amber-900 font-bold mb-3 flex items-center gap-2">
+            <span className="animate-pulse">🚨</span> Cảnh báo: Có {temporaryResidenceAlerts.length} trường hợp cần làm thủ tục tạm trú
           </h3>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {expiringResidences.map(c => {
-              const formattedDate = new Date(c.temp_residence_expiry).toLocaleDateString("vi-VN");
-              const isOverdue = c.res_days_left < 0;
-              
+            {temporaryResidenceAlerts.map((c) => {
+              const isUnregistered = c.alert_type === "unregistered";
+              const isOverdue = !isUnregistered && c.res_days_left < 0;
+              const formattedDate = c.temp_residence_expiry
+                ? new Date(c.temp_residence_expiry).toLocaleDateString("vi-VN")
+                : "";
+
               return (
                 <div
-                  key={`res_${c.id}`}
+                  key={`res_alert_${c.id}`}
                   {...roomCardProps(c.computed_room)}
                   className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3.5 rounded-xl border border-amber-100 hover:border-amber-300 hover:shadow-md transition cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-300"
                 >
                   <div className="mb-2 sm:mb-0">
                     <p className="font-bold text-gray-800">
-                      Phòng {c.computed_room?.room_number} <span className="text-sm font-normal text-gray-500 ml-1">({c.computed_house?.name})</span>
+                      Phòng {c.computed_room?.room_number}{" "}
+                      <span className="text-sm font-normal text-gray-500 ml-1">
+                        ({c.computed_house?.name})
+                      </span>
                     </p>
-                    <p className="text-sm text-gray-600 mt-0.5">Đại diện: <span className="font-medium text-gray-800">{c.tenant?.full_name || "N/A"}</span></p>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      Đại diện: <span className="font-medium text-gray-800">{c.tenant?.full_name || "N/A"}</span>
+                    </p>
                   </div>
-                  
-                  <div className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap
-                    ${isOverdue ? "bg-red-100 text-red-700" : "bg-yellow-100 text-amber-700"}`}
-                  >
-                    {isOverdue 
-                      ? `Đã quá hạn ${Math.abs(c.res_days_left)} ngày` 
-                      : c.res_days_left === 0 ? "Hết hạn HÔM NAY" : `Còn ${c.res_days_left} ngày`
-                    }
-                    <div className="text-[10px] font-normal opacity-80 text-center mt-0.5">
-                      ({formattedDate})
+
+                  {/* Badge trạng thái */}
+                  {isUnregistered ? (
+                    <div className="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap bg-rose-100 text-rose-700 border border-rose-200">
+                      Chưa làm tạm trú
                     </div>
-                  </div>
+                  ) : (
+                    <div
+                      className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap ${
+                        isOverdue
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-amber-700"
+                      }`}
+                    >
+                      {isOverdue
+                        ? `Đã quá hạn ${Math.abs(c.res_days_left)} ngày`
+                        : c.res_days_left === 0
+                        ? "Hết hạn HÔM NAY"
+                        : `Còn ${c.res_days_left} ngày`}
+                      <div className="text-[10px] font-normal opacity-80 text-center mt-0.5">
+                        ({formattedDate})
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
+
           <div className="mt-3 text-right">
-            <Link to="/tenants" className="text-sm font-semibold text-amber-600 hover:text-amber-700 hover:underline">
-              Tới trang Quản lý người thuê &rarr;
+            <Link
+              to="/tenants"
+              className="text-sm font-semibold text-amber-700 hover:text-amber-800 hover:underline"
+            >
+              Quản lý người thuê &rarr;
             </Link>
           </div>
         </div>
@@ -542,7 +587,7 @@ export default function DashboardPage() {
               </span>
             )}
           </div>
-          <Link to="/incidents" className="text-sm font-medium text-blue-600 hover:underline">
+          <Link to="/incidents" className="text-sm font-medium text-blue-600 hover:underline mr-5">
             Quản lý sự cố &rarr;
           </Link>
         </div>

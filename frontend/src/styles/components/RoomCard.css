@@ -1,0 +1,71 @@
+/* Card */
+.room-card {
+  background-color: var(--semantic-background-primary);
+  border: var(--semantic-stroke-0-25) solid var(--semantic-stroke-tertiary);
+  border-radius: var(--semantic-radius-4);
+  color: var(--semantic-foreground-primary);
+}
+
+/* Trạng thái được chọn */
+.room-card--selected {
+  border-color: var(--semantic-stroke-brand-primary);
+  /* Dùng outline thay vì box-shadow để không bị hover:shadow-md của Tailwind ghi đè */
+  outline: var(--semantic-stroke-0-5) solid var(--semantic-background-brand-primary);
+}
+
+/* Hợp đồng sắp hết hạn */
+.room-card--expiring {
+  background-color: var(--semantic-background-warning-primary);
+}
+
+/* Nội dung */
+.room-card__title {
+  color: var(--semantic-foreground-primary);
+}
+
+.room-card__price {
+  color: var(--semantic-foreground-primary);
+}
+
+.room-card__secondary {
+  color: var(--semantic-foreground-secondary);
+}
+
+.room-card__house {
+  color: var(--semantic-foreground-brand-primary);
+}
+
+.room-card__warning {
+  color: var(--semantic-foreground-danger-primary);
+}
+
+/* Badge trạng thái */
+.room-card__status {
+  border-radius: var(--semantic-radius-full);
+}
+
+.room-card__status--vacant {
+  background-color: var(--semantic-background-success-secondary);
+  color: var(--semantic-foreground-success-primary);
+}
+
+.room-card__status--occupied {
+  background-color: var(--semantic-background-info-secondary);
+  color: var(--semantic-foreground-info-primary);
+}
+
+.room-card__status--inactive {
+  background-color: var(--semantic-background-neutral-secondary);
+  color: var(--semantic-foreground-neutral-secondary);
+}
+
+/* Nút sao chép */
+.room-card__duplicate {
+  border-radius: var(--semantic-radius-2);
+  color: var(--semantic-foreground-tertiary);
+}
+
+.room-card__duplicate:hover {
+  color: var(--semantic-foreground-brand-primary);
+  background-color: var(--semantic-background-brand-primary);
+}

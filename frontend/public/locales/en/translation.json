@@ -1,0 +1,1018 @@
+{
+  "navbar": {
+    "dashboard": "Dashboard",
+    "rooms_and_contracts": "Rooms & Contracts",
+    "tenants": "Tenants",
+    "bills": "Bills",
+    "incidents": "Incidents",
+    "staff": "Staff",
+    "finance": "Finance",
+    "hello": "Hello",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "loading": "Loading...",
+    "error_load_data": "Failed to load data.",
+    "export_data": "Export Data",
+    "exporting": "Exporting...",
+    "import_data": "Import Data",
+    "importing": "Processing...",
+    "download_template": "Download Template",
+    "all_houses": "All Houses",
+    
+    "room_stats": {
+      "total": "Total Rooms",
+      "occupied": "Occupied",
+      "vacant": "Vacant"
+    },
+    
+    "finance": {
+      "title": "Finance for {{month}}",
+      "manage_bills": "Manage Bills",
+      "collected": "Collected",
+      "uncollected": "Uncollected (Debt)",
+      "unpaid_bills": "{{count}} unpaid bills",
+      "prev_month_revenue": "Previous month's revenue ({{month}}):",
+      "increase": "Up {{percent}}%",
+      "decrease": "Down {{percent}}%"
+    },
+    
+    "alerts": {
+      "contracts": {
+        "title": "Warning: {{count}} contracts are expiring soon",
+        "tenant": "Tenant:",
+        "manage_rooms": "Manage Rooms"
+      },
+      "residence": {
+        "title": "Warning: {{count}} cases require temporary residence registration",
+        "representative": "Representative:",
+        "unregistered": "Unregistered",
+        "manage_tenants": "Manage Tenants"
+      },
+      "time": {
+        "overdue": "Overdue by {{days}} days",
+        "expires_today": "Expires TODAY",
+        "days_left": "{{days}} days left"
+      }
+    },
+    
+    "incidents": {
+      "title": "Incident Warnings",
+      "unresolved_count": "{{count}} unresolved incidents",
+      "manage_incidents": "Manage Incidents",
+      "no_incidents": "There are currently no incidents to process.",
+      "status_received": "Received (Not processed yet)",
+      "status_processing": "Processing",
+      "handler": "Handler:",
+      "move_to_processing": "Move to \"Processing\"",
+      "details": "Details",
+      "update_in_page": "View & Update on Incidents Page",
+      "error_update": "Failed to update incident status."
+    },
+    
+    "messages": {
+      "export_error": "An error occurred while exporting Excel. Please try again.",
+      "template_error": "Failed to download the template. Please try again.",
+      "import_success": "Data imported successfully from Excel!",
+      "import_error": "Error importing Excel file. Please check the format."
+    }
+  },
+  "rooms_page": {
+    "title": "Rooms & Contracts",
+    "all_houses": "All Houses",
+    "all_rooms": "All Rooms",
+    "add_house": "Add House",
+    "delete_house": "Delete House",
+    "contract_template": "Contract Template",
+    "add_room": "Add Room",
+    "status": {
+      "vacant": "Vacant",
+      "occupied": "Occupied",
+      "expiring_contract": "Expiring Soon"
+    },
+    "filters": {
+      "button": "Filter",
+      "search_placeholder": "Search amenities...",
+      "no_amenities": "No amenities found.",
+      "filter_by": "Filter by:",
+      "clear_filter": "Clear filter"
+    },
+    "messages": {
+      "delete_house_confirm": "Are you sure you want to delete \"{{houseName}}\"?\nNote: You must delete all rooms in this house before deleting the house itself.",
+      "delete_house_success": "House deleted successfully!",
+      "delete_house_error": "Cannot delete this house.",
+      "no_rooms_matched": "No rooms match the filter criteria.",
+      "tooltip_template_active": "Set up contract template for this house",
+      "tooltip_template_disabled": "Please select a specific house to set up the contract template"
+    }
+  },
+  "room_card": {
+    "status": {
+      "vacant": "Vacant",
+      "occupied": "Occupied",
+      "inactive": "Inactive"
+    },
+    "room_title": "Room {{roomNumber}}",
+    "overdue_days": "Overdue by {{days}} days",
+    "days_left": "{{days}} days left",
+    "tooltip_days_left": "{{days}} days until expiry",
+    "tooltip_duplicate": "Duplicate this room",
+    "cost_price": "Cost price:",
+    "area": "Area:",
+    "water_meter": "Water meter:",
+    "yes": "✅ Yes",
+    "no": "❌ No"
+  },
+  "forms": {
+    "house": {
+      "title_add": "Add New House",
+      "name_label": "House Name",
+      "name_placeholder": "e.g. House A",
+      "address_label": "Address",
+      "address_placeholder": "e.g. 123 Main St, District 1",
+      "theme_color_label": "Theme Color",
+      "theme_color_desc": "This color helps identify houses easily on the interface.",
+      "optional": "(optional)",
+      "select_color_aria": "Select color {{color}}",
+      "btn_add": "Add House",
+      "btn_saving": "Saving...",
+      "error_create": "An error occurred while creating the house."
+    },
+    "room": {
+      "title_add": "Add New Room",
+      "title_edit": "Edit Room {{roomNumber}}",
+      "title_duplicate": "Duplicate Room",
+      "select_house": "Belongs to House",
+      "select_house_placeholder": "-- Select House --",
+      "room_number": "Room Number",
+      "room_number_placeholder": "e.g. 101",
+      "cost_price": "Cost Price (/month)",
+      "area": "Area (m²)",
+      "features_furniture": "Features & Furniture",
+      "features_placeholder": "e.g. AC, Balcony, Mezzanine...",
+      "add_furniture_placeholder": "Add furniture...",
+      "show_suggested": "Show available amenities",
+      "hide_suggested": "Hide suggestions",
+      "no_suggested_found": "No features/amenities found.",
+      "add_new_tag": "Add \"{{tag}}\"",
+      "has_water_meter": "Room has private water meter",
+      "btn_add": "Add Room",
+      "btn_save": "Save Changes",
+      "btn_saving": "Saving...",
+      "error_data": "Data error: {{msg}} (at {{loc}})",
+      "error_save": "An error occurred while saving the room."
+    }
+  },
+  "contract_template": {
+    "title": "Contract Template Settings",
+    "subtitle": "Upload your original Word (.docx) file to the system.",
+    "loading": "Loading...",
+    "upload_area": {
+      "click_to_select": "Click here to select a file",
+      "support_format": "Only Word files (.docx) are supported",
+      "remove_and_reupload": "Remove and upload a different file"
+    },
+    "instructions": {
+      "title": "💡 Instructions:",
+      "step_1": "Draft your standard contract using MS Word.",
+      "step_2": "Copy the variables from the right column and paste them into the desired locations in your Word file.",
+      "step_3": "Save that Word file and upload it here."
+    },
+    "variables_section": {
+      "title": "Auto Variables",
+      "description": "Click a variable to copy, then paste it into your Word file.",
+      "copied": "Copied"
+    },
+    "variables": {
+      "date_created": "Sign Date (Today)",
+      "house_name": "House Name",
+      "house_address": "House Address",
+      "room_number": "Room Number",
+      "owner_name": "Owner Name",
+      "tenant_name": "Tenant Name",
+      "tenant_phone": "Tenant Phone",
+      "tenant_id_card": "Tenant ID Card",
+      "num_tenants": "Number of Tenants",
+      "num_vehicles": "Number of Vehicles",
+      "furnitures": "Furniture List",
+      "rent_price": "Rent Price/Month",
+      "deposit": "Deposit",
+      "service_fee": "Service Fee/Month",
+      "payment_deadline": "Payment Deadline",
+      "electric_price": "Electricity Price",
+      "water_price": "Water Price",
+      "initial_electric": "Initial Electricity Reading",
+      "initial_water": "Initial Water Reading",
+      "start_date": "Start Date",
+      "end_date": "End Date"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save Template",
+      "saving": "Saving..."
+    },
+    "messages": {
+      "load_error": "Cannot load house information.",
+      "invalid_format": "Only Word files (.docx) are supported",
+      "upload_required": "Please upload a contract template file (.docx)",
+      "save_success": "Contract template saved successfully!",
+      "save_error": "Error saving contract template."
+    }
+  },
+  "room_drawer": {
+    "title": "Room {{roomNumber}}",
+    "close": "Close / Collapse",
+    "room_info": {
+      "title": "Room Information",
+      "status": "Status",
+      "cost_price": "Cost Price",
+      "area": "Area",
+      "water_meter": "Water Meter",
+      "yes": "✅ Yes",
+      "no": "❌ No",
+      "features": "Features & Furniture",
+      "items_count": "{{count}} items",
+      "view": "▼ View",
+      "hide": "▲ Hide",
+      "none": "None",
+      "btn_edit": "✏️ Edit",
+      "btn_duplicate": "📋 Duplicate",
+      "btn_delete": "🗑️ Delete",
+      "btn_report_incidents": "⚠️ Report Incidents"
+    },
+    "contract_info": {
+      "title": "Current Contract",
+      "tenant": "Tenant",
+      "phone": "Phone",
+      "email": "Email",
+      "email_not_provided": "Not provided",
+      "copy_email": "Copy email",
+      "rent": "Rent",
+      "deposit": "Deposit",
+      "tenants_count": "Tenants",
+      "representative": "(Representative)",
+      "temp_residence": "Temp Residence",
+      "stay_declaration": "Stay Declaration",
+      "unregistered_warning": "⚠️ Tenant has not registered for temporary residence!",
+      "register_now": "Register now",
+      "vehicles_count": "Vehicles",
+      "start_date": "Start Date",
+      "end_date": "End Date",
+      "warning_overdue": "⚠️ Contract is overdue by {{days}} days. Please renew (Edit Contract) if the tenant stays, or End Contract if they have checked out.",
+      "warning_expires_today": "⏰ Contract expires TODAY. Remember to record utility readings and generate the final bill, or renew if the tenant stays.",
+      "warning_expiring_soon": "⏰ Contract expires in {{days}} days. Remember to record utility readings and generate the final bill, or renew if the tenant stays.",
+      "electric_price": "Electricity Price",
+      "electric_split_ratio": "By bill (Split ratio)",
+      "water_price": "Water Price",
+      "water_fixed": "Fixed Water",
+      "initial_electric": "Initial Electricity",
+      "initial_water": "Initial Water",
+      "notes": "Notes / Furniture:",
+      "btn_edit": "✏️ Edit Contract",
+      "btn_end": "🔚 End",
+      "btn_export": "📄 Export Contract",
+      "btn_exporting": "⏳ Exporting...",
+      "btn_generate_bill": "🧾 Record Readings & Bill",
+      "no_contract": "Room has no contract",
+      "btn_add_contract": "+ Add Contract"
+    },
+    "messages": {
+      "delete_confirm": "Delete room {{roomNumber}}? This action cannot be undone.",
+      "delete_error": "Cannot delete this room.",
+      "export_error": "Cannot download the contract file. Please check the template file.",
+      "copy_success": "Email copied!"
+    }
+  },
+  "contract_form": {
+    "title_add": "Add Contract",
+    "subtitle": "Room {{roomNumber}}",
+    "sections": {
+      "tenant": "Tenant Information",
+      "contract": "Contract Information",
+      "utility": "Utility Rates",
+      "initial_readings": "Initial Utility Readings",
+      "notes": "Notes"
+    },
+    "fields": {
+      "full_name": "Full Name",
+      "phone": "Phone Number",
+      "email": "Email",
+      "email_hint": "Used to receive monthly bills",
+      "id_card": "ID Card Number",
+      "id_card_hint": "Must be accurate. This information is securely encrypted and only used to generate the contract file.",
+      "id_card_placeholder": "Enter 12-digit ID...",
+      "start_date": "Start Date",
+      "end_date": "End Date",
+      "rent": "Monthly Rent",
+      "deposit": "Deposit",
+      "service_fee": "Service Fee (/month)",
+      "cleaning_fee": "Cleaning Fee (/month)",
+      "internet_fee": "Internet Fee (/month)",
+      "payment_day": "Payment Deadline (Day)",
+      "payment_day_hint": "Enter the day of the month the tenant must pay (e.g., 5 means the 5th of every month)",
+      "tenants_count": "Number of Tenants",
+      "vehicles_count": "Number of Vehicles",
+      "residence_reg": "Register Temp Residence",
+      "stay_dec": "Register Stay Declaration",
+      "residence_start": "Registration Date",
+      "residence_expiry": "Expiry Date",
+      "electric_method": "Electricity Calculation Method",
+      "electric_fixed": "⚡ Fixed Price",
+      "electric_split": "📊 Split by Total Bill",
+      "electric_split_hint": "ℹ️ Monthly electricity = (Room's electricity / Total house electricity) × Total bill. You will enter the total bill info when generating the monthly bill.",
+      "electric_price": "Electricity Price (/kWh)",
+      "electric_by_company_bill": "By Electricity Company Bill",
+      "water_price": "Water Price (/m³)",
+      "water_fixed": "Fixed Water Amount (/month)",
+      "water_fixed_hint": "For rooms without water meters",
+      "initial_electric": "Initial Electricity Reading",
+      "initial_water": "Initial Water Reading",
+      "reading_hint": "Auto-filled, can be edited",
+      "loading_readings": "(Loading...)",
+      "notes_label": "Contract Notes / Furniture",
+      "notes_hint": "Note the furniture condition or special agreements...",
+      "notes_placeholder": "e.g. Tenant did not take the mattress..."
+    },
+    "co_tenants": {
+      "title_rep": "Register for Representative",
+      "title_others": "Co-tenant Information",
+      "person_idx": "Person {{index}}",
+      "sync_dates": "🔄 Sync dates with representative"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "submit_add": "Create Contract",
+      "submit_edit": "Save Changes",
+      "processing": "Processing..."
+    },
+    "steps": {
+      "check_tenant": "Checking tenant info...",
+      "update_tenant": "Updating returning tenant info...",
+      "create_tenant": "Creating new tenant...",
+      "create_contract": "Creating contract...",
+      "save_utility_rates": "Saving utility rates...",
+      "save_initial_readings": "Saving initial utility readings...",
+      "downloading_word": "Downloading Word contract file..."
+    },
+    "messages": {
+      "create_success_confirm": "Contract created successfully! Do you want to download the Word document to print?",
+      "download_error": "Cannot download the contract file. You can export it later in Room Management.",
+      "general_error": "An error occurred. Please check the provided information."
+    }
+  },
+  "edit_contract_form": {
+    "title": "Edit Contract",
+    "subtitle": "Room {{roomNumber}} — {{tenantName}}",
+    "sections": {
+      "tenant": "Tenant Information",
+      "contract": "Contract Information",
+      "initial_utility": "Initial Utility Readings",
+      "utility_rates": "Utility Rates",
+      "notes": "Notes"
+    },
+    "fields": {
+      "phone_hint": "Enter a new phone number if you wish to change it.",
+      "initial_utility_hint": "These readings mark the start of the contract. Edit them only if they were entered incorrectly.",
+      "electric_method": "Electricity Calculation Method",
+      "electric_split_hint": "ℹ️ This contract's electricity is calculated proportionally based on the total EVN bill.",
+      "update_rate_check": "Update to new rates",
+      "update_rate_hint": "Old rates are kept for history. New rates will apply from the effective date.",
+      "effective_from": "Effective Date",
+      "effective_from_hint": "The date when the new rate starts applying",
+      "electric_price_new": "New Electricity Price (/kWh)",
+      "water_price_new": "New Water Price (/m³)",
+      "fixed_water_new": "New Fixed Water Amount (/month)"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "save": "Save Changes"
+    },
+    "steps": {
+      "update_tenant": "Updating tenant info...",
+      "update_phone": "Overwriting phone number...",
+      "update_contract": "Updating contract...",
+      "save_new_rate": "Saving new rates...",
+      "update_initial_utility": "Updating initial utility readings..."
+    },
+    "messages": {
+      "phone_security_warning": "⚠️ SECURITY WARNING\n\nThis tenant has an active contract.\n\nAre you SURE they LOST their old phone number and you want to replace it with a new one?",
+      "error_general": "An error occurred. Please check the information provided."
+    }
+  },
+  "end_contract_form": {
+    "title": "End Contract",
+    "subtitle": "Room {{roomNumber}} — {{tenantName}}",
+    "tabs": {
+      "normal_end": "Normal End",
+      "checkout_bill": "Checkout Bill"
+    },
+    "normal_mode": {
+      "reason_label": "Reason for ending",
+      "optional": "(optional)",
+      "reason_placeholder": "e.g., Contract expired, moving out...",
+      "note": "👉 Use this option when the tenant has fully paid the final period, settled debts outside the system, and no final utility bill needs to be generated."
+    },
+    "checkout_mode": {
+      "billing_month": "Checkout Billing Month",
+      "billing_month_hint": "The final bill before the tenant leaves.",
+      "final_rent": "Final Rent Amount",
+      "adjust_rent_check": "Adjust rent based on actual days stayed",
+      "actual_days": "Actual days stayed",
+      "calc_note": "Month {{month}} has {{daysInMonth}} days.\nSystem calculation: ({{rent}} / {{daysInMonth}}) × {{actualDays}} = {{total}}",
+      "electric_title": "Electricity (kWh)",
+      "water_title": "Water (m³)",
+      "water_fixed_title": "Water (Fixed)",
+      "reading_old": "Old Reading",
+      "reading_final": "Final Reading",
+      "fees_title": "Service Fees",
+      "discount_title": "Discounts / Deductions",
+      "discount_amount": "Discount / Deposit Refund Amount",
+      "discount_reason": "Reason for deduction",
+      "discount_reason_placeholder": "e.g., Deposit deduction, special agreement..."
+    },
+    "success_state": {
+      "title": "Contract Ended",
+      "desc_normal": "The room status has been updated to Vacant.",
+      "desc_checkout": "The room status has been updated to Vacant and the checkout bill has been generated.",
+      "billing_month": "Checkout Month",
+      "total_payment": "Total Payment"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "confirm_end": "Confirm End",
+      "end_and_checkout": "End & Generate Bill",
+      "processing": "Processing...",
+      "close_done": "Close (Done)"
+    },
+    "alerts": {
+      "confirm_normal": "CONFIRM END CONTRACT:\n\n⚠️ This action will end the contract and set the room to Vacant.\n(Only use when the tenant has fully paid the last term and no checkout bill is needed)\n\nClick \"OK\" to complete.",
+      "confirm_checkout": "CONFIRM END CONTRACT & FINAL BILL FOR {{month}}:\n\n- Rent: {{rent}}\n- New Electric: {{electricNew}}\n{{waterInfo}}- Service Fee: {{service}}\n- Cleaning Fee: {{cleaning}}\n- Internet Fee: {{internet}}\n- Additional Fee: {{additional}}\n{{additionalReason}}- Discount: {{discount}}\n{{discountReason}}- Due Date: {{dueDate}}\n\n⚠️ This action will end the contract, set the room to Vacant, and generate a final bill.\nPlease double-check. Click \"OK\" to complete.",
+      "error_electric": "Error: New electricity reading cannot be smaller than the old reading.",
+      "error_water": "Error: New water reading cannot be smaller than the old reading.",
+      "error_general": "An error occurred during processing."
+    }
+  },
+  "generate_bill_form": {
+    "title": "Generate Bill",
+    "subtitle": "Room {{roomNumber}} — {{tenantName}}",
+    "alerts": {
+      "payment_deadline": "Payment deadline: Day {{day}} of the month (this period's deadline is {{dueDate}}).",
+      "final_bill": "📌 This is the final bill of the contract (ends {{endDate}}). If the tenant checks out, use 'End Contract' to generate the final bill and close the contract. If they stay, please renew the contract first.",
+      "overdue_bill": "⚠️ Contract ended on {{endDate}}. The billing month {{month}} is beyond the contract period. If the tenant stays, please renew the contract; if they have checked out, please end the contract.",
+      "overdue_ack": "Tenant is still staying (overdue / pending renewal), I still want to issue this month's bill.",
+      "btn_extend": "✏️ Renew Contract",
+      "btn_end": "🔚 End Contract"
+    },
+    "fields": {
+      "billing_month": "Billing Month",
+      "first_bill_hint": "This is the first bill, you can customize the month.",
+      "auto_bill_hint": "The month has been calculated automatically.",
+      "rent_amount": "Room Rent Amount",
+      "rent_placeholder": "Enter room rent...",
+      "adjust_rent": "Adjust room rent by days stayed",
+      "odd_days": "Odd days stayed (current month)",
+      "combo_bill": "Combo Bill (Odd days + Full next month)",
+      "electric_title": "Electricity",
+      "electric_split": "Split total bill",
+      "electric_fixed": "Fixed price",
+      "reading_old": "Old reading",
+      "loading": "(loading...)",
+      "reading_new": "New reading",
+      "evn_info": "Total EVN Bill Info",
+      "evn_total_kwh": "Total House kWh",
+      "evn_total_cost": "Total Bill Cost",
+      "room_consumed": "Room consumption:",
+      "temp_calc": "Estimated cost:",
+      "water_meter_title": "Water (m³)",
+      "water_fixed_title": "Water (Fixed)",
+      "water_fixed_amount": "Fixed water amount (/month)",
+      "water_fixed_hint": "For rooms without a water meter, a fixed monthly rate applies.",
+      "fees_title": "Service Fees",
+      "service_fee": "Service Fee",
+      "cleaning_fee": "Cleaning Fee",
+      "internet_fee": "Internet Fee",
+      "additional_fee": "Additional Fee",
+      "additional_reason": "Additional Reason",
+      "discount_title": "Discount",
+      "discount_amount": "Discount Amount",
+      "discount_reason": "Discount Reason"
+    },
+    "calc": {
+      "month_days": "Month {{month}} has {{days}} days.",
+      "odd_rent": "Odd rent ({{days}} days):",
+      "next_month_rent": "Next month's rent:",
+      "total": "Total:"
+    },
+    "preview": {
+      "due_warning": "Tenant needs to pay before day {{day}} of the month.",
+      "month": "Month",
+      "due_date": "Due Date",
+      "rent": "Rent",
+      "combo_days_info": "(Odd {{days}} days + 1 Full Month)",
+      "odd_days_info": "({{days}} days stay)",
+      "electric": "Electricity ({{consumed}} kWh)",
+      "electric_split_ratio": "(Split ratio {{roomConsumed}}/{{totalConsumed}} kWh)",
+      "water_meter": "Water ({{consumed}} m³)",
+      "water_fixed": "Water (fixed)",
+      "total": "Total"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "calculate": "🧾 Calculate",
+      "close_send_later": "Close (Send email later)"
+    },
+    "messages": {
+      "error_overdue_ack": "Contract ended on {{endDate}}, month {{month}} is beyond the period. Please renew the contract, or check \"Tenant is still staying\" below the billing month to continue.",
+      "confirm_generate": "CONFIRM DATA FOR MONTH {{month}}:\n\n- Rent: {{rent}}\n- New Electric: {{electricNew}}\n{{waterInfo}}- Service Fee: {{service}}\n- Cleaning Fee: {{cleaning}}\n- Internet Fee: {{internet}}\n- Additional Fee: {{additional}}\n{{additionalReason}}- Discount: {{discount}}\n{{discountReason}}- Due Date: {{dueDate}} (Day {{paymentDay}} of month)\n\nPlease double-check. Click \"OK\" to calculate."
+    }
+  },
+  "utility_form": {
+    "title": "Record Utilities",
+    "subtitle": "Room {{roomNumber}}",
+    "fields": {
+      "billing_month": "Billing Month",
+      "electric_title": "⚡ Electricity (kWh)",
+      "water_title": "💧 Water (m³)",
+      "old_reading": "Old reading",
+      "new_reading": "New reading",
+      "placeholder_electric_old": "e.g., 100",
+      "placeholder_electric_new": "e.g., 150",
+      "placeholder_water_old": "e.g., 20",
+      "placeholder_water_new": "e.g., 25"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save readings"
+    },
+    "messages": {
+      "error_general": "An error occurred. Please check the data."
+    }
+  },
+  "report_incident_form": {
+    "title": "Report Incident",
+    "subtitle": "Room {{roomNumber}}",
+    "fields": {
+      "description": "Incident / Damage Description",
+      "description_placeholder": "Example: Broken toilet pipe, burnt light bulb...",
+      "handler": "Handler Information (Optional)",
+      "handler_placeholder": "Example: Electrician A, Plumber B..."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "reporting": "Sending...",
+      "submit": "Report"
+    },
+    "messages": {
+      "error_empty": "Please enter an incident description.",
+      "error_general": "Error reporting the incident.",
+      "success": "Incident reported successfully!"
+    }
+  },
+  "tenants_page": {
+    "title": "Tenants",
+    "subtitle": "{{count}} people in the list",
+    "all_houses": "All Houses",
+    "search_placeholder": "Search name, ID card, phone, email...",
+    "tags": {
+      "status_active": "Active",
+      "status_inactive": "Ended Contract",
+      "attr_tam_tru": "Temp Residence",
+      "attr_chua_tam_tru": "No Temp Residence",
+      "attr_luu_tru": "Stay Declaration",
+      "attr_o_ghep": "Shared Room"
+    },
+    "filters": {
+      "all": "All",
+      "button": "Filter",
+      "search": "Search filters...",
+      "filter_by": "Filter by:",
+      "clear": "Clear filter"
+    },
+    "empty_states": {
+      "loading": "Loading...",
+      "no_tenants": "No tenants yet.",
+      "no_match": "No tenants found matching the filter."
+    },
+    "card": {
+      "representative": "Representative:",
+      "unknown_house": "Unknown",
+      "room": "Room:",
+      "view_room_tooltip": "View this room",
+      "phone": "Phone:",
+      "email": "Email:",
+      "end_reason": "End reason:",
+      "warning_no_temp_residence": "⚠️ No Temp Residence"
+    }
+  },
+  "tenant_drawer": {
+    "personal_info": {
+      "title": "Personal Information",
+      "full_name": "Full Name",
+      "phone": "Phone Number",
+      "email": "Email",
+      "no_email": "Not provided",
+      "co_tenants": "Co-tenants",
+      "people_count": "{{count}} people",
+      "btn_view": "▼ View",
+      "btn_hide": "▲ Hide",
+      "btn_edit": "✏️ Edit Info",
+      "btn_delete": "🗑️ Delete"
+    },
+    "contract_info": {
+      "title": "Contract",
+      "room": "Room",
+      "rent": "Rent",
+      "deposit": "Deposit",
+      "start_date": "Start",
+      "end_date": "End",
+      "registered_temp_residence": "Registered Temp Residence",
+      "from": "From",
+      "to": "To",
+      "registered_stay_declaration": "Registered Stay Declaration",
+      "no_contract": "This tenant currently has no active contract.",
+      "history_title": "Rental History",
+      "period": "Period",
+      "until_now": "Now",
+      "end_reason": "End Reason",
+      "unknown_reason": "Unknown reason"
+    },
+    "messages": {
+      "delete_confirm": "Delete tenant \"{{name}}\"?",
+      "delete_error": "Cannot delete this tenant."
+    }
+  },
+  "tenant_form": {
+    "title_edit": "Edit Info: {{name}}",
+    "title_add": "Add New Tenant",
+    "fields": {
+      "full_name": "Full Name",
+      "full_name_placeholder": "John Doe",
+      "phone": "Phone Number",
+      "phone_placeholder": "0123456789",
+      "email": "Email (used to receive bills)",
+      "email_placeholder": "example@gmail.com"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save_changes": "Save Changes",
+      "add_tenant": "Add Tenant"
+    },
+    "messages": {
+      "error_general": "An error occurred."
+    }
+  },
+  "bills_page": {
+    "title": "Bills",
+    "all_houses": "All Houses",
+    "loading": "Loading...",
+    "status": {
+      "pending": "Unsent",
+      "sent": "Sent",
+      "paid": "Paid"
+    },
+    "filters": {
+      "all": "All",
+      "unpaid": "Unpaid",
+      "overdue": "Overdue",
+      "paid": "Paid"
+    },
+    "summary": {
+      "total_uncollected": "Total Uncollected:",
+      "bill_count": "({{count}} bills)"
+    },
+    "bulk_send": {
+      "button": "Send All ({{count}} emails)",
+      "sending": "Sending in bulk..."
+    },
+    "empty_state": {
+      "no_bills": "No bills found.",
+      "no_bills_in_section": "No bills found in this section."
+    },
+    "card": {
+      "final_bill_badge": "Final Bill",
+      "month_label": "Month {{month}}",
+      "room_label": "Room {{roomNumber}}",
+      "contract_label": "Contract #{{contractId}}",
+      "rent": "Rent",
+      "stay_days": "({{days}} days stay)",
+      "electric_consumed": "Electricity ({{consumed}} kWh)",
+      "water_consumed": "Water ({{consumed}} m³)",
+      "water_fixed": "Water (fixed)",
+      "service_fee": "Service Fee",
+      "cleaning_fee": "Cleaning Fee",
+      "internet_fee": "Internet Fee",
+      "additional_fee": "Additional",
+      "discount": "Discount",
+      "btn_hide": "▲ Hide",
+      "btn_view": "▼ View",
+      "total": "Total",
+      "due_date": "Due Date",
+      "btn_edit": "✏️ Edit",
+      "btn_send_email": "📧 Send Email",
+      "btn_sending": "⏳ Sending...",
+      "btn_mark_paid": "✅ Mark as Paid",
+      "btn_resend": "📧 Resend",
+      "bill_completed": "Bill Completed"
+    },
+    "alerts": {
+      "confirm_send_email": "Send bill for month {{month}} to room {{room}} via email?",
+      "send_email_success": "Email sent successfully!",
+      "send_email_fail": "Failed to send email.",
+      "confirm_bulk_send": "Are you sure you want to send emails for {{count}} unsent bills?",
+      "bulk_send_success": "Successfully sent all {{count}} bills!",
+      "bulk_send_partial": "Completed: Sent {{success}} bills. Failed {{fail}} bills.",
+      "confirm_mark_paid": "Confirm payment received for room {{room}} for month {{month}}?",
+      "general_error": "An error occurred."
+    }
+  },
+  "edit_bill_form": {
+    "title": "Edit Bill",
+    "subtitle_room": "Month {{month}} — Room {{roomNumber}}",
+    "subtitle_contract": "Month {{month}} — Contract #{{contractId}}",
+    "sections": {
+      "electricity": "Electricity Calculation Method",
+      "fees": "Service Fees",
+      "discount": "Discount"
+    },
+    "fields": {
+      "billing_month": "Billing Month",
+      "due_date": "Due Date",
+      "rent_amount": "Room Rent (VND)",
+      "rent_placeholder": "Enter room rent...",
+      "adjust_rent_check": "Adjust room rent by days stayed",
+      "odd_days": "Odd days stayed (current month)",
+      "odd_days_placeholder": "e.g., 10",
+      "combo_bill_check": "Combo Bill (Odd days + Full next month)",
+      "electric_fixed": "Fixed Price",
+      "electric_split": "Split Total Bill",
+      "electric_new": "New Room Electricity Reading (kWh)",
+      "electric_new_placeholder": "Enter new reading...",
+      "electric_evn_info": "Total Electricity Bill Info (EVN)",
+      "electric_total_consumed": "Total House kWh",
+      "electric_total_cost": "Total Bill Amount (VND)",
+      "water_new": "New Water Reading (m³)",
+      "water_new_placeholder": "Enter cubic meters...",
+      "water_fixed": "Fixed Water Amount (VND)",
+      "service_fee": "Service Fee (VND)",
+      "cleaning_fee": "Cleaning Fee (VND)",
+      "internet_fee": "Internet Fee (VND)",
+      "additional_fee": "Additional Fee (VND)",
+      "additional_reason": "Additional Fee Reason",
+      "additional_reason_placeholder": "e.g., Fix plumbing",
+      "discount_amount": "Discount Amount (VND)",
+      "discount_reason": "Discount Reason",
+      "discount_reason_placeholder": "e.g., Student discount, Promotion..."
+    },
+    "calc": {
+      "month_days": "Month {{month}} has {{days}} days.",
+      "odd_rent": "Odd days rent ({{days}} days):",
+      "next_month_rent": "Next month's rent:",
+      "total": "Total:"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "calculating": "Recalculating...",
+      "update": "Update Bill"
+    },
+    "messages": {
+      "error_electric_consumed": "Please enter a Total Electricity (kWh) greater than 0.",
+      "error_electric_cost": "Please enter a valid Total Bill Amount.",
+      "error_general": "An error occurred while updating the bill.",
+      "error_fetch_old_readings": "Cannot fetch previous utility readings"
+    }
+  },
+  "incidents_page": {
+    "title": "Incidents & Damages",
+    "subtitle": "List of incidents to process",
+    "all_houses": "All Houses",
+    "all_months": "All Months",
+    "loading": "Loading...",
+    "status": {
+      "received": "Received",
+      "processing": "Processing",
+      "completed": "Completed"
+    },
+    "filters": {
+      "all": "All incidents",
+      "handler_btn": "Filter handler",
+      "handler_search": "Search handler name...",
+      "no_handler": "No handler information saved yet.",
+      "filter_by": "Filter by:",
+      "clear_filter": "Clear filter"
+    },
+    "stats": {
+      "title_month": "Total repair cost for month {{month}}",
+      "title_all": "Total repair cost (All time)",
+      "desc": "Calculated by expense month, applying house & handler filters"
+    },
+    "empty_state": {
+      "no_incidents": "No incidents found matching the filters."
+    },
+    "card": {
+      "overdue": "⚠️ 3 days overdue",
+      "room": "Room {{roomNumber}}",
+      "unknown_room": "N/A",
+      "received_at": "Received: {{date}}",
+      "completed_at": "Completed: {{date}}",
+      "handler": "👷 Handler:",
+      "btn_edit": "✏️ Edit",
+      "btn_process": "➡️ Process",
+      "btn_complete": "✅ Complete",
+      "fixed_msg": "Incident has been resolved",
+      "cost": "Cost: {{cost}}",
+      "expense_month": "(Accounted for month {{month}})",
+      "btn_edit_completed": "✏️ Edit info & expense month"
+    },
+    "complete_modal": {
+      "title": "Confirm Completion",
+      "desc": "Enter repair cost and expense month for room {{roomNumber}}:",
+      "cost_label": "Repair Cost",
+      "cost_placeholder": "e.g., 150,000",
+      "month_label": "Account to expense month",
+      "month_hint": "💡 You can select the next month if completed at the end of the current month.",
+      "btn_cancel": "Cancel",
+      "btn_confirm": "Confirm",
+      "btn_saving": "Saving..."
+    },
+    "edit_modal": {
+      "title": "Edit Incident Info",
+      "desc_label": "Incident Description",
+      "handler_label": "Handler (Name/Phone...)",
+      "handler_placeholder": "e.g., Electrician B - 0901234567",
+      "cost_label": "Repair Cost",
+      "cost_placeholder": "e.g., 150,000",
+      "month_label": "Account to month",
+      "btn_cancel": "Cancel",
+      "btn_save": "Save Changes",
+      "btn_saving": "Saving..."
+    },
+    "alerts": {
+      "update_incident_error": "An error occurred while updating the incident.",
+      "update_status_error": "An error occurred while updating the status."
+    }
+  },
+  "staff_page": {
+    "title": "Staff",
+    "subtitle": "{{count}} staff members in this list",
+    "all_houses": "All Houses",
+    "search_placeholder": "Search name, phone...",
+    "btn_add_staff": "+ Add Staff",
+    "empty_state": {
+      "loading": "Loading...",
+      "no_staff": "Please create staff accounts on the Registration page first.",
+      "go_to_register": "Go to Registration Page"
+    },
+    "card": {
+      "tooltip_fire": "Terminate employment (Delete account)",
+      "managed_houses": "Managed Houses",
+      "btn_grant_more": "+ Grant more access",
+      "management_fee": "Mng. Fee:",
+      "btn_edit_fee": "Edit",
+      "no_fee_setup": "Management fee not set",
+      "btn_add_fee": "Add",
+      "btn_revoke_access": "Revoke access"
+    },
+    "grant_modal": {
+      "title": "Grant Additional Access",
+      "staff_info": "Staff:",
+      "select_houses_label": "Select houses to grant access",
+      "all_houses_granted": "This staff member already has access to all existing houses.",
+      "global_fee_label": "Global Management Fee",
+      "global_fee_placeholder": "e.g., 3,000,000",
+      "global_fee_hint": "This fee (VND/month) will be applied to the {{count}} selected houses. Can be left blank if not needed yet.",
+      "btn_cancel": "Cancel",
+      "btn_confirm": "Confirm",
+      "btn_processing": "Processing..."
+    },
+    "fee_modal": {
+      "title": "Update Management Fee",
+      "house_info": "House:",
+      "fee_label": "Staff Management Fee (/month)",
+      "fee_placeholder": "e.g., 3,000,000",
+      "btn_cancel": "Cancel",
+      "btn_save": "Save Changes",
+      "btn_saving": "Saving..."
+    },
+    "alerts": {
+      "update_fee_success": "Management fee updated successfully!",
+      "update_fee_error": "An error occurred while updating the fee.",
+      "confirm_revoke": "Revoke management access for house \"{{houseName}}\" from this staff member?",
+      "revoke_error": "Cannot revoke access.",
+      "grant_no_house": "Please select at least one house to grant access.",
+      "grant_success": "Additional access granted and fees set successfully!",
+      "grant_error": "An error occurred while granting access.",
+      "confirm_fire": "WARNING: Are you sure you want to terminate and delete the account of \"{{staffName}}\"? This action will permanently remove their access to the system.",
+      "fire_success": "Staff member deleted successfully.",
+      "fire_error": "Cannot delete staff member."
+    }
+  },
+  "financial_page": {
+    "title": "Financial Report",
+    "all_houses": "All Houses",
+    "all_rooms": "All Rooms",
+    "btn_export": "📊 Export Excel",
+    "btn_exporting": "⏳ Exporting...",
+    "empty_state": {
+      "loading": "Compiling data...",
+      "no_data": "No report data available for this month.",
+      "no_data_table": "No data available."
+    },
+    "overview": {
+      "monthly_revenue": "Monthly Revenue",
+      "monthly_cost": "Monthly Cost",
+      "profit": "Profit",
+      "loss": "Loss",
+      "revenue_by_category": "Revenue by Category",
+      "cost_by_category": "Cost by Category",
+      "click_details_rev": "Click to view revenue details",
+      "click_details_cost": "Click to view cost details",
+      "monthly_chart": "Income & Expenses",
+      "empty_revenue": "No income yet",
+      "empty_cost": "No expenses yet",
+      "chart_income": "Income",
+      "chart_expense": "Expense",
+      "profit_analysis_title": "Service Profit/Loss Analysis (Elec, Water, Internet)",
+      "total_collected": "Total Collected:",
+      "total_spent": "Total Spent:",
+      "profit_loss": "Profit / Loss:"
+    },
+    "detail_view": {
+      "back_to_overview": "← Back to Overview",
+      "total_revenue": "↓ Total Revenue",
+      "total_cost": "↑ Total Cost"
+    },
+    "categories": {
+      "rent": "Room Rent",
+      "electric_rev": "Electricity (Collected)",
+      "water_rev": "Water (Collected)",
+      "service_rev": "Service Fee",
+      "additional_rev": "Additional Fee",
+      "cleaning_rev": "Cleaning Fee",
+      "internet_rev": "Internet Fee",
+      "electric_cost": "Electricity (Paid by Owner)",
+      "water_cost": "Water (Paid by Owner)",
+      "maintenance": "Maintenance & Repairs",
+      "base_cost": "Base Cost",
+      "management": "Management Staff",
+      "other_costs": "Other Costs",
+      "internet_cost": "Internet Cost",
+      "discount": "Discount"
+    },
+    "tables": {
+      "room": "Room",
+      "amount": "Amount",
+      "reason": "Reason",
+      "description": "Description",
+      "handler": "Handler",
+      "cost": "Cost",
+      "cost_price": "Cost Price",
+      "category": "Category",
+      "allocated_cost": "Allocated Cost",
+      "discount_reason": "Discount Reason"
+    },
+    "inputs": {
+      "evn_title": "Enter Utility Bills (EVN/Water Co.)",
+      "evn_total_kwh": "Total House kWh",
+      "evn_total_electric_cost": "Total Electricity Bill",
+      "evn_total_water_cube": "Total House m³",
+      "evn_total_water_cost": "Total Water Bill",
+      "btn_save_calc": "Save & Calculate",
+      "btn_processing": "Processing...",
+      
+      "other_cost_title": "Record Shared House Costs",
+      "other_cost_recorded": "Recorded:",
+      "other_cost_recorded_desc": "The items entered below will be added to this amount and divided equally among rooms.",
+      "btn_clear_all": "Clear all",
+      "reason_label": "Expense Reason",
+      "reason_placeholder": "e.g., Trash, Cleaning...",
+      "amount_label": "Amount",
+      "btn_delete_row": "Delete this row",
+      "btn_add_row": "Add row",
+      "recurring_monthly": "Repeat monthly",
+      "btn_save_cost": "Save Cost",
+      "btn_saving": "Saving...",
+      
+      "internet_title": "Record Total House Internet Bill",
+      "internet_amount_label": "Total bill amount"
+    },
+    "alerts": {
+      "confirm_clear_other_cost": "Clear all recorded 'Other Costs' for this month and start over?",
+      "clear_other_cost_error": "An error occurred while clearing other costs.",
+      "empty_other_cost": "Please enter at least 1 expense item.",
+      "save_other_cost_success": "Added {{newAmount}}. Total other costs for the month: {{totalAmount}}",
+      "save_other_cost_error": "An error occurred while saving other costs.",
+      "save_internet_success": "Internet cost saved!",
+      "save_internet_error": "An error occurred while saving internet cost.",
+      "save_evn_success": "Utility bills updated and costs recalculated!",
+      "save_evn_error": "An error occurred while saving costs.",
+      "export_error": "Error exporting Excel"
+    },
+    "charts": {
+      "month_label": "Month {{month}}"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+:root {
+  /* Figma: Stroke/0 -> Scale/0 */
+  --semantic-stroke-0: var(--primitive-scale-0);
+  /* Figma: Stroke/1 -> Scale/1 */
+  --semantic-stroke-1: var(--primitive-scale-1);
+  /* Figma: Stroke/0,125 -> Scale/0,125 */
+  --semantic-stroke-0-125: var(--primitive-scale-0-125);
+  /* Figma: Stroke/0,25 -> Scale/0,25 */
+  --semantic-stroke-0-25: var(--primitive-scale-0-25);
+  /* Figma: Stroke/0,375 -> Scale/0,375 */
+  --semantic-stroke-0-375: var(--primitive-scale-0-375);
+  /* Figma: Stroke/0,5 -> Scale/0,5 */
+  --semantic-stroke-0-5: var(--primitive-scale-0-5);
+  /* Figma: Stroke/0,75 -> Scale/0,75 */
+  --semantic-stroke-0-75: var(--primitive-scale-0-75);
+}

@@ -6,11 +6,12 @@ import TenantDrawer from "../components/tenants/TenantDrawer";
 
 const STATUS_TAGS = [
   { id: "status_active", label: "Đang thuê" },
-  { id: "status_inactive", label: "Không HĐ" },
+  { id: "status_inactive", label: "Đã kết thúc HĐ" },
 ];
 
 const ATTRIBUTE_TAGS = [
   { id: "attr_tam_tru", label: "Tạm trú" },
+  { id: "attr_chua_tam_tru", label: "Chưa tạm trú" },
   { id: "attr_luu_tru", label: "Lưu trú" },
   { id: "attr_o_ghep", label: "Ở ghép" },
 ];
@@ -152,7 +153,11 @@ export default function TenantsPage() {
     if (selectedAttrIds.length > 0) {
       const tenantAttrs = [];
       if (activeContract) {
-        if (activeContract.temp_residence_reg) tenantAttrs.push("attr_tam_tru");
+        if (activeContract.temp_residence_reg) {
+          tenantAttrs.push("attr_tam_tru");
+        } else {
+          tenantAttrs.push("attr_chua_tam_tru"); 
+        }
         if (activeContract.temp_residence_dec) tenantAttrs.push("attr_luu_tru");
         if (activeContract.num_tenants > 1 || (activeContract.co_tenants && activeContract.co_tenants.length > 0)) {
           tenantAttrs.push("attr_o_ghep");
@@ -172,6 +177,7 @@ export default function TenantsPage() {
       }
       if (!activeContract) return false;
       if (tagId === "attr_tam_tru") return activeContract.temp_residence_reg;
+      if (tagId === "attr_chua_tam_tru") return !activeContract.temp_residence_reg;
       if (tagId === "attr_luu_tru") return activeContract.temp_residence_dec;
       if (tagId === "attr_o_ghep") return activeContract.num_tenants > 1 || (activeContract.co_tenants && activeContract.co_tenants.length > 0);
       return false;
@@ -372,7 +378,7 @@ export default function TenantsPage() {
                   </div>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap
                     ${isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {isActive ? "Đang thuê" : "Không HĐ"}
+                    {isActive ? "Đang thuê" : "Đã kết thúc HĐ"}
                   </span>
                 </div>
                 
@@ -413,10 +419,14 @@ export default function TenantsPage() {
 
                   {/* Giữ nguyên phần render tags tạm trú/lưu trú của Card */}
                   {contract && (contract.temp_residence_reg || contract.temp_residence_dec || contract.num_tenants > 1 || (contract.co_tenants && contract.co_tenants.length > 0)) && (
-                    <div className="flex gap-2 pt-1.5 pb-1">
-                      {contract.temp_residence_reg && (
+                    <div className="flex flex-wrap gap-2 pt-1.5 pb-1">
+                      {contract.temp_residence_reg ? (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100">
                           Tạm trú
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                          ⚠️ Chưa tạm trú
                         </span>
                       )}
                       {contract.temp_residence_dec && (
@@ -454,7 +464,7 @@ export default function TenantsPage() {
                   <h3 className="text-lg font-bold text-gray-800">{tenant.full_name}</h3>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap
                     ${isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {isActive ? "Đang thuê" : "Không HĐ"}
+                    {isActive ? "Đang thuê" : "Đã kết thúc HĐ"}
                   </span>
                 </div>
                 {isActive && (

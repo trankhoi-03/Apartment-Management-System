@@ -1,1 +1,6 @@
 @import "tailwindcss";
+@import "./styles/tokens/primitives.css";
+@import "./styles/tokens/semantic-colors.css";
+@import "./styles/tokens/semantic-spacing.css";
+@import "./styles/tokens/semantic-radius.css";
+@import "./styles/tokens/semantic-stroke.css";

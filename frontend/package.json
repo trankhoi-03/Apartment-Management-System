@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.3.2",
     "axios": "^1.18.1",
     "i18next": "^26.4.2",
+    "i18next-http-backend": "^4.0.3",
     "lucide-react": "^1.35.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

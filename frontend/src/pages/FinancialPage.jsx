@@ -40,6 +40,20 @@ const roundKeepingTotal = (list) => {
   return list.map((d, i) => ({ ...d, amount: result[i] }));
 };
 
+
+const sortByRoomName = (list, key = 'room_name') => {
+  return [...list].sort((a, b) => {
+    const nameA = (a[key] || '').toString();
+    const nameB = (b[key] || '').toString();
+
+    // Đưa dòng hao hụt xuống cuối bảng
+    if (nameA.toLowerCase().includes('hao hụt')) return 1;
+    if (nameB.toLowerCase().includes('hao hụt')) return -1;
+
+    return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+  });
+};
+
 const CATEGORY_COLORS = {
   // CHI PHÍ (COST)
   'Tiền điện (Chi)':    '#1e3a8a',  
@@ -228,6 +242,9 @@ export default function FinancialPage() {
   
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const [isRecurringOther, setIsRecurringOther] = useState(false);
+  const [isRecurringInternet, setIsRecurringInternet] = useState(false);
   
   const [viewMode, setViewMode] = useState('overview');
 
@@ -266,9 +283,41 @@ export default function FinancialPage() {
       const res = await api.get(`/reports/financial/${selectedHouse}?month=${selectedMonth}`);
       setReportData(res.data);
       if (res.data.utility_bill_input) setUtilInputs(res.data.utility_bill_input);
-      // Form chỉ dùng để nhập khoản chi MỚI (sẽ được cộng dồn vào khoản đã ghi nhận), nên luôn bắt đầu trống
       setOtherCostInputs([{ amount: 0, reason: "" }]);
-      if (res.data.internet_cost_input) setInternetInputs({ amount: res.data.internet_cost_input.total_internet_cost || 0 });
+      
+      const serverInternetCost = res.data.internet_cost_input?.total_internet_cost || 0;
+      const serverOtherCost = Number(res.data.other_cost_input?.other_house_cost) || 0;
+
+      // Đọc cấu hình lặp lại đã lưu của nhà này
+      const recurringOtherConfig = JSON.parse(localStorage.getItem(`recurring_other_${selectedHouse}`) || 'null');
+      const recurringInternetConfig = JSON.parse(localStorage.getItem(`recurring_internet_${selectedHouse}`) || 'null');
+
+      setIsRecurringOther(!!recurringOtherConfig?.enabled);
+      setIsRecurringInternet(!!recurringInternetConfig?.enabled);
+
+      // 1. Tự động áp dụng Chi phí khác lặp lại nếu tháng hiện tại chưa có dữ liệu
+      if (recurringOtherConfig?.enabled && serverOtherCost === 0 && recurringOtherConfig.amount > 0) {
+        api.post(`/reports/financial/${selectedHouse}/other-cost?month=${selectedMonth}`, {
+          other_house_cost: recurringOtherConfig.amount,
+          other_house_cost_reason: recurringOtherConfig.reason || "Chi phí cố định hàng tháng"
+        }).then(() => {
+          // Tải lại ngầm để cập nhật biểu đồ và bảng
+          api.get(`/reports/financial/${selectedHouse}?month=${selectedMonth}`).then(updated => setReportData(updated.data));
+        }).catch(err => console.error("Lỗi tự động lặp lại chi phí khác:", err));
+      }
+
+      // 2. Tự động áp dụng Chi phí Internet lặp lại nếu tháng hiện tại chưa có dữ liệu
+      if (recurringInternetConfig?.enabled && serverInternetCost === 0 && recurringInternetConfig.amount > 0) {
+        setInternetInputs({ amount: recurringInternetConfig.amount });
+        api.post(`/reports/financial/${selectedHouse}/internet-cost?month=${selectedMonth}`, {
+          total_internet_cost: recurringInternetConfig.amount
+        }).then(() => {
+          api.get(`/reports/financial/${selectedHouse}?month=${selectedMonth}`).then(updated => setReportData(updated.data));
+        }).catch(err => console.error("Lỗi tự động lặp lại internet:", err));
+      } else {
+        setInternetInputs({ amount: serverInternetCost });
+      }
+
     // eslint-disable-next-line no-unused-vars
     } catch (error) { setReportData(null); } finally { setLoading(false); }
   }, [selectedHouse, selectedMonth]);
@@ -281,20 +330,27 @@ export default function FinancialPage() {
   const displayData = useMemo(() => {
     if (!reportData) return null;
 
-    let rentDetails = reportData.rent_tab?.details || [];
-    let electricCostDetails = roundKeepingTotal((reportData.utilities_tab?.details || []).filter(d => d.electric_cost > 0).map(d => ({ room_name: d.room_name, amount: d.electric_cost })));
-    let waterCostDetails    = roundKeepingTotal((reportData.utilities_tab?.details || []).filter(d => d.water_cost > 0).map(d => ({ room_name: d.room_name, amount: d.water_cost })));
+    let rentDetails = sortByRoomName(reportData.rent_tab?.details || [], 'room_name');
+    
+    let electricCostDetails = sortByRoomName(
+      roundKeepingTotal((reportData.utilities_tab?.details || []).filter(d => d.electric_cost > 0).map(d => ({ room_name: d.room_name, amount: d.electric_cost }))),
+      'room_name'
+    );
+    let waterCostDetails = sortByRoomName(
+      roundKeepingTotal((reportData.utilities_tab?.details || []).filter(d => d.water_cost > 0 || (d.room_name || '').toLowerCase().includes('hao hụt')).map(d => ({ room_name: d.room_name, amount: d.water_cost }))),
+      'room_name'
+    );
 
-    // LẤY TRỰC TIẾP CÁC KHOẢN THU TỪ BACKEND
-    let serviceRevDetails    = (reportData.other_revenue_tab?.details || []).filter(d => d.item === 'Phí dịch vụ');
-    let additionalRevDetails = (reportData.other_revenue_tab?.details || []).filter(d => d.item !== 'Phí dịch vụ');
-    let cleaningRevDetails   = reportData.cleaning_rev_tab?.details || [];
-    let internetRevDetails   = reportData.internet_rev_tab?.details || [];
+    let serviceRevDetails    = sortByRoomName((reportData.other_revenue_tab?.details || []).filter(d => d.item === 'Phí dịch vụ'), 'room_name');
+    let additionalRevDetails = sortByRoomName((reportData.other_revenue_tab?.details || []).filter(d => d.item !== 'Phí dịch vụ'), 'room_name');
+    let cleaningRevDetails   = sortByRoomName(reportData.cleaning_rev_tab?.details || [], 'room_name');
+    let internetRevDetails   = sortByRoomName(reportData.internet_rev_tab?.details || [], 'room_name');
 
-    let maintDetails = reportData.maintenance_tab?.details || [];
-    let baseCostDetails = reportData.base_cost_tab?.details || [];
+    let maintDetails = sortByRoomName(reportData.maintenance_tab?.details || [], 'room_name');
+    let baseCostDetails = sortByRoomName(reportData.base_cost_tab?.details || [], 'room_name');
     let mgmtDetails = reportData.management_tab?.details || [];
-    let otherCostDetails = reportData.other_costs_tab?.details || [];
+    let otherCostDetails = sortByRoomName(reportData.other_costs_tab?.details || [], 'item');
+    let internetCostDetails = sortByRoomName(reportData.internet_cost_tab?.details || [], 'item');
 
     // NẾU CHỌN LỌC PHÒNG CỤ THỂ
     if (selectedHouse !== "all" && selectedRoom !== "all") {
@@ -302,7 +358,6 @@ export default function FinancialPage() {
       if (room) {
         const exact1 = `Phòng ${room.room_number}`;
         
-        // Hỗ trợ cả trường hợp có gắn tên khách: "Phòng 3 (Nguyen Van Troi)" hoặc "Phòng 3 - Nhà A (Nguyen Van Troi)"
         const filterByRoomName = (list) => list.filter(d => {
           const name = d.room_name || "";
           return name === exact1 || name.startsWith(`${exact1} `) || name.startsWith(`${exact1} -`) || name.startsWith(`${exact1}(`);
@@ -338,34 +393,43 @@ export default function FinancialPage() {
       return true;
     });
 
-    const electricRevDetails = filteredBills.filter(b => Number(b.electric_amount) > 0).map(bill => {
-      const contract = contracts.find(c => c.id === bill.contract_id);
-      const room = rooms.find(r => r.id === contract?.room_id);
-      const tenant = tenants.find(t => t.id === contract?.tenant_id);
-      const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
-      return { room_name: `Phòng ${room?.room_number}${tenantLabel}`, amount: Number(bill.electric_amount) };
-    });
+    const electricRevDetails = sortByRoomName(
+      filteredBills.filter(b => Number(b.electric_amount) > 0).map(bill => {
+        const contract = contracts.find(c => c.id === bill.contract_id);
+        const room = rooms.find(r => r.id === contract?.room_id);
+        const tenant = tenants.find(t => t.id === contract?.tenant_id);
+        const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
+        return { room_name: `Phòng ${room?.room_number}${tenantLabel}`, amount: Number(bill.electric_amount) };
+      }),
+      'room_name'
+    );
 
-    const waterRevDetails = filteredBills.filter(b => Number(b.water_amount) > 0).map(bill => {
-      const contract = contracts.find(c => c.id === bill.contract_id);
-      const room = rooms.find(r => r.id === contract?.room_id);
-      const tenant = tenants.find(t => t.id === contract?.tenant_id);
-      const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
-      return { room_name: `Phòng ${room?.room_number}${tenantLabel}`, amount: Number(bill.water_amount) };
-    });
+    const waterRevDetails = sortByRoomName(
+      filteredBills.filter(b => Number(b.water_amount) > 0).map(bill => {
+        const contract = contracts.find(c => c.id === bill.contract_id);
+        const room = rooms.find(r => r.id === contract?.room_id);
+        const tenant = tenants.find(t => t.id === contract?.tenant_id);
+        const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
+        return { room_name: `Phòng ${room?.room_number}${tenantLabel}`, amount: Number(bill.water_amount) };
+      }),
+      'room_name'
+    );
 
     // Tính toán Giảm trừ (Discount)
-    const discountDetails = filteredBills.filter(bill => Number(bill.discount_amount) > 0).map(bill => {
-      const contract = contracts.find(c => c.id === bill.contract_id);
-      const room = rooms.find(r => r.id === contract?.room_id);
-      const tenant = tenants.find(t => t.id === contract?.tenant_id);
-      const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
-      return { 
-        room_name: `Phòng ${room?.room_number}${tenantLabel}`, 
-        reason: bill.discount_reason || 'Không có', 
-        amount: Number(bill.discount_amount) 
-      };
-    });
+    const discountDetails = sortByRoomName(
+      filteredBills.filter(bill => Number(bill.discount_amount) > 0).map(bill => {
+        const contract = contracts.find(c => c.id === bill.contract_id);
+        const room = rooms.find(r => r.id === contract?.room_id);
+        const tenant = tenants.find(t => t.id === contract?.tenant_id);
+        const tenantLabel = tenant?.full_name ? ` (${tenant.full_name})` : "";
+        return { 
+          room_name: `Phòng ${room?.room_number}${tenantLabel}`, 
+          reason: bill.discount_reason || 'Không có', 
+          amount: Number(bill.discount_amount) 
+        };
+      }),
+      'room_name'
+    );
 
     let paidRent = 0;
     let unpaidRent = 0;
@@ -442,6 +506,11 @@ export default function FinancialPage() {
       base_cost_tab: { total: baseCostTotal, details: baseCostDetails },
       management_tab: { total: mgmtTotal, details: mgmtDetails },
       other_costs_tab: { total: otherCostTotal, details: otherCostDetails },
+      internet_cost_tab: { 
+        ...reportData.internet_cost_tab, 
+        total: internetCostTotal, 
+        details: internetCostDetails 
+      },
       discount_tab: { total: discountTotal, details: discountDetails },
       charts: { barThuChiData, pieCostData, pieRevData }
     };
@@ -478,6 +547,39 @@ export default function FinancialPage() {
     }
   };
 
+  const handleToggleRecurringOther = (checked) => {
+    setIsRecurringOther(checked);
+    if (!checked) {
+      localStorage.removeItem(`recurring_other_${selectedHouse}`);
+    } else {
+      // Nếu đã có sẵn chi phí đã ghi nhận thì lưu luôn làm template
+      const existingAmount = Number(reportData?.other_cost_input?.other_house_cost) || 0;
+      const existingReason = reportData?.other_cost_input?.other_house_cost_reason || "";
+      if (existingAmount > 0) {
+        localStorage.setItem(`recurring_other_${selectedHouse}`, JSON.stringify({
+          enabled: true,
+          amount: existingAmount,
+          reason: existingReason
+        }));
+      }
+    }
+  };
+
+  const handleToggleRecurringInternet = (checked) => {
+    setIsRecurringInternet(checked);
+    if (!checked) {
+      localStorage.removeItem(`recurring_internet_${selectedHouse}`);
+    } else {
+      const currentAmount = Number(internetInputs.amount) || Number(reportData?.internet_cost_input?.total_internet_cost) || 0;
+      if (currentAmount > 0) {
+        localStorage.setItem(`recurring_internet_${selectedHouse}`, JSON.stringify({
+          enabled: true,
+          amount: currentAmount
+        }));
+      }
+    }
+  };
+
   const handleSaveOtherCost = async () => {
     setSavingOtherCost(true);
     try {
@@ -502,6 +604,14 @@ export default function FinancialPage() {
       const totalAmount = existingAmount + newAmount;
       const combinedReason = mergeReasons(existingReason, newReasons);
 
+      if (isRecurringOther) {
+        localStorage.setItem(`recurring_other_${selectedHouse}`, JSON.stringify({
+          enabled: true,
+          amount: totalAmount,
+          reason: combinedReason || "Chi phí chung"
+        }));
+      }
+
       await api.post(`/reports/financial/${selectedHouse}/other-cost?month=${selectedMonth}`, {
         other_house_cost: totalAmount,
         other_house_cost_reason: combinedReason || "Chi phí chung"
@@ -522,6 +632,13 @@ export default function FinancialPage() {
   const handleSaveInternetCost = async () => {
     setSavingInternet(true);
     try {
+      const val = Number(internetInputs.amount) || 0;
+      if (isRecurringInternet) {
+        localStorage.setItem(`recurring_internet_${selectedHouse}`, JSON.stringify({
+          enabled: true,
+          amount: val
+        }));
+      }
       await api.post(`/reports/financial/${selectedHouse}/internet-cost?month=${selectedMonth}`, {
         total_internet_cost: Number(internetInputs.amount) || 0
       });
@@ -774,14 +891,33 @@ export default function FinancialPage() {
             ))}
           </div>
 
-          <div className="mt-3 flex justify-start">
-            <button 
-              onClick={handleAddOtherCostRow}
-              className="text-sm text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-purple-50"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-              Thêm dòng
-            </button>
+          <div className="mt-3 flex flex-col sm:flex-row gap-3 items-center">
+            <div className="flex-[3] w-full flex justify-start">
+              <button 
+                type="button"
+                onClick={handleAddOtherCostRow}
+                className="text-sm text-purple-600 hover:text-purple-800 font-semibold flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-purple-50"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Thêm dòng
+              </button>
+            </div>
+
+            <div className="flex-[2] w-full flex justify-start">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700 select-none">
+                <input 
+                  type="checkbox" 
+                  checked={isRecurringOther} 
+                  onChange={(e) => handleToggleRecurringOther(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
+                />
+                <span className="font-medium text-xs sm:text-sm">Lặp lại hàng tháng</span>
+              </label>
+            </div>
+
+            <div className="w-[42px] shrink-0 hidden sm:block"></div>
           </div>
           <div className="mt-4 flex justify-end">
             <button onClick={handleSaveOtherCost} disabled={savingOtherCost} className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50">{savingOtherCost ? "Đang lưu..." : "Lưu chi phí"}</button>
@@ -813,6 +949,17 @@ export default function FinancialPage() {
                 className={inputStyle} 
               />
             </div>
+          </div>
+          <div className="mt-3">
+            <label className="inline-flex items-center gap-2 cursor-pointer text-sm text-gray-700 select-none">
+              <input 
+                type="checkbox" 
+                checked={isRecurringInternet} 
+                onChange={(e) => handleToggleRecurringInternet(e.target.checked)}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
+              />
+              <span className="font-medium text-xs sm:text-sm">Lặp lại hàng tháng</span>
+            </label>
           </div>
           <div className="mt-4 flex justify-end">
             <button onClick={handleSaveInternetCost} disabled={savingInternet} className="w-full sm:w-auto px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50">

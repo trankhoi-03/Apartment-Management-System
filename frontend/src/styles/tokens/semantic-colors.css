@@ -1,0 +1,486 @@
+:root {
+  /* Figma: Background/Primary -> Color/Neutral/White */
+  --semantic-background-primary: var(--primitive-color-neutral-white);
+  /* Figma: Background/Secondary -> Color/Neutral/100 */
+  --semantic-background-secondary: var(--primitive-color-neutral-100);
+  /* Figma: Background/Tertiary -> Color/Neutral/200 */
+  --semantic-background-tertiary: var(--primitive-color-neutral-200);
+  /* Figma: Background/Base -> Color/Neutral/900 */
+  --semantic-background-base: var(--primitive-color-neutral-900);
+  /* Figma: Background/White -> Color/Neutral/White */
+  --semantic-background-white: var(--primitive-color-neutral-white);
+  /* Figma: Background/Neutral/Disabled -> Color/Neutral/100 */
+  --semantic-background-neutral-disabled: var(--primitive-color-neutral-100);
+  /* Figma: Background/Neutral/Primary/Hover -> Color/Neutral/100 */
+  --semantic-background-neutral-primary-hover: var(--primitive-color-neutral-100);
+  /* Figma: Background/Neutral/Primary/Active -> Color/Neutral/200 */
+  --semantic-background-neutral-primary-active: var(--primitive-color-neutral-200);
+  /* Figma: Background/Neutral/Primary/$root -> Color/Neutral/50 */
+  --semantic-background-neutral-primary: var(--primitive-color-neutral-50);
+  /* Figma: Background/Neutral/Secondary/Hover -> Color/Neutral/200 */
+  --semantic-background-neutral-secondary-hover: var(--primitive-color-neutral-200);
+  /* Figma: Background/Neutral/Secondary/Active -> Color/Neutral/300 */
+  --semantic-background-neutral-secondary-active: var(--primitive-color-neutral-300);
+  /* Figma: Background/Neutral/Secondary/$root -> Color/Neutral/100 */
+  --semantic-background-neutral-secondary: var(--primitive-color-neutral-100);
+  /* Figma: Background/Neutral/Tertiary/Hover -> Color/Neutral/300 */
+  --semantic-background-neutral-tertiary-hover: var(--primitive-color-neutral-300);
+  /* Figma: Background/Neutral/Tertiary/Active -> Color/Neutral/400 */
+  --semantic-background-neutral-tertiary-active: var(--primitive-color-neutral-400);
+  /* Figma: Background/Neutral/Tertiary/$root -> Color/Neutral/200 */
+  --semantic-background-neutral-tertiary: var(--primitive-color-neutral-200);
+  /* Figma: Background/Neutral/Base/Hover -> Color/Neutral/600 */
+  --semantic-background-neutral-base-hover: var(--primitive-color-neutral-600);
+  /* Figma: Background/Neutral/Base/Active -> Color/Neutral/700 */
+  --semantic-background-neutral-base-active: var(--primitive-color-neutral-700);
+  /* Figma: Background/Neutral/Base/$root -> Color/Neutral/500 */
+  --semantic-background-neutral-base: var(--primitive-color-neutral-500);
+  /* Figma: Background/Brand/Disabled -> Color/Brand/100 */
+  --semantic-background-brand-disabled: var(--primitive-color-brand-100);
+  /* Figma: Background/Brand/Primary/Hover -> Color/Brand/100 */
+  --semantic-background-brand-primary-hover: var(--primitive-color-brand-100);
+  /* Figma: Background/Brand/Primary/Active -> Color/Brand/200 */
+  --semantic-background-brand-primary-active: var(--primitive-color-brand-200);
+  /* Figma: Background/Brand/Primary/$root -> Color/Brand/50 */
+  --semantic-background-brand-primary: var(--primitive-color-brand-50);
+  /* Figma: Background/Brand/Secondary/Hover -> Color/Brand/200 */
+  --semantic-background-brand-secondary-hover: var(--primitive-color-brand-200);
+  /* Figma: Background/Brand/Secondary/Active -> Color/Brand/250 */
+  --semantic-background-brand-secondary-active: var(--primitive-color-brand-250);
+  /* Figma: Background/Brand/Secondary/$root -> Color/Brand/100 */
+  --semantic-background-brand-secondary: var(--primitive-color-brand-100);
+  /* Figma: Background/Brand/Tertiary/Hover -> Color/Brand/250 */
+  --semantic-background-brand-tertiary-hover: var(--primitive-color-brand-250);
+  /* Figma: Background/Brand/Tertiary/Active -> Color/Brand/300 */
+  --semantic-background-brand-tertiary-active: var(--primitive-color-brand-300);
+  /* Figma: Background/Brand/Tertiary/$root -> Color/Brand/200 */
+  --semantic-background-brand-tertiary: var(--primitive-color-brand-200);
+  /* Figma: Background/Brand/Base/Hover -> Color/Brand/500 */
+  --semantic-background-brand-base-hover: var(--primitive-color-brand-500);
+  /* Figma: Background/Brand/Base/Active -> Color/Brand/600 */
+  --semantic-background-brand-base-active: var(--primitive-color-brand-600);
+  /* Figma: Background/Brand/Base/$root -> Color/Brand/400 */
+  --semantic-background-brand-base: var(--primitive-color-brand-400);
+  /* Figma: Background/Danger/Disabled -> Color/Danger/100 */
+  --semantic-background-danger-disabled: var(--primitive-color-danger-100);
+  /* Figma: Background/Danger/Primary/Hover -> Color/Danger/100 */
+  --semantic-background-danger-primary-hover: var(--primitive-color-danger-100);
+  /* Figma: Background/Danger/Primary/Active -> Color/Danger/200 */
+  --semantic-background-danger-primary-active: var(--primitive-color-danger-200);
+  /* Figma: Background/Danger/Primary/$root -> Color/Danger/50 */
+  --semantic-background-danger-primary: var(--primitive-color-danger-50);
+  /* Figma: Background/Danger/Secondary/Hover -> Color/Danger/200 */
+  --semantic-background-danger-secondary-hover: var(--primitive-color-danger-200);
+  /* Figma: Background/Danger/Secondary/Active -> Color/Danger/300 */
+  --semantic-background-danger-secondary-active: var(--primitive-color-danger-300);
+  /* Figma: Background/Danger/Secondary/$root -> Color/Danger/100 */
+  --semantic-background-danger-secondary: var(--primitive-color-danger-100);
+  /* Figma: Background/Danger/Tertiary/Hover -> Color/Danger/300 */
+  --semantic-background-danger-tertiary-hover: var(--primitive-color-danger-300);
+  /* Figma: Background/Danger/Tertiary/Active -> Color/Danger/400 */
+  --semantic-background-danger-tertiary-active: var(--primitive-color-danger-400);
+  /* Figma: Background/Danger/Tertiary/$root -> Color/Danger/200 */
+  --semantic-background-danger-tertiary: var(--primitive-color-danger-200);
+  /* Figma: Background/Danger/Base/Hover -> Color/Danger/500 */
+  --semantic-background-danger-base-hover: var(--primitive-color-danger-500);
+  /* Figma: Background/Danger/Base/Active -> Color/Danger/600 */
+  --semantic-background-danger-base-active: var(--primitive-color-danger-600);
+  /* Figma: Background/Danger/Base/$root -> Color/Danger/400 */
+  --semantic-background-danger-base: var(--primitive-color-danger-400);
+  /* Figma: Background/Warning/Disabled -> Color/Warning/100 */
+  --semantic-background-warning-disabled: var(--primitive-color-warning-100);
+  /* Figma: Background/Warning/Primary/Hover -> Color/Warning/100 */
+  --semantic-background-warning-primary-hover: var(--primitive-color-warning-100);
+  /* Figma: Background/Warning/Primary/Active -> Color/Warning/200 */
+  --semantic-background-warning-primary-active: var(--primitive-color-warning-200);
+  /* Figma: Background/Warning/Primary/$root -> Color/Warning/50 */
+  --semantic-background-warning-primary: var(--primitive-color-warning-50);
+  /* Figma: Background/Warning/Secondary/Hover -> Color/Warning/200 */
+  --semantic-background-warning-secondary-hover: var(--primitive-color-warning-200);
+  /* Figma: Background/Warning/Secondary/Active -> Color/Warning/300 */
+  --semantic-background-warning-secondary-active: var(--primitive-color-warning-300);
+  /* Figma: Background/Warning/Secondary/$root -> Color/Warning/100 */
+  --semantic-background-warning-secondary: var(--primitive-color-warning-100);
+  /* Figma: Background/Warning/Tertiary/Hover -> Color/Warning/300 */
+  --semantic-background-warning-tertiary-hover: var(--primitive-color-warning-300);
+  /* Figma: Background/Warning/Tertiary/Active -> Color/Warning/400 */
+  --semantic-background-warning-tertiary-active: var(--primitive-color-warning-400);
+  /* Figma: Background/Warning/Tertiary/$root -> Color/Warning/200 */
+  --semantic-background-warning-tertiary: var(--primitive-color-warning-200);
+  /* Figma: Background/Warning/Base/Hover -> Color/Warning/500 */
+  --semantic-background-warning-base-hover: var(--primitive-color-warning-500);
+  /* Figma: Background/Warning/Base/Active -> Color/Warning/600 */
+  --semantic-background-warning-base-active: var(--primitive-color-warning-600);
+  /* Figma: Background/Warning/Base/$root -> Color/Warning/400 */
+  --semantic-background-warning-base: var(--primitive-color-warning-400);
+  /* Figma: Background/Success/Disabled -> Color/Success/100 */
+  --semantic-background-success-disabled: var(--primitive-color-success-100);
+  /* Figma: Background/Success/Primary/Hover -> Color/Success/100 */
+  --semantic-background-success-primary-hover: var(--primitive-color-success-100);
+  /* Figma: Background/Success/Primary/Active -> Color/Success/200 */
+  --semantic-background-success-primary-active: var(--primitive-color-success-200);
+  /* Figma: Background/Success/Primary/$root -> Color/Success/50 */
+  --semantic-background-success-primary: var(--primitive-color-success-50);
+  /* Figma: Background/Success/Secondary/Hover -> Color/Success/200 */
+  --semantic-background-success-secondary-hover: var(--primitive-color-success-200);
+  /* Figma: Background/Success/Secondary/Active -> Color/Success/300 */
+  --semantic-background-success-secondary-active: var(--primitive-color-success-300);
+  /* Figma: Background/Success/Secondary/$root -> Color/Success/100 */
+  --semantic-background-success-secondary: var(--primitive-color-success-100);
+  /* Figma: Background/Success/Tertiary/Hover -> Color/Success/300 */
+  --semantic-background-success-tertiary-hover: var(--primitive-color-success-300);
+  /* Figma: Background/Success/Tertiary/Active -> Color/Success/400 */
+  --semantic-background-success-tertiary-active: var(--primitive-color-success-400);
+  /* Figma: Background/Success/Tertiary/$root -> Color/Success/200 */
+  --semantic-background-success-tertiary: var(--primitive-color-success-200);
+  /* Figma: Background/Success/Base/Hover -> Color/Success/500 */
+  --semantic-background-success-base-hover: var(--primitive-color-success-500);
+  /* Figma: Background/Success/Base/Active -> Color/Success/600 */
+  --semantic-background-success-base-active: var(--primitive-color-success-600);
+  /* Figma: Background/Success/Base/$root -> Color/Success/400 */
+  --semantic-background-success-base: var(--primitive-color-success-400);
+  /* Figma: Background/Info/Disabled -> Color/Info/100 */
+  --semantic-background-info-disabled: var(--primitive-color-info-100);
+  /* Figma: Background/Info/Primary/Hover -> Color/Info/100 */
+  --semantic-background-info-primary-hover: var(--primitive-color-info-100);
+  /* Figma: Background/Info/Primary/Active -> Color/Info/200 */
+  --semantic-background-info-primary-active: var(--primitive-color-info-200);
+  /* Figma: Background/Info/Primary/$root -> Color/Info/50 */
+  --semantic-background-info-primary: var(--primitive-color-info-50);
+  /* Figma: Background/Info/Secondary/Hover -> Color/Info/200 */
+  --semantic-background-info-secondary-hover: var(--primitive-color-info-200);
+  /* Figma: Background/Info/Secondary/Active -> Color/Info/300 */
+  --semantic-background-info-secondary-active: var(--primitive-color-info-300);
+  /* Figma: Background/Info/Secondary/$root -> Color/Info/100 */
+  --semantic-background-info-secondary: var(--primitive-color-info-100);
+  /* Figma: Background/Info/Tertiary/Hover -> Color/Info/300 */
+  --semantic-background-info-tertiary-hover: var(--primitive-color-info-300);
+  /* Figma: Background/Info/Tertiary/Active -> Color/Info/400 */
+  --semantic-background-info-tertiary-active: var(--primitive-color-info-400);
+  /* Figma: Background/Info/Tertiary/$root -> Color/Info/200 */
+  --semantic-background-info-tertiary: var(--primitive-color-info-200);
+  /* Figma: Background/Info/Base/Hover -> Color/Info/500 */
+  --semantic-background-info-base-hover: var(--primitive-color-info-500);
+  /* Figma: Background/Info/Base/Active -> Color/Info/600 */
+  --semantic-background-info-base-active: var(--primitive-color-info-600);
+  /* Figma: Background/Info/Base/$root -> Color/Info/400 */
+  --semantic-background-info-base: var(--primitive-color-info-400);
+  /* Figma: Foreground/Primary -> Color/Neutral/900 */
+  --semantic-foreground-primary: var(--primitive-color-neutral-900);
+  /* Figma: Foreground/Secondary -> Color/Neutral/600 */
+  --semantic-foreground-secondary: var(--primitive-color-neutral-600);
+  /* Figma: Foreground/Tertiary -> Color/Neutral/500 */
+  --semantic-foreground-tertiary: var(--primitive-color-neutral-500);
+  /* Figma: Foreground/White -> Color/Neutral/White */
+  --semantic-foreground-white: var(--primitive-color-neutral-white);
+  /* Figma: Foreground/Neutral/Primary -> Color/Neutral/800 */
+  --semantic-foreground-neutral-primary: var(--primitive-color-neutral-800);
+  /* Figma: Foreground/Neutral/Quaternary -> Color/Neutral/300 */
+  --semantic-foreground-neutral-quaternary: var(--primitive-color-neutral-300);
+  /* Figma: Foreground/Neutral/OnBase -> Color/Neutral/White */
+  --semantic-foreground-neutral-onbase: var(--primitive-color-neutral-white);
+  /* Figma: Foreground/Neutral/OnBase-Disabled -> Color/Neutral/400 */
+  --semantic-foreground-neutral-onbase-disabled: var(--primitive-color-neutral-400);
+  /* Figma: Foreground/Neutral/Secondary/Hover -> Color/Neutral/700 */
+  --semantic-foreground-neutral-secondary-hover: var(--primitive-color-neutral-700);
+  /* Figma: Foreground/Neutral/Secondary/Active -> Color/Neutral/800 */
+  --semantic-foreground-neutral-secondary-active: var(--primitive-color-neutral-800);
+  /* Figma: Foreground/Neutral/Secondary/$root -> Color/Neutral/600 */
+  --semantic-foreground-neutral-secondary: var(--primitive-color-neutral-600);
+  /* Figma: Foreground/Neutral/Tertiary/Hover -> Color/Neutral/600 */
+  --semantic-foreground-neutral-tertiary-hover: var(--primitive-color-neutral-600);
+  /* Figma: Foreground/Neutral/Tertiary/Active -> Color/Neutral/700 */
+  --semantic-foreground-neutral-tertiary-active: var(--primitive-color-neutral-700);
+  /* Figma: Foreground/Neutral/Tertiary/$root -> Color/Neutral/500 */
+  --semantic-foreground-neutral-tertiary: var(--primitive-color-neutral-500);
+  /* Figma: Foreground/Brand/Primary -> Color/Brand/600 */
+  --semantic-foreground-brand-primary: var(--primitive-color-brand-600);
+  /* Figma: Foreground/Brand/Quaternary -> Color/Brand/200 */
+  --semantic-foreground-brand-quaternary: var(--primitive-color-brand-200);
+  /* Figma: Foreground/Brand/OnBase -> Color/Neutral/White */
+  --semantic-foreground-brand-onbase: var(--primitive-color-neutral-white);
+  /* Figma: Foreground/Brand/OnBase-Disabled -> Color/Brand/250 */
+  --semantic-foreground-brand-onbase-disabled: var(--primitive-color-brand-250);
+  /* Figma: Foreground/Brand/Secondary/Hover -> Color/Brand/500 */
+  --semantic-foreground-brand-secondary-hover: var(--primitive-color-brand-500);
+  /* Figma: Foreground/Brand/Secondary/Active -> Color/Brand/600 */
+  --semantic-foreground-brand-secondary-active: var(--primitive-color-brand-600);
+  /* Figma: Foreground/Brand/Secondary/$root -> Color/Brand/400 */
+  --semantic-foreground-brand-secondary: var(--primitive-color-brand-400);
+  /* Figma: Foreground/Brand/Tertiary/Hover -> Color/Brand/400 */
+  --semantic-foreground-brand-tertiary-hover: var(--primitive-color-brand-400);
+  /* Figma: Foreground/Brand/Tertiary/Active -> Color/Brand/500 */
+  --semantic-foreground-brand-tertiary-active: var(--primitive-color-brand-500);
+  /* Figma: Foreground/Brand/Tertiary/$root -> Color/Brand/300 */
+  --semantic-foreground-brand-tertiary: var(--primitive-color-brand-300);
+  /* Figma: Foreground/Danger/Primary -> Color/Danger/700 */
+  --semantic-foreground-danger-primary: var(--primitive-color-danger-700);
+  /* Figma: Foreground/Danger/Quaternary -> Color/Danger/100 */
+  --semantic-foreground-danger-quaternary: var(--primitive-color-danger-100);
+  /* Figma: Foreground/Danger/OnBase -> Color/Neutral/White */
+  --semantic-foreground-danger-onbase: var(--primitive-color-neutral-white);
+  /* Figma: Foreground/Danger/OnBase-Disabled -> Color/Danger/200 */
+  --semantic-foreground-danger-onbase-disabled: var(--primitive-color-danger-200);
+  /* Figma: Foreground/Danger/Secondary/Hover -> Color/Danger/500 */
+  --semantic-foreground-danger-secondary-hover: var(--primitive-color-danger-500);
+  /* Figma: Foreground/Danger/Secondary/Active -> Color/Danger/600 */
+  --semantic-foreground-danger-secondary-active: var(--primitive-color-danger-600);
+  /* Figma: Foreground/Danger/Secondary/$root -> Color/Danger/400 */
+  --semantic-foreground-danger-secondary: var(--primitive-color-danger-400);
+  /* Figma: Foreground/Danger/Tertiary/Hover -> Color/Danger/400 */
+  --semantic-foreground-danger-tertiary-hover: var(--primitive-color-danger-400);
+  /* Figma: Foreground/Danger/Tertiary/Active -> Color/Danger/500 */
+  --semantic-foreground-danger-tertiary-active: var(--primitive-color-danger-500);
+  /* Figma: Foreground/Danger/Tertiary/$root -> Color/Danger/300 */
+  --semantic-foreground-danger-tertiary: var(--primitive-color-danger-300);
+  /* Figma: Foreground/Warning/Primary -> Color/Warning/700 */
+  --semantic-foreground-warning-primary: var(--primitive-color-warning-700);
+  /* Figma: Foreground/Warning/Quaternary -> Color/Warning/100 */
+  --semantic-foreground-warning-quaternary: var(--primitive-color-warning-100);
+  /* Figma: Foreground/Warning/OnBase -> Color/Neutral/White */
+  --semantic-foreground-warning-onbase: var(--primitive-color-neutral-white);
+  /* Figma: Foreground/Warning/OnBase-Disabled -> Color/Warning/200 */
+  --semantic-foreground-warning-onbase-disabled: var(--primitive-color-warning-200);
+  /* Figma: Foreground/Warning/Secondary/Hover -> Color/Warning/500 */
+  --semantic-foreground-warning-secondary-hover: var(--primitive-color-warning-500);
+  /* Figma: Foreground/Warning/Secondary/Active -> Color/Warning/600 */
+  --semantic-foreground-warning-secondary-active: var(--primitive-color-warning-600);
+  /* Figma: Foreground/Warning/Secondary/$root -> Color/Warning/400 */
+  --semantic-foreground-warning-secondary: var(--primitive-color-warning-400);
+  /* Figma: Foreground/Warning/Tertiary/Hover -> Color/Warning/400 */
+  --semantic-foreground-warning-tertiary-hover: var(--primitive-color-warning-400);
+  /* Figma: Foreground/Warning/Tertiary/Active -> Color/Warning/500 */
+  --semantic-foreground-warning-tertiary-active: var(--primitive-color-warning-500);
+  /* Figma: Foreground/Warning/Tertiary/$root -> Color/Warning/300 */
+  --semantic-foreground-warning-tertiary: var(--primitive-color-warning-300);
+  /* Figma: Foreground/Success/Primary -> Color/Success/700 */
+  --semantic-foreground-success-primary: var(--primitive-color-success-700);
+  /* Figma: Foreground/Success/Quaternary -> Color/Success/100 */
+  --semantic-foreground-success-quaternary: var(--primitive-color-success-100);
+  /* Figma: Foreground/Success/OnBase -> Color/Neutral/White */
+  --semantic-foreground-success-onbase: var(--primitive-color-neutral-white);
+  /* Figma: Foreground/Success/OnBase-Disabled -> Color/Success/200 */
+  --semantic-foreground-success-onbase-disabled: var(--primitive-color-success-200);
+  /* Figma: Foreground/Success/Secondary/Hover -> Color/Success/500 */
+  --semantic-foreground-success-secondary-hover: var(--primitive-color-success-500);
+  /* Figma: Foreground/Success/Secondary/Active -> Color/Success/600 */
+  --semantic-foreground-success-secondary-active: var(--primitive-color-success-600);
+  /* Figma: Foreground/Success/Secondary/$root -> Color/Success/400 */
+  --semantic-foreground-success-secondary: var(--primitive-color-success-400);
+  /* Figma: Foreground/Success/Tertiary/Hover -> Color/Success/400 */
+  --semantic-foreground-success-tertiary-hover: var(--primitive-color-success-400);
+  /* Figma: Foreground/Success/Tertiary/Active -> Color/Success/500 */
+  --semantic-foreground-success-tertiary-active: var(--primitive-color-success-500);
+  /* Figma: Foreground/Success/Tertiary/$root -> Color/Success/300 */
+  --semantic-foreground-success-tertiary: var(--primitive-color-success-300);
+  /* Figma: Foreground/Info/Primary -> Color/Info/700 */
+  --semantic-foreground-info-primary: var(--primitive-color-info-700);
+  /* Figma: Foreground/Info/Quaternary -> Color/Info/100 */
+  --semantic-foreground-info-quaternary: var(--primitive-color-info-100);
+  /* Figma: Foreground/Info/OnBase -> Color/Neutral/White */
+  --semantic-foreground-info-onbase: var(--primitive-color-neutral-white);
+  /* Figma: Foreground/Info/OnBase-Disabled -> Color/Info/200 */
+  --semantic-foreground-info-onbase-disabled: var(--primitive-color-info-200);
+  /* Figma: Foreground/Info/Secondary/Hover -> Color/Info/500 */
+  --semantic-foreground-info-secondary-hover: var(--primitive-color-info-500);
+  /* Figma: Foreground/Info/Secondary/Active -> Color/Info/600 */
+  --semantic-foreground-info-secondary-active: var(--primitive-color-info-600);
+  /* Figma: Foreground/Info/Secondary/$root -> Color/Info/400 */
+  --semantic-foreground-info-secondary: var(--primitive-color-info-400);
+  /* Figma: Foreground/Info/Tertiary/Hover -> Color/Info/400 */
+  --semantic-foreground-info-tertiary-hover: var(--primitive-color-info-400);
+  /* Figma: Foreground/Info/Tertiary/Active -> Color/Info/500 */
+  --semantic-foreground-info-tertiary-active: var(--primitive-color-info-500);
+  /* Figma: Foreground/Info/Tertiary/$root -> Color/Info/300 */
+  --semantic-foreground-info-tertiary: var(--primitive-color-info-300);
+  /* Figma: Stroke/Primary -> Color/Neutral/400 */
+  --semantic-stroke-primary: var(--primitive-color-neutral-400);
+  /* Figma: Stroke/Secondary -> Color/Neutral/300 */
+  --semantic-stroke-secondary: var(--primitive-color-neutral-300);
+  /* Figma: Stroke/Tertiary -> Color/Neutral/200 */
+  --semantic-stroke-tertiary: var(--primitive-color-neutral-200);
+  /* Figma: Stroke/Base -> Color/Neutral/700 */
+  --semantic-stroke-base: var(--primitive-color-neutral-700);
+  /* Figma: Stroke/White -> Color/Neutral/White */
+  --semantic-stroke-white: var(--primitive-color-neutral-white);
+  /* Figma: Stroke/Neutral/Primary -> Color/Neutral/400 */
+  --semantic-stroke-neutral-primary: var(--primitive-color-neutral-400);
+  /* Figma: Stroke/Neutral/Quaternary -> Color/Neutral/100 */
+  --semantic-stroke-neutral-quaternary: var(--primitive-color-neutral-100);
+  /* Figma: Stroke/Neutral/Base/Hover -> Color/Neutral/700 */
+  --semantic-stroke-neutral-base-hover: var(--primitive-color-neutral-700);
+  /* Figma: Stroke/Neutral/Base/Active -> Color/Neutral/800 */
+  --semantic-stroke-neutral-base-active: var(--primitive-color-neutral-800);
+  /* Figma: Stroke/Neutral/Base/$root -> Color/Neutral/600 */
+  --semantic-stroke-neutral-base: var(--primitive-color-neutral-600);
+  /* Figma: Stroke/Neutral/Secondary/Hover -> Color/Neutral/400 */
+  --semantic-stroke-neutral-secondary-hover: var(--primitive-color-neutral-400);
+  /* Figma: Stroke/Neutral/Secondary/Active -> Color/Neutral/500 */
+  --semantic-stroke-neutral-secondary-active: var(--primitive-color-neutral-500);
+  /* Figma: Stroke/Neutral/Secondary/$root -> Color/Neutral/300 */
+  --semantic-stroke-neutral-secondary: var(--primitive-color-neutral-300);
+  /* Figma: Stroke/Neutral/Tertiary/Hover -> Color/Neutral/300 */
+  --semantic-stroke-neutral-tertiary-hover: var(--primitive-color-neutral-300);
+  /* Figma: Stroke/Neutral/Tertiary/Active -> Color/Neutral/400 */
+  --semantic-stroke-neutral-tertiary-active: var(--primitive-color-neutral-400);
+  /* Figma: Stroke/Neutral/Tertiary/$root -> Color/Neutral/200 */
+  --semantic-stroke-neutral-tertiary: var(--primitive-color-neutral-200);
+  /* Figma: Stroke/Brand/Primary -> Color/Brand/300 */
+  --semantic-stroke-brand-primary: var(--primitive-color-brand-300);
+  /* Figma: Stroke/Brand/Quaternary -> Color/Brand/100 */
+  --semantic-stroke-brand-quaternary: var(--primitive-color-brand-100);
+  /* Figma: Stroke/Brand/Base/Hover -> Color/Brand/600 */
+  --semantic-stroke-brand-base-hover: var(--primitive-color-brand-600);
+  /* Figma: Stroke/Brand/Base/Active -> Color/Brand/700 */
+  --semantic-stroke-brand-base-active: var(--primitive-color-brand-700);
+  /* Figma: Stroke/Brand/Base/$root -> Color/Brand/500 */
+  --semantic-stroke-brand-base: var(--primitive-color-brand-500);
+  /* Figma: Stroke/Brand/Secondary/Hover -> Color/Brand/300 */
+  --semantic-stroke-brand-secondary-hover: var(--primitive-color-brand-300);
+  /* Figma: Stroke/Brand/Secondary/Active -> Color/Brand/400 */
+  --semantic-stroke-brand-secondary-active: var(--primitive-color-brand-400);
+  /* Figma: Stroke/Brand/Secondary/$root -> Color/Brand/250 */
+  --semantic-stroke-brand-secondary: var(--primitive-color-brand-250);
+  /* Figma: Stroke/Brand/Tertiary/Hover -> Color/Brand/250 */
+  --semantic-stroke-brand-tertiary-hover: var(--primitive-color-brand-250);
+  /* Figma: Stroke/Brand/Tertiary/Active -> Color/Brand/300 */
+  --semantic-stroke-brand-tertiary-active: var(--primitive-color-brand-300);
+  /* Figma: Stroke/Brand/Tertiary/$root -> Color/Brand/200 */
+  --semantic-stroke-brand-tertiary: var(--primitive-color-brand-200);
+  /* Figma: Stroke/Danger/Primary -> Color/Danger/300 */
+  --semantic-stroke-danger-primary: var(--primitive-color-danger-300);
+  /* Figma: Stroke/Danger/Quaternary -> Color/Danger/50 */
+  --semantic-stroke-danger-quaternary: var(--primitive-color-danger-50);
+  /* Figma: Stroke/Danger/Base/Hover -> Color/Danger/600 */
+  --semantic-stroke-danger-base-hover: var(--primitive-color-danger-600);
+  /* Figma: Stroke/Danger/Base/Active -> Color/Danger/700 */
+  --semantic-stroke-danger-base-active: var(--primitive-color-danger-700);
+  /* Figma: Stroke/Danger/Base/$root -> Color/Danger/500 */
+  --semantic-stroke-danger-base: var(--primitive-color-danger-500);
+  /* Figma: Stroke/Danger/Secondary/Hover -> Color/Danger/300 */
+  --semantic-stroke-danger-secondary-hover: var(--primitive-color-danger-300);
+  /* Figma: Stroke/Danger/Secondary/Active -> Color/Danger/400 */
+  --semantic-stroke-danger-secondary-active: var(--primitive-color-danger-400);
+  /* Figma: Stroke/Danger/Secondary/$root -> Color/Danger/200 */
+  --semantic-stroke-danger-secondary: var(--primitive-color-danger-200);
+  /* Figma: Stroke/Danger/Tertiary/Hover -> Color/Danger/200 */
+  --semantic-stroke-danger-tertiary-hover: var(--primitive-color-danger-200);
+  /* Figma: Stroke/Danger/Tertiary/Active -> Color/Danger/300 */
+  --semantic-stroke-danger-tertiary-active: var(--primitive-color-danger-300);
+  /* Figma: Stroke/Danger/Tertiary/$root -> Color/Danger/100 */
+  --semantic-stroke-danger-tertiary: var(--primitive-color-danger-100);
+  /* Figma: Stroke/Warning/Primary -> Color/Warning/300 */
+  --semantic-stroke-warning-primary: var(--primitive-color-warning-300);
+  /* Figma: Stroke/Warning/Quaternary -> Color/Warning/50 */
+  --semantic-stroke-warning-quaternary: var(--primitive-color-warning-50);
+  /* Figma: Stroke/Warning/Base/Hover -> Color/Warning/600 */
+  --semantic-stroke-warning-base-hover: var(--primitive-color-warning-600);
+  /* Figma: Stroke/Warning/Base/Active -> Color/Warning/700 */
+  --semantic-stroke-warning-base-active: var(--primitive-color-warning-700);
+  /* Figma: Stroke/Warning/Base/$root -> Color/Warning/500 */
+  --semantic-stroke-warning-base: var(--primitive-color-warning-500);
+  /* Figma: Stroke/Warning/Secondary/Hover -> Color/Warning/300 */
+  --semantic-stroke-warning-secondary-hover: var(--primitive-color-warning-300);
+  /* Figma: Stroke/Warning/Secondary/Active -> Color/Warning/400 */
+  --semantic-stroke-warning-secondary-active: var(--primitive-color-warning-400);
+  /* Figma: Stroke/Warning/Secondary/$root -> Color/Warning/200 */
+  --semantic-stroke-warning-secondary: var(--primitive-color-warning-200);
+  /* Figma: Stroke/Warning/Tertiary/Hover -> Color/Warning/200 */
+  --semantic-stroke-warning-tertiary-hover: var(--primitive-color-warning-200);
+  /* Figma: Stroke/Warning/Tertiary/Active -> Color/Warning/300 */
+  --semantic-stroke-warning-tertiary-active: var(--primitive-color-warning-300);
+  /* Figma: Stroke/Warning/Tertiary/$root -> Color/Warning/100 */
+  --semantic-stroke-warning-tertiary: var(--primitive-color-warning-100);
+  /* Figma: Stroke/Success/Primary -> Color/Success/300 */
+  --semantic-stroke-success-primary: var(--primitive-color-success-300);
+  /* Figma: Stroke/Success/Quaternary -> Color/Success/50 */
+  --semantic-stroke-success-quaternary: var(--primitive-color-success-50);
+  /* Figma: Stroke/Success/Base/Hover -> Color/Success/600 */
+  --semantic-stroke-success-base-hover: var(--primitive-color-success-600);
+  /* Figma: Stroke/Success/Base/Active -> Color/Success/700 */
+  --semantic-stroke-success-base-active: var(--primitive-color-success-700);
+  /* Figma: Stroke/Success/Base/$root -> Color/Success/500 */
+  --semantic-stroke-success-base: var(--primitive-color-success-500);
+  /* Figma: Stroke/Success/Secondary/Hover -> Color/Success/300 */
+  --semantic-stroke-success-secondary-hover: var(--primitive-color-success-300);
+  /* Figma: Stroke/Success/Secondary/Active -> Color/Success/400 */
+  --semantic-stroke-success-secondary-active: var(--primitive-color-success-400);
+  /* Figma: Stroke/Success/Secondary/$root -> Color/Success/200 */
+  --semantic-stroke-success-secondary: var(--primitive-color-success-200);
+  /* Figma: Stroke/Success/Tertiary/Hover -> Color/Success/200 */
+  --semantic-stroke-success-tertiary-hover: var(--primitive-color-success-200);
+  /* Figma: Stroke/Success/Tertiary/Active -> Color/Success/300 */
+  --semantic-stroke-success-tertiary-active: var(--primitive-color-success-300);
+  /* Figma: Stroke/Success/Tertiary/$root -> Color/Success/100 */
+  --semantic-stroke-success-tertiary: var(--primitive-color-success-100);
+  /* Figma: Stroke/Info/Primary -> Color/Info/300 */
+  --semantic-stroke-info-primary: var(--primitive-color-info-300);
+  /* Figma: Stroke/Info/Quaternary -> Color/Info/50 */
+  --semantic-stroke-info-quaternary: var(--primitive-color-info-50);
+  /* Figma: Stroke/Info/Base/Hover -> Color/Info/600 */
+  --semantic-stroke-info-base-hover: var(--primitive-color-info-600);
+  /* Figma: Stroke/Info/Base/Active -> Color/Info/700 */
+  --semantic-stroke-info-base-active: var(--primitive-color-info-700);
+  /* Figma: Stroke/Info/Base/$root -> Color/Info/500 */
+  --semantic-stroke-info-base: var(--primitive-color-info-500);
+  /* Figma: Stroke/Info/Secondary/Hover -> Color/Info/300 */
+  --semantic-stroke-info-secondary-hover: var(--primitive-color-info-300);
+  /* Figma: Stroke/Info/Secondary/Active -> Color/Info/400 */
+  --semantic-stroke-info-secondary-active: var(--primitive-color-info-400);
+  /* Figma: Stroke/Info/Secondary/$root -> Color/Info/200 */
+  --semantic-stroke-info-secondary: var(--primitive-color-info-200);
+  /* Figma: Stroke/Info/Tertiary/Hover -> Color/Info/200 */
+  --semantic-stroke-info-tertiary-hover: var(--primitive-color-info-200);
+  /* Figma: Stroke/Info/Tertiary/Active -> Color/Info/300 */
+  --semantic-stroke-info-tertiary-active: var(--primitive-color-info-300);
+  /* Figma: Stroke/Info/Tertiary/$root -> Color/Info/100 */
+  --semantic-stroke-info-tertiary: var(--primitive-color-info-100);
+  /* Figma: Alpha/White/5 */
+  --semantic-alpha-white-5: color-mix(in srgb, #FFFFFF 5.0%, transparent);
+  /* Figma: Alpha/White/10 */
+  --semantic-alpha-white-10: color-mix(in srgb, #FFFFFF 10.0%, transparent);
+  /* Figma: Alpha/White/20 */
+  --semantic-alpha-white-20: color-mix(in srgb, #FFFFFF 20.0%, transparent);
+  /* Figma: Alpha/White/30 */
+  --semantic-alpha-white-30: color-mix(in srgb, #FFFFFF 30.0%, transparent);
+  /* Figma: Alpha/White/40 */
+  --semantic-alpha-white-40: color-mix(in srgb, #FFFFFF 40.0%, transparent);
+  /* Figma: Alpha/White/50 */
+  --semantic-alpha-white-50: color-mix(in srgb, #FFFFFF 50.0%, transparent);
+  /* Figma: Alpha/White/60 */
+  --semantic-alpha-white-60: color-mix(in srgb, #FFFFFF 60.0%, transparent);
+  /* Figma: Alpha/White/70 */
+  --semantic-alpha-white-70: color-mix(in srgb, #FFFFFF 70.0%, transparent);
+  /* Figma: Alpha/White/75 */
+  --semantic-alpha-white-75: color-mix(in srgb, #FFFFFF 75.0%, transparent);
+  /* Figma: Alpha/White/80 */
+  --semantic-alpha-white-80: color-mix(in srgb, #FFFFFF 80.0%, transparent);
+  /* Figma: Alpha/White/90 */
+  --semantic-alpha-white-90: color-mix(in srgb, #FFFFFF 90.0%, transparent);
+  /* Figma: Alpha/White/100 */
+  --semantic-alpha-white-100: #FFFFFF;
+  /* Figma: Alpha/Black/5 */
+  --semantic-alpha-black-5: color-mix(in srgb, #101114 5.0%, transparent);
+  /* Figma: Alpha/Black/10 */
+  --semantic-alpha-black-10: color-mix(in srgb, #101114 10.0%, transparent);
+  /* Figma: Alpha/Black/20 */
+  --semantic-alpha-black-20: color-mix(in srgb, #101114 20.0%, transparent);
+  /* Figma: Alpha/Black/30 */
+  --semantic-alpha-black-30: color-mix(in srgb, #101114 30.0%, transparent);
+  /* Figma: Alpha/Black/40 */
+  --semantic-alpha-black-40: color-mix(in srgb, #101114 40.0%, transparent);
+  /* Figma: Alpha/Black/50 */
+  --semantic-alpha-black-50: color-mix(in srgb, #101114 50.0%, transparent);
+  /* Figma: Alpha/Black/60 */
+  --semantic-alpha-black-60: color-mix(in srgb, #101114 60.0%, transparent);
+  /* Figma: Alpha/Black/70 */
+  --semantic-alpha-black-70: color-mix(in srgb, #101114 70.0%, transparent);
+  /* Figma: Alpha/Black/75 */
+  --semantic-alpha-black-75: color-mix(in srgb, #101114 75.0%, transparent);
+  /* Figma: Alpha/Black/80 */
+  --semantic-alpha-black-80: color-mix(in srgb, #101114 80.0%, transparent);
+  /* Figma: Alpha/Black/90 */
+  --semantic-alpha-black-90: color-mix(in srgb, #101114 90.0%, transparent);
+  /* Figma: Alpha/Black/100 */
+  --semantic-alpha-black-100: #101114;
+}

@@ -1,0 +1,28 @@
+:root {
+  /* Figma: Radius/0 -> Scale/0 */
+  --semantic-radius-0: var(--primitive-scale-0);
+  /* Figma: Radius/1 -> Scale/1 */
+  --semantic-radius-1: var(--primitive-scale-1);
+  /* Figma: Radius/2 -> Scale/2 */
+  --semantic-radius-2: var(--primitive-scale-2);
+  /* Figma: Radius/3 -> Scale/3 */
+  --semantic-radius-3: var(--primitive-scale-3);
+  /* Figma: Radius/4 -> Scale/4 */
+  --semantic-radius-4: var(--primitive-scale-4);
+  /* Figma: Radius/5 -> Scale/5 */
+  --semantic-radius-5: var(--primitive-scale-5);
+  /* Figma: Radius/6 -> Scale/6 */
+  --semantic-radius-6: var(--primitive-scale-6);
+  /* Figma: Radius/8 -> Scale/8 */
+  --semantic-radius-8: var(--primitive-scale-8);
+  /* Figma: Radius/0,5 -> Scale/0,5 */
+  --semantic-radius-0-5: var(--primitive-scale-0-5);
+  /* Figma: Radius/1,5 -> Scale/1,5 */
+  --semantic-radius-1-5: var(--primitive-scale-1-5);
+  /* Figma: Radius/2,5 -> Scale/2,5 */
+  --semantic-radius-2-5: var(--primitive-scale-2-5);
+  /* Figma: Radius/3,5 -> Scale/3,5 */
+  --semantic-radius-3-5: var(--primitive-scale-3-5);
+  /* Figma: Radius/full */
+  --semantic-radius-full: 99999px;
+}

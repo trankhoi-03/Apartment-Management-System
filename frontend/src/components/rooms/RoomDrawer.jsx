@@ -419,6 +419,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                       <span className="font-medium text-gray-800 text-right max-w-[60%]">{contract.num_tenants ?? "—"}</span>
                       {((contract.num_tenants > 1 && contract.co_tenants?.length > 0) || 
                         contract.temp_residence_reg || 
+                        !contract.temp_residence_reg || 
                         (contract.temp_residence_dec && isStayDeclarationValid(contract.start_date))) && (
                         <button 
                           onClick={() => setShowCoTenants(!showCoTenants)} 
@@ -433,7 +434,6 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                   {showCoTenants && (
                     <div className="mt-2 p-3 bg-white rounded-xl border border-blue-100 shadow-sm animate-fade-in flex flex-col gap-3">
                       <div className="text-xs space-y-3">
-                        
                         {/* 1. NGƯỜI ĐẠI DIỆN */}
                         <div className="flex gap-2">
                           <span className="font-semibold text-blue-600 mt-0.5">1.</span> 
@@ -491,10 +491,24 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                             </div>
                           </div>
                         ))}
-
                       </div>
                     </div>
                   )}
+                  {!contract.temp_residence_reg && (
+                  <div className="mt-2.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs text-rose-700 animate-fade-in">
+                    <span className="font-medium flex items-center gap-1.5">
+                      ⚠️ Khách chưa đăng ký tạm trú!
+                    </span>
+                    {isOwner && (
+                      <button
+                        onClick={() => setShowEditContract(true)}
+                        className="text-rose-700 underline font-semibold hover:text-rose-900 shrink-0 ml-2"
+                      >
+                        Đăng ký ngay
+                      </button>
+                    )}
+                  </div>
+                )}
                 </div>
                 <Row label="Số xe"       value={contract.num_vehicles ?? "—"} />
                 <Row label="Bắt đầu"     value={formatDateVN(contract.start_date)} />

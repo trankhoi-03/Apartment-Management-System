@@ -1,0 +1,1018 @@
+{
+  "navbar": {
+    "dashboard": "Dashboard",
+    "rooms_and_contracts": "Phòng & HĐ",
+    "tenants": "Người thuê",
+    "bills": "Hoá đơn",
+    "incidents": "Sự cố",
+    "staff": "Nhân viên",
+    "finance": "Tài chính",
+    "hello": "Xin chào",
+    "logout": "Đăng xuất"
+  },
+  "dashboard": {
+    "title": "Tổng quan",
+    "loading": "Đang tải...",
+    "error_load_data": "Không thể tải dữ liệu.",
+    "export_data": "Xuất dữ liệu",
+    "exporting": "Đang xuất...",
+    "import_data": "Nhập dữ liệu",
+    "importing": "Đang xử lý...",
+    "download_template": "Tải file mẫu",
+    "all_houses": "Tất cả nhà trọ",
+    
+    "room_stats": {
+      "total": "Tổng số phòng",
+      "occupied": "Đang có người thuê",
+      "vacant": "Phòng trống"
+    },
+    
+    "finance": {
+      "title": "Tài chính tháng {{month}}",
+      "manage_bills": "Quản lý hoá đơn",
+      "collected": "Đã thu",
+      "uncollected": "Chưa thu (Tổng nợ)",
+      "unpaid_bills": "{{count}} hoá đơn chưa thanh toán",
+      "prev_month_revenue": "Tổng doanh thu tháng trước ({{month}}):",
+      "increase": "Tăng {{percent}}%",
+      "decrease": "Giảm {{percent}}%"
+    },
+    
+    "alerts": {
+      "contracts": {
+        "title": "Cảnh báo: Có {{count}} hợp đồng sắp hết hạn",
+        "tenant": "Khách thuê:",
+        "manage_rooms": "Quản lý phòng"
+      },
+      "residence": {
+        "title": "Cảnh báo: Có {{count}} trường hợp cần làm thủ tục tạm trú",
+        "representative": "Đại diện:",
+        "unregistered": "Chưa làm tạm trú",
+        "manage_tenants": "Quản lý người thuê"
+      },
+      "time": {
+        "overdue": "Đã quá hạn {{days}} ngày",
+        "expires_today": "Hết hạn HÔM NAY",
+        "days_left": "Còn {{days}} ngày"
+      }
+    },
+    
+    "incidents": {
+      "title": "Cảnh báo xử lý sự cố",
+      "unresolved_count": "{{count}} sự cố chưa xử lý",
+      "manage_incidents": "Quản lý sự cố",
+      "no_incidents": "Hiện không có sự cố nào cần xử lý.",
+      "status_received": "Đã tiếp nhận (Chưa chuyển xử lý)",
+      "status_processing": "Đang xử lý",
+      "handler": "Bên xử lý:",
+      "move_to_processing": "Chuyển sang \"Đang xử lý\"",
+      "details": "Chi tiết",
+      "update_in_page": "Xem & Cập nhật tại trang Sự cố",
+      "error_update": "Không thể cập nhật trạng thái sự cố."
+    },
+    
+    "messages": {
+      "export_error": "Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại.",
+      "template_error": "Không thể tải file mẫu. Vui lòng thử lại.",
+      "import_success": "Nhập dữ liệu từ Excel thành công!",
+      "import_error": "Lỗi khi nhập file Excel. Hãy kiểm tra lại định dạng."
+    }
+  },
+  "rooms_page": {
+    "title": "Phòng & Hợp đồng",
+    "all_houses": "Tất cả nhà trọ",
+    "all_rooms": "Tất cả phòng",
+    "add_house": "Thêm nhà",
+    "delete_house": "Xóa nhà",
+    "contract_template": "Mẫu Hợp đồng",
+    "add_room": "Thêm phòng",
+    "status": {
+      "vacant": "Trống",
+      "occupied": "Đang thuê",
+      "expiring_contract": "Sắp hết hạn HĐ"
+    },
+    "filters": {
+      "button": "Bộ lọc",
+      "search_placeholder": "Tìm đặc điểm, nội thất...",
+      "no_amenities": "Chưa có đặc điểm/nội thất nào.",
+      "filter_by": "Lọc theo:",
+      "clear_filter": "Xóa lọc"
+    },
+    "messages": {
+      "delete_house_confirm": "Bạn có chắc chắn muốn xóa \"{{houseName}}\"?\nLưu ý: Bạn phải xóa hết tất cả các phòng trong nhà này trước khi xóa nhà.",
+      "delete_house_success": "Đã xóa nhà trọ thành công!",
+      "delete_house_error": "Không thể xóa nhà trọ này.",
+      "no_rooms_matched": "Không có phòng nào phù hợp với bộ lọc.",
+      "tooltip_template_active": "Cài đặt mẫu hợp đồng cho nhà này",
+      "tooltip_template_disabled": "Vui lòng chọn một nhà cụ thể để cài đặt mẫu HĐ"
+    }
+  },
+  "room_card": {
+    "status": {
+      "vacant": "Trống",
+      "occupied": "Đang thuê",
+      "inactive": "Ngừng thuê"
+    },
+    "room_title": "Phòng {{roomNumber}}",
+    "overdue_days": "Đã quá hạn {{days}} ngày",
+    "days_left": "HĐ còn {{days}} ngày",
+    "tooltip_days_left": "Còn {{days}} ngày hết hạn",
+    "tooltip_duplicate": "Sao chép phòng này",
+    "cost_price": "Giá cost:",
+    "area": "Diện tích:",
+    "water_meter": "Đồng hồ nước:",
+    "yes": "✅ Có",
+    "no": "❌ Không"
+  },
+  "forms": {
+    "house": {
+      "title_add": "Thêm nhà trọ mới",
+      "name_label": "Tên nhà trọ",
+      "name_placeholder": "vd: Nhà trọ A",
+      "address_label": "Địa chỉ",
+      "address_placeholder": "vd: 122 đường B, Quận C",
+      "theme_color_label": "Màu chủ đề",
+      "theme_color_desc": "Màu này sẽ giúp phân biệt các nhà trọ trên giao diện.",
+      "optional": "(tuỳ chọn)",
+      "select_color_aria": "Chọn màu {{color}}",
+      "btn_add": "Thêm nhà trọ",
+      "btn_saving": "Đang lưu...",
+      "error_create": "Có lỗi xảy ra khi tạo nhà trọ."
+    },
+    "room": {
+      "title_add": "Thêm phòng mới",
+      "title_edit": "Sửa phòng {{roomNumber}}",
+      "title_duplicate": "Sao chép phòng mới",
+      "select_house": "Thuộc nhà trọ",
+      "select_house_placeholder": "-- Chọn nhà trọ --",
+      "room_number": "Số phòng",
+      "room_number_placeholder": "vd: P101",
+      "cost_price": "Giá cost (đ/tháng)",
+      "area": "Diện tích (m²)",
+      "features_furniture": "Đặc điểm & Nội thất",
+      "features_placeholder": "vd: Máy lạnh, Có ban công, Gác lửng...",
+      "add_furniture_placeholder": "Thêm nội thất...",
+      "show_suggested": "Hiện danh sách nội thất sẵn có",
+      "hide_suggested": "Thu gọn gợi ý",
+      "no_suggested_found": "Chưa có đặc điểm/nội thất nào.",
+      "add_new_tag": "Thêm \"{{tag}}\"",
+      "has_water_meter": "Phòng có đồng hồ nước riêng",
+      "btn_add": "Thêm phòng",
+      "btn_save": "Lưu thay đổi",
+      "btn_saving": "Đang lưu...",
+      "error_data": "Lỗi dữ liệu: {{msg}} (tại {{loc}})",
+      "error_save": "Có lỗi xảy ra khi lưu phòng."
+    }
+  },
+  "contract_template": {
+    "title": "Cài đặt Mẫu Hợp Đồng",
+    "subtitle": "Upload file Word (.docx) gốc của bạn lên hệ thống.",
+    "loading": "Đang tải...",
+    "upload_area": {
+      "click_to_select": "Bấm vào đây để chọn file",
+      "support_format": "Chỉ hỗ trợ file Word (.docx)",
+      "remove_and_reupload": "Xóa và tải lên file khác"
+    },
+    "instructions": {
+      "title": "💡 Hướng dẫn:",
+      "step_1": "Soạn thảo hợp đồng chuẩn của bạn bằng MS Word.",
+      "step_2": "Copy các biến ở cột bên phải dán vào vị trí cần điền trong file Word.",
+      "step_3": "Lưu file Word đó lại và tải lên đây."
+    },
+    "variables_section": {
+      "title": "Biến tự động",
+      "description": "Bấm vào biến để Copy, sau đó dán vào file Word của bạn.",
+      "copied": "Đã Copy"
+    },
+    "variables": {
+      "date_created": "Ngày ký HĐ (Hôm nay)",
+      "house_name": "Tên nhà trọ",
+      "house_address": "Địa chỉ nhà trọ",
+      "room_number": "Số phòng",
+      "owner_name": "Tên Chủ nhà",
+      "tenant_name": "Tên Người thuê",
+      "tenant_phone": "SĐT Người thuê",
+      "tenant_id_card": "CCCD Người thuê",
+      "num_tenants": "Số người ở",
+      "num_vehicles": "Số xe",
+      "furnitures": "Danh sách nội thất",
+      "rent_price": "Giá thuê/Tháng",
+      "deposit": "Tiền cọc",
+      "service_fee": "Phí dịch vụ/Tháng",
+      "payment_deadline": "Hạn thanh toán tiền nhà",
+      "electric_price": "Đơn giá Điện",
+      "water_price": "Đơn giá Nước",
+      "initial_electric": "Chỉ số Điện ban đầu",
+      "initial_water": "Chỉ số Nước ban đầu",
+      "start_date": "Ngày bắt đầu thuê",
+      "end_date": "Ngày kết thúc thuê"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "save": "Lưu mẫu hợp đồng",
+      "saving": "Đang lưu..."
+    },
+    "messages": {
+      "load_error": "Không thể tải thông tin nhà trọ.",
+      "invalid_format": "Chỉ hỗ trợ file Word định dạng .docx",
+      "upload_required": "Vui lòng tải lên một file mẫu hợp đồng (.docx)",
+      "save_success": "Đã lưu mẫu hợp đồng gốc thành công!",
+      "save_error": "Lỗi khi lưu mẫu hợp đồng."
+    }
+  },
+  "room_drawer": {
+    "title": "Phòng {{roomNumber}}",
+    "close": "Đóng / Thu gọn",
+    "room_info": {
+      "title": "Thông tin phòng",
+      "status": "Trạng thái",
+      "cost_price": "Giá cost",
+      "area": "Diện tích",
+      "water_meter": "Đồng hồ nước",
+      "yes": "✅ Có",
+      "no": "❌ Không",
+      "features": "Đặc điểm & Nội thất",
+      "items_count": "{{count}} mục",
+      "view": "▼ Xem",
+      "hide": "▲ Ẩn",
+      "none": "Không có",
+      "btn_edit": "✏️ Sửa",
+      "btn_duplicate": "📋 Sao chép",
+      "btn_delete": "🗑️ Xoá",
+      "btn_report_incidents": "⚠️ Báo cáo sự cố"
+    },
+    "contract_info": {
+      "title": "Hợp đồng hiện tại",
+      "tenant": "Người thuê",
+      "phone": "SĐT",
+      "email": "Email",
+      "email_not_provided": "Chưa có",
+      "copy_email": "Copy email",
+      "rent": "Tiền thuê",
+      "deposit": "Đặt cọc",
+      "tenants_count": "Số người",
+      "representative": "(Đại diện)",
+      "temp_residence": "Tạm trú",
+      "stay_declaration": "Lưu trú",
+      "unregistered_warning": "⚠️ Khách chưa đăng ký tạm trú!",
+      "register_now": "Đăng ký ngay",
+      "vehicles_count": "Số xe",
+      "start_date": "Bắt đầu",
+      "end_date": "Kết thúc",
+      "warning_overdue": "⚠️ Hợp đồng đã quá hạn {{days}} ngày. Hãy gia hạn (Sửa HĐ) nếu khách ở tiếp, hoặc Kết thúc hợp đồng nếu khách đã trả phòng.",
+      "warning_expires_today": "⏰ Hợp đồng hết hạn hôm nay. Nhớ chốt số điện nước và xuất bill cuối, hoặc gia hạn nếu khách ở tiếp.",
+      "warning_expiring_soon": "⏰ Hợp đồng còn {{days}} ngày. Nhớ chốt số điện nước và xuất bill cuối, hoặc gia hạn nếu khách ở tiếp.",
+      "electric_price": "Giá điện",
+      "electric_split_ratio": "Theo hóa đơn (chia tỉ lệ)",
+      "water_price": "Giá nước",
+      "water_fixed": "Nước cố định",
+      "initial_electric": "Số điện ban đầu",
+      "initial_water": "Số nước ban đầu",
+      "notes": "Ghi chú / Nội thất:",
+      "btn_edit": "✏️ Sửa HĐ",
+      "btn_end": "🔚 Kết thúc",
+      "btn_export": "📄 Xuất hợp đồng",
+      "btn_exporting": "⏳ Đang tải...",
+      "btn_generate_bill": "🧾 Ghi chỉ số & Tính tiền",
+      "no_contract": "Phòng chưa có hợp đồng",
+      "btn_add_contract": "+ Thêm hợp đồng"
+    },
+    "messages": {
+      "delete_confirm": "Xoá phòng {{roomNumber}}? Hành động này không thể hoàn tác.",
+      "delete_error": "Không thể xoá phòng này.",
+      "export_error": "Không thể tải file hợp đồng. Vui lòng kiểm tra lại file mẫu.",
+      "copy_success": "Đã copy email!"
+    }
+  },
+  "contract_form": {
+    "title_add": "Thêm hợp đồng",
+    "subtitle": "Phòng {{roomNumber}}",
+    "sections": {
+      "tenant": "Thông tin người thuê",
+      "contract": "Thông tin hợp đồng",
+      "utility": "Đơn giá điện / nước",
+      "initial_readings": "Số điện / nước ban đầu",
+      "notes": "Ghi chú"
+    },
+    "fields": {
+      "full_name": "Họ tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "email_hint": "Dùng để nhận bill hàng tháng",
+      "id_card": "Căn cước công dân (CCCD)",
+      "id_card_hint": "Bắt buộc nhập chính xác. Thông tin này được bảo mật mã hóa và chỉ dùng để tạo file hợp đồng.",
+      "id_card_placeholder": "Nhập 12 số CCCD...",
+      "start_date": "Ngày bắt đầu",
+      "end_date": "Ngày kết thúc",
+      "rent": "Tiền thuê (đ/tháng)",
+      "deposit": "Tiền đặt cọc (đ)",
+      "service_fee": "Phí dịch vụ (đ/tháng)",
+      "cleaning_fee": "Phí vệ sinh (đ/tháng)",
+      "internet_fee": "Phí internet (đ/tháng)",
+      "payment_day": "Hạn thanh toán (Ngày)",
+      "payment_day_hint": "Nhập ngày khách thuê phải đóng tiền hàng tháng (VD: 5 là ngày 5 hàng tháng)",
+      "tenants_count": "Số người thuê",
+      "vehicles_count": "Số lượng xe",
+      "residence_reg": "Đăng ký tạm trú",
+      "stay_dec": "Đăng ký lưu trú",
+      "residence_start": "Ngày đăng ký tạm trú",
+      "residence_expiry": "Thời hạn (Đến ngày)",
+      "electric_method": "Phương thức tính tiền điện",
+      "electric_fixed": "⚡ Đơn giá cố định",
+      "electric_split": "📊 Chia theo bill tổng",
+      "electric_split_hint": "ℹ️ Tiền điện hàng tháng = (Số điện phòng / Tổng số điện cả nhà) × Tổng tiền bill. Bạn sẽ nhập thông tin bill tổng khi xuất hóa đơn hàng tháng.",
+      "electric_price": "Giá điện (đ/kWh)",
+      "electric_by_company_bill": "Theo hóa đơn EVN",
+      "water_price": "Giá nước (đ/m³)",
+      "water_fixed": "Tiền nước cố định (đ/tháng)",
+      "water_fixed_hint": "Phòng không có đồng hồ",
+      "initial_electric": "Số điện ban đầu",
+      "initial_water": "Số nước ban đầu",
+      "reading_hint": "Số chốt tự động điền, có thể chỉnh sửa",
+      "loading_readings": "(Đang tải...)",
+      "notes_label": "Ghi chú hợp đồng / Nội thất",
+      "notes_hint": "Ghi chú lại tình trạng nội thất hoặc các thoả thuận riêng...",
+      "notes_placeholder": "VD: Khách không lấy nệm..."
+    },
+    "co_tenants": {
+      "title_rep": "Đăng ký cho người đại diện",
+      "title_others": "Thông tin người ở cùng",
+      "person_idx": "Người thứ {{index}}",
+      "sync_dates": "🔄 Gắn cùng ngày với người đại diện"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "submit_add": "Tạo hợp đồng",
+      "submit_edit": "Lưu thay đổi",
+      "processing": "Đang xử lý..."
+    },
+    "steps": {
+      "check_tenant": "Đang kiểm tra thông tin người thuê...",
+      "update_tenant": "Đang cập nhật thông tin khách cũ...",
+      "create_tenant": "Đang tạo người thuê mới...",
+      "create_contract": "Đang tạo hợp đồng...",
+      "save_utility_rates": "Đang lưu đơn giá điện/nước...",
+      "save_initial_readings": "Đang lưu số điện/nước ban đầu...",
+      "downloading_word": "Đang tải file hợp đồng Word..."
+    },
+    "messages": {
+      "create_success_confirm": "Tạo hợp đồng thành công! Bạn có muốn tải bản Word về máy để in không?",
+      "download_error": "Không thể tải file hợp đồng. Bạn có thể xuất lại sau ở mục Quản lý phòng.",
+      "general_error": "Có lỗi xảy ra. Vui lòng kiểm tra lại thông tin."
+    }
+  },
+  "edit_contract_form": {
+    "title": "Sửa hợp đồng",
+    "subtitle": "Phòng {{roomNumber}} — {{tenantName}}",
+    "sections": {
+      "tenant": "Thông tin người thuê",
+      "contract": "Thông tin hợp đồng",
+      "initial_utility": "Số điện / nước ban đầu",
+      "utility_rates": "Đơn giá điện / nước",
+      "notes": "Ghi chú"
+    },
+    "fields": {
+      "phone_hint": "Nhập số điện thoại mới nếu muốn đổi.",
+      "initial_utility_hint": "Chỉ số này ghi nhận mốc bắt đầu của hợp đồng. Cần sửa nếu số điện/nước ban đầu bị nhập sai.",
+      "electric_method": "Phương thức tính tiền điện của hợp đồng",
+      "electric_split_hint": "ℹ️ Hợp đồng này tính điện theo tỉ lệ chia hóa đơn tổng của EVN khi xuất bill hàng tháng.",
+      "update_rate_check": "Cập nhật đơn giá mới",
+      "update_rate_hint": "Giá cũ vẫn được giữ lại để đối chiếu lịch sử. Giá mới sẽ áp dụng từ ngày hiệu lực trở đi.",
+      "effective_from": "Ngày hiệu lực",
+      "effective_from_hint": "Ngày bắt đầu áp dụng đơn giá mới",
+      "electric_price_new": "Giá điện mới (đ/kWh)",
+      "water_price_new": "Giá nước mới (đ/m³)",
+      "fixed_water_new": "Tiền nước cố định mới (đ/tháng)"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "save": "Lưu thay đổi"
+    },
+    "steps": {
+      "update_tenant": "Đang cập nhật người thuê...",
+      "update_phone": "Đang ghi đè số điện thoại mới...",
+      "update_contract": "Đang cập nhật hợp đồng...",
+      "save_new_rate": "Đang lưu đơn giá mới...",
+      "update_initial_utility": "Đang cập nhật số điện/nước ban đầu..."
+    },
+    "messages": {
+      "phone_security_warning": "⚠️ CẢNH BÁO BẢO MẬT\n\nKhách thuê này đang có hợp đồng hoạt động.\n\nBạn có CHẮC CHẮN khách thuê đã MẤT số điện thoại cũ và muốn đổi sang số mới không?",
+      "error_general": "Có lỗi xảy ra. Vui lòng kiểm tra lại."
+    }
+  },
+  "end_contract_form": {
+    "title": "Kết thúc hợp đồng",
+    "subtitle": "Phòng {{roomNumber}} — {{tenantName}}",
+    "tabs": {
+      "normal_end": "Kết thúc thông thường",
+      "checkout_bill": "Xuất hóa đơn chốt"
+    },
+    "normal_mode": {
+      "reason_label": "Lý do kết thúc",
+      "optional": "(không bắt buộc)",
+      "reason_placeholder": "vd: Hết hạn hợp đồng, chuyển đi...",
+      "note": "👉 Tùy chọn này sử dụng khi khách đã thanh toán đủ tiền kỳ cuối, đã chốt xong công nợ ngoài hệ thống và không phát sinh hóa đơn điện nước cuối kỳ."
+    },
+    "checkout_mode": {
+      "billing_month": "Tháng xuất bill chốt",
+      "billing_month_hint": "Hóa đơn cuối cùng trước khi khách rời đi.",
+      "final_rent": "Tiền thuê nhà chốt (đ)",
+      "adjust_rent_check": "Điều chỉnh tiền phòng theo ngày ở",
+      "actual_days": "Số ngày ở thực tế",
+      "calc_note": "Tháng {{month}} có {{daysInMonth}} ngày.\nHệ thống tính: ({{rent}}đ / {{daysInMonth}}) × {{actualDays}} = {{total}}đ",
+      "electric_title": "Điện (kWh)",
+      "water_title": "Nước (m³)",
+      "water_fixed_title": "Nước (Cố định)",
+      "reading_old": "Số cũ",
+      "reading_final": "Số chốt cuối",
+      "fees_title": "Các loại phí dịch vụ",
+      "discount_title": "Giảm trừ",
+      "discount_amount": "Giảm trừ / Hoàn cọc (đ)",
+      "discount_reason": "Nội dung giảm trừ",
+      "discount_reason_placeholder": "vd: Trừ tiền cọc, Thỏa thuận riêng..."
+    },
+    "success_state": {
+      "title": "Đã kết thúc hợp đồng",
+      "desc_normal": "Phòng đã được cập nhật về trạng thái Trống.",
+      "desc_checkout": "Phòng đã được cập nhật về trạng thái Trống và hóa đơn chốt đã được tạo thành công.",
+      "billing_month": "Tháng chốt",
+      "total_payment": "Tổng thanh toán"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "confirm_end": "Xác nhận kết thúc",
+      "end_and_checkout": "Kết thúc & Xuất HĐ",
+      "processing": "Đang xử lý...",
+      "close_done": "Đóng (Hoàn tất)"
+    },
+    "alerts": {
+      "confirm_normal": "XÁC NHẬN KẾT THÚC HỢP ĐỒNG:\n\n⚠️ Hành động này sẽ kết thúc hợp đồng và chuyển phòng về trạng thái Trống.\n(Chỉ dùng khi khách đã thanh toán đủ tiền kỳ cuối và không phát sinh hóa đơn chốt)\n\nBấm \"OK\" để hoàn tất.",
+      "confirm_checkout": "XÁC NHẬN KẾT THÚC HỢP ĐỒNG & CHỐT SỐ LIỆU THÁNG {{month}}:\n\n- Tiền thuê: {{rent}} đ\n- Số điện mới: {{electricNew}}\n{{waterInfo}}- Phí dịch vụ: {{service}} đ\n- Phí vệ sinh: {{cleaning}} đ\n- Phí internet: {{internet}} đ\n- Phí phát sinh: {{additional}} đ\n{{additionalReason}}- Giảm trừ: {{discount}} đ\n{{discountReason}}- Hạn thanh toán: {{dueDate}}\n\n⚠️ Hành động này sẽ kết thúc hợp đồng, chuyển phòng về trạng thái Trống và tạo một hóa đơn chốt.\nVui lòng kiểm tra kỹ. Bấm \"OK\" để hoàn tất.",
+      "error_electric": "Lỗi: Số điện mới không được nhỏ hơn số điện cũ.",
+      "error_water": "Lỗi: Số nước mới không được nhỏ hơn số nước cũ.",
+      "error_general": "Có lỗi xảy ra trong quá trình xử lý."
+    }
+  },
+  "generate_bill_form": {
+    "title": "Xuất hoá đơn",
+    "subtitle": "Phòng {{roomNumber}} — {{tenantName}}",
+    "alerts": {
+      "payment_deadline": "Hạn thanh toán: Ngày {{day}} hàng tháng (hạn chót kỳ này là {{dueDate}}).",
+      "final_bill": "📌 Đây là hoá đơn cuối của hợp đồng (kết thúc {{endDate}}). Nếu khách trả phòng, hãy dùng Kết thúc hợp đồng để chốt bill cuối và đóng hợp đồng. Nếu khách ở tiếp, hãy gia hạn hợp đồng trước.",
+      "overdue_bill": "⚠️ Hợp đồng kết thúc ngày {{endDate}}, tháng {{month}} nằm ngoài thời hạn hợp đồng. Nếu khách ở tiếp, hãy gia hạn hợp đồng trước; nếu khách đã trả phòng, hãy kết thúc hợp đồng.",
+      "overdue_ack": "Khách vẫn đang ở (quá hạn / chờ gia hạn), tôi vẫn muốn xuất bill tháng này.",
+      "btn_extend": "✏️ Gia hạn (Sửa HĐ)",
+      "btn_end": "🔚 Kết thúc hợp đồng"
+    },
+    "fields": {
+      "billing_month": "Tháng xuất bill",
+      "first_bill_hint": "Đây là hoá đơn đầu tiên, bạn có thể tuỳ chỉnh tháng.",
+      "auto_bill_hint": "Tháng đã được tính toán tự động.",
+      "rent_amount": "Tiền thuê nhà (đ)",
+      "rent_placeholder": "Nhập tiền thuê nhà...",
+      "adjust_rent": "Điều chỉnh tiền phòng theo ngày ở",
+      "odd_days": "Số ngày ở lẻ (của tháng hiện tại)",
+      "combo_bill": "Hóa đơn gộp (Thu lẻ tháng này + Trọn tháng sau)",
+      "electric_title": "Điện",
+      "electric_split": "Chia bill tổng",
+      "electric_fixed": "Đơn giá cố định",
+      "reading_old": "Số cũ",
+      "loading": "(đang tải...)",
+      "reading_new": "Số mới",
+      "evn_info": "Thông tin hóa đơn điện tổng (EVN)",
+      "evn_total_kwh": "Tổng kWh cả nhà",
+      "evn_total_cost": "Tổng tiền bill tổng (đ)",
+      "room_consumed": "Tiêu thụ của phòng:",
+      "temp_calc": "Tiền điện tạm tính:",
+      "water_meter_title": "Nước (m³)",
+      "water_fixed_title": "Nước (Cố định)",
+      "water_fixed_amount": "Tiền nước cố định (đ/tháng)",
+      "water_fixed_hint": "Phòng không dùng đồng hồ nước, áp dụng mức thu cố định hàng tháng.",
+      "fees_title": "Các loại phí dịch vụ",
+      "service_fee": "Phí dịch vụ",
+      "cleaning_fee": "Phí vệ sinh",
+      "internet_fee": "Phí internet",
+      "additional_fee": "Phí phát sinh",
+      "additional_reason": "Lý do phát sinh",
+      "discount_title": "Giảm trừ",
+      "discount_amount": "Giảm trừ tiền phòng (đ)",
+      "discount_reason": "Nội dung giảm trừ"
+    },
+    "calc": {
+      "month_days": "Tháng {{month}} có {{days}} ngày.",
+      "odd_rent": "Tiền lẻ ({{days}} ngày):",
+      "next_month_rent": "Tiền trọ tháng sau:",
+      "total": "Tổng cộng:"
+    },
+    "preview": {
+      "due_warning": "Khách thuê cần thanh toán trước ngày {{day}} hàng tháng.",
+      "month": "Tháng",
+      "due_date": "Hạn thanh toán",
+      "rent": "Tiền thuê",
+      "combo_days_info": "(Lẻ {{days}} ngày + Trọn 1 tháng)",
+      "odd_days_info": "(Ở {{days}} ngày)",
+      "electric": "Điện ({{consumed}} kWh)",
+      "electric_split_ratio": "(Chia tỉ lệ {{roomConsumed}}/{{totalConsumed}} kWh)",
+      "water_meter": "Nước ({{consumed}} m³)",
+      "water_fixed": "Nước (cố định)",
+      "total": "Tổng cộng"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "processing": "Đang xử lý...",
+      "calculate": "🧾 Tính tiền",
+      "close_send_later": "Đóng (gửi email sau)"
+    },
+    "messages": {
+      "error_overdue_ack": "Hợp đồng kết thúc ngày {{endDate}}, tháng {{month}} nằm ngoài thời hạn. Hãy gia hạn hợp đồng, hoặc tick xác nhận \"khách vẫn đang ở\" bên dưới tháng xuất bill để tiếp tục.",
+      "confirm_generate": "XÁC NHẬN SỐ LIỆU THÁNG {{month}}:\n\n- Tiền thuê: {{rent}} đ\n- Số điện mới: {{electricNew}}\n{{waterInfo}}- Phí dịch vụ: {{service}} đ\n- Phí vệ sinh: {{cleaning}} đ\n- Phí internet: {{internet}} đ\n- Phí phát sinh: {{additional}} đ\n{{additionalReason}}- Giảm trừ: {{discount}} đ\n{{discountReason}}- Hạn thanh toán: {{dueDate}} (Ngày {{paymentDay}} hàng tháng)\n\nVui lòng kiểm tra kỹ. Bấm \"OK\" để tính tiền."
+    }
+  },
+  "utility_form": {
+    "title": "Ghi Điện / Nước",
+    "subtitle": "Phòng {{roomNumber}}",
+    "fields": {
+      "billing_month": "Tháng ghi nhận",
+      "electric_title": "⚡ Điện (kWh)",
+      "water_title": "💧 Nước (m³)",
+      "old_reading": "Số cũ",
+      "new_reading": "Số mới",
+      "placeholder_electric_old": "vd: 100",
+      "placeholder_electric_new": "vd: 150",
+      "placeholder_water_old": "vd: 20",
+      "placeholder_water_new": "vd: 25"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "saving": "Đang lưu...",
+      "save": "Lưu số liệu"
+    },
+    "messages": {
+      "error_general": "Có lỗi xảy ra. Vui lòng kiểm tra lại số liệu."
+    }
+  },
+  "report_incident_form": {
+    "title": "Báo cáo sự cố",
+    "subtitle": "Phòng {{roomNumber}}",
+    "fields": {
+      "description": "Mô tả sự cố / Hư hỏng",
+      "description_placeholder": "Ví dụ: Vỡ ống nước nhà vệ sinh, hỏng bóng đèn...",
+      "handler": "Thông tin bên xử lý (Tuỳ chọn)",
+      "handler_placeholder": "VD: Thợ điện bên A, Thợ nước bên B..."
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "reporting": "Đang gửi...",
+      "submit": "Báo cáo"
+    },
+    "messages": {
+      "error_empty": "Vui lòng nhập mô tả sự cố.",
+      "error_general": "Lỗi khi báo cáo sự cố.",
+      "success": "Đã báo cáo sự cố thành công!"
+    }
+  },
+  "tenants_page": {
+    "title": "Người thuê",
+    "subtitle": "{{count}} người trong danh sách",
+    "all_houses": "Tất cả nhà trọ",
+    "search_placeholder": "Tìm tên, CCCD, SĐT, email...",
+    "tags": {
+      "status_active": "Đang thuê",
+      "status_inactive": "Đã kết thúc HĐ",
+      "attr_tam_tru": "Tạm trú",
+      "attr_chua_tam_tru": "Chưa tạm trú",
+      "attr_luu_tru": "Lưu trú",
+      "attr_o_ghep": "Ở ghép"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "button": "Bộ lọc",
+      "search": "Tìm bộ lọc...",
+      "filter_by": "Lọc theo:",
+      "clear": "Xóa lọc"
+    },
+    "empty_states": {
+      "loading": "Đang tải...",
+      "no_tenants": "Chưa có người thuê nào.",
+      "no_match": "Không tìm thấy khách thuê nào khớp với bộ lọc."
+    },
+    "card": {
+      "representative": "Đại diện:",
+      "unknown_house": "Không xác định",
+      "room": "Phòng:",
+      "view_room_tooltip": "Xem phòng này",
+      "phone": "SĐT:",
+      "email": "Email:",
+      "end_reason": "Lý do kết thúc:",
+      "warning_no_temp_residence": "⚠️ Chưa tạm trú"
+    }
+  },
+  "tenant_drawer": {
+    "personal_info": {
+      "title": "Thông tin cá nhân",
+      "full_name": "Họ tên",
+      "phone": "Số điện thoại",
+      "email": "Email",
+      "no_email": "Chưa có",
+      "co_tenants": "Người ở cùng",
+      "people_count": "{{count}} người",
+      "btn_view": "▼ Xem",
+      "btn_hide": "▲ Ẩn",
+      "btn_edit": "✏️ Sửa thông tin",
+      "btn_delete": "🗑️ Xoá"
+    },
+    "contract_info": {
+      "title": "Hợp đồng",
+      "room": "Phòng",
+      "rent": "Tiền thuê",
+      "deposit": "Đặt cọc",
+      "start_date": "Bắt đầu",
+      "end_date": "Kết thúc",
+      "registered_temp_residence": "Đã đăng ký tạm trú",
+      "from": "Từ",
+      "to": "Đến",
+      "registered_stay_declaration": "Đã đăng ký lưu trú",
+      "no_contract": "Người thuê này hiện đang không có hợp đồng.",
+      "history_title": "Lịch sử thuê phòng",
+      "period": "Thời gian",
+      "until_now": "Nay",
+      "end_reason": "Lý do kết thúc",
+      "unknown_reason": "Không rõ lý do"
+    },
+    "messages": {
+      "delete_confirm": "Xoá người thuê \"{{name}}\"?",
+      "delete_error": "Không thể xoá người thuê này."
+    }
+  },
+  "tenant_form": {
+    "title_edit": "Sửa thông tin: {{name}}",
+    "title_add": "Thêm người thuê mới",
+    "fields": {
+      "full_name": "Họ tên",
+      "full_name_placeholder": "Nguyễn Văn A",
+      "phone": "Số điện thoại",
+      "phone_placeholder": "0912345678",
+      "email": "Email (dùng để nhận bill)",
+      "email_placeholder": "example@gmail.com"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "saving": "Đang lưu...",
+      "save_changes": "Lưu thay đổi",
+      "add_tenant": "Thêm người thuê"
+    },
+    "messages": {
+      "error_general": "Có lỗi xảy ra."
+    }
+  },
+  "bills_page": {
+    "title": "Hoá đơn",
+    "all_houses": "Tất cả nhà trọ",
+    "loading": "Đang tải...",
+    "status": {
+      "pending": "Chưa gửi",
+      "sent": "Đã gửi",
+      "paid": "Đã thanh toán"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "unpaid": "Chưa thanh toán",
+      "overdue": "Quá hạn",
+      "paid": "Đã thanh toán"
+    },
+    "summary": {
+      "total_uncollected": "Tổng tiền chưa thu:",
+      "bill_count": "({{count}} bill)"
+    },
+    "bulk_send": {
+      "button": "Gửi tất cả ({{count}} email)",
+      "sending": "Đang gửi hàng loạt..."
+    },
+    "empty_state": {
+      "no_bills": "Không có hoá đơn nào.",
+      "no_bills_in_section": "Không có hoá đơn nào trong mục này."
+    },
+    "card": {
+      "final_bill_badge": "Hóa đơn kết thúc HĐ",
+      "month_label": "Tháng {{month}}",
+      "room_label": "Phòng {{roomNumber}}",
+      "contract_label": "HĐ #{{contractId}}",
+      "rent": "Tiền thuê",
+      "stay_days": "(Ở {{days}} ngày)",
+      "electric_consumed": "Điện ({{consumed}} kWh)",
+      "water_consumed": "Nước ({{consumed}} m³)",
+      "water_fixed": "Nước (cố định)",
+      "service_fee": "Phí dịch vụ",
+      "cleaning_fee": "Phí vệ sinh",
+      "internet_fee": "Phí internet",
+      "additional_fee": "Phát sinh",
+      "discount": "Giảm trừ",
+      "btn_hide": "▲ Ẩn",
+      "btn_view": "▼ Xem",
+      "total": "Tổng cộng",
+      "due_date": "Hạn thanh toán",
+      "btn_edit": "✏️ Sửa",
+      "btn_send_email": "📧 Gửi Email",
+      "btn_sending": "⏳ Đang gửi...",
+      "btn_mark_paid": "✅ Xác nhận đã thanh toán",
+      "btn_resend": "📧 Gửi lại",
+      "bill_completed": "Hóa đơn đã hoàn tất"
+    },
+    "alerts": {
+      "confirm_send_email": "Bạn muốn gửi bill tháng {{month}} qua email cho phòng {{room}}?",
+      "send_email_success": "Đã gửi email thành công!",
+      "send_email_fail": "Gửi email thất bại.",
+      "confirm_bulk_send": "Bạn có chắc chắn muốn gửi email cho {{count}} hoá đơn chưa gửi?",
+      "bulk_send_success": "Đã gửi thành công toàn bộ {{count}} hoá đơn!",
+      "bulk_send_partial": "Hoàn tất: Đã gửi {{success}} hoá đơn. Thất bại {{fail}} hoá đơn.",
+      "confirm_mark_paid": "Xác nhận đã nhận tiền cho phòng {{room}} tháng {{month}}?",
+      "general_error": "Có lỗi xảy ra."
+    }
+  },
+  "edit_bill_form": {
+    "title": "Sửa hóa đơn",
+    "subtitle_room": "Tháng {{month}} — Phòng {{roomNumber}}",
+    "subtitle_contract": "Tháng {{month}} — HĐ #{{contractId}}",
+    "sections": {
+      "electricity": "Phương thức tính tiền điện",
+      "fees": "Các loại phí dịch vụ",
+      "discount": "Giảm trừ"
+    },
+    "fields": {
+      "billing_month": "Tháng xuất bill",
+      "due_date": "Hạn thanh toán",
+      "rent_amount": "Tiền thuê nhà (đ)",
+      "rent_placeholder": "Nhập tiền thuê nhà...",
+      "adjust_rent_check": "Điều chỉnh tiền phòng theo ngày ở",
+      "odd_days": "Số ngày ở lẻ (của tháng hiện tại)",
+      "odd_days_placeholder": "vd: 10",
+      "combo_bill_check": "Hóa đơn gộp (Thu lẻ tháng này + Trọn tháng sau)",
+      "electric_fixed": "Đơn giá cố định",
+      "electric_split": "Chia bill tổng",
+      "electric_new": "Số điện mới của phòng (kWh)",
+      "electric_new_placeholder": "Nhập số điện chốt mới...",
+      "electric_evn_info": "Thông tin hóa đơn điện tổng (EVN)",
+      "electric_total_consumed": "Tổng kWh cả nhà",
+      "electric_total_cost": "Tổng tiền bill tổng (đ)",
+      "water_new": "Số nước mới (m³)",
+      "water_new_placeholder": "Nhập số khối...",
+      "water_fixed": "Tiền nước cố định (đ)",
+      "service_fee": "Phí dịch vụ (đ)",
+      "cleaning_fee": "Phí vệ sinh (đ)",
+      "internet_fee": "Phí internet (đ)",
+      "additional_fee": "Phí phát sinh (đ)",
+      "additional_reason": "Lý do phát sinh",
+      "additional_reason_placeholder": "vd: Sửa ống nước",
+      "discount_amount": "Chi phí giảm trừ (đ)",
+      "discount_reason": "Nội dung giảm trừ",
+      "discount_reason_placeholder": "vd: Hỗ trợ sinh viên, Khuyến mãi..."
+    },
+    "calc": {
+      "month_days": "Tháng {{month}} có {{days}} ngày.",
+      "odd_rent": "Tiền lẻ ({{days}} ngày):",
+      "next_month_rent": "Tiền trọ tháng sau:",
+      "total": "Tổng cộng:"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "calculating": "Đang tính lại...",
+      "update": "Cập nhật hóa đơn"
+    },
+    "messages": {
+      "error_electric_consumed": "Vui lòng nhập Tổng số điện (kWh) của hóa đơn tổng lớn hơn 0.",
+      "error_electric_cost": "Vui lòng nhập Tổng tiền của hóa đơn điện tổng hợp lệ.",
+      "error_general": "Có lỗi xảy ra khi sửa hóa đơn.",
+      "error_fetch_old_readings": "Không lấy được số điện nước cũ"
+    }
+  },
+  "incidents_page": {
+    "title": "Sự cố & Hư hỏng",
+    "subtitle": "Danh sách các sự cố cần xử lý",
+    "all_houses": "Tất cả nhà trọ",
+    "all_months": "Tất cả các tháng",
+    "loading": "Đang tải...",
+    "status": {
+      "received": "Đã tiếp nhận",
+      "processing": "Đang xử lý",
+      "completed": "Hoàn thành"
+    },
+    "filters": {
+      "all": "Tất cả sự cố",
+      "handler_btn": "Lọc bên xử lý",
+      "handler_search": "Tìm tên thợ, bên xử lý...",
+      "no_handler": "Chưa có thông tin bên xử lý nào được lưu.",
+      "filter_by": "Lọc theo:",
+      "clear_filter": "Xóa lọc"
+    },
+    "stats": {
+      "title_month": "Tổng chi phí sửa chữa tháng {{month}}",
+      "title_all": "Tổng chi phí sửa chữa (Tất cả thời gian)",
+      "desc": "Tính theo tháng hạch toán, áp dụng bộ lọc nhà trọ & bên xử lý"
+    },
+    "empty_state": {
+      "no_incidents": "Không tìm thấy sự cố nào phù hợp với bộ lọc."
+    },
+    "card": {
+      "overdue": "⚠️ Quá hạn 3 ngày",
+      "room": "Phòng {{roomNumber}}",
+      "unknown_room": "N/A",
+      "received_at": "Tiếp nhận: {{date}}",
+      "completed_at": "Hoàn thành: {{date}}",
+      "handler": "👷 Bên xử lý:",
+      "btn_edit": "✏️ Sửa",
+      "btn_process": "➡️ Xử lý",
+      "btn_complete": "✅ Hoàn thành",
+      "fixed_msg": "Sự cố đã được khắc phục",
+      "cost": "Chi phí: {{cost}}đ",
+      "expense_month": "(Hạch toán tháng {{month}})",
+      "btn_edit_completed": "✏️ Sửa thông tin & tháng tính"
+    },
+    "complete_modal": {
+      "title": "Xác nhận hoàn thành",
+      "desc": "Nhập chi phí và tháng hạch toán cho sự cố phòng {{roomNumber}}:",
+      "cost_label": "Chi phí sửa chữa (đ)",
+      "cost_placeholder": "Ví dụ: 150,000",
+      "month_label": "Hạch toán vào chi phí tháng",
+      "month_hint": "💡 Bạn có thể chọn chuyển sang tháng sau nếu hoàn thành vào cuối tháng.",
+      "btn_cancel": "Hủy",
+      "btn_confirm": "Xác nhận",
+      "btn_saving": "Đang lưu..."
+    },
+    "edit_modal": {
+      "title": "Sửa thông tin sự cố",
+      "desc_label": "Mô tả sự cố",
+      "handler_label": "Bên xử lý (Tên/SĐT thợ...)",
+      "handler_placeholder": "VD: Thợ điện bên B - 0901234567",
+      "cost_label": "Chi phí sửa chữa (đ)",
+      "cost_placeholder": "Ví dụ: 150,000",
+      "month_label": "Tính vào tháng",
+      "btn_cancel": "Hủy",
+      "btn_save": "Lưu thay đổi",
+      "btn_saving": "Đang lưu..."
+    },
+    "alerts": {
+      "update_incident_error": "Có lỗi xảy ra khi cập nhật sự cố.",
+      "update_status_error": "Có lỗi xảy ra khi cập nhật trạng thái."
+    }
+  },
+  "staff_page": {
+    "title": "Nhân viên",
+    "subtitle": "{{count}} nhân viên trong danh sách này",
+    "all_houses": "Tất cả nhà trọ",
+    "search_placeholder": "Tìm tên, SĐT...",
+    "btn_add_staff": "+ Thêm nhân viên",
+    "empty_state": {
+      "loading": "Đang tải...",
+      "no_staff": "Hãy đăng ký tài khoản cho nhân viên ở trang Đăng ký trước.",
+      "go_to_register": "Đi đến trang Đăng ký"
+    },
+    "card": {
+      "tooltip_fire": "Cho thôi việc (Xóa tài khoản)",
+      "managed_houses": "Nhà đang quản lý",
+      "btn_grant_more": "+ Cấp quyền thêm",
+      "management_fee": "Phí QL:",
+      "btn_edit_fee": "Sửa",
+      "no_fee_setup": "Chưa thiết lập phí QL",
+      "btn_add_fee": "Thêm",
+      "btn_revoke_access": "Xóa quyền"
+    },
+    "grant_modal": {
+      "title": "Cấp quyền thêm",
+      "staff_info": "Nhân viên:",
+      "select_houses_label": "Chọn các nhà trọ muốn cấp quyền",
+      "all_houses_granted": "Nhân viên này đã được cấp quyền quản lý tất cả các nhà trọ hiện có.",
+      "global_fee_label": "Phí quản lý áp dụng chung",
+      "global_fee_placeholder": "Ví dụ: 3,000,000",
+      "global_fee_hint": "Mức phí (đ/tháng) này sẽ được áp dụng cho {{count}} nhà trọ bạn vừa chọn. Có thể bỏ trống nếu chưa muốn thiết lập.",
+      "btn_cancel": "Hủy",
+      "btn_confirm": "Xác nhận",
+      "btn_processing": "Đang xử lý..."
+    },
+    "fee_modal": {
+      "title": "Cập nhật phí quản lý",
+      "house_info": "Nhà trọ:",
+      "fee_label": "Phí quản lý nhân viên (đ/tháng)",
+      "fee_placeholder": "Ví dụ: 3,000,000",
+      "btn_cancel": "Hủy",
+      "btn_save": "Lưu thay đổi",
+      "btn_saving": "Đang lưu..."
+    },
+    "alerts": {
+      "update_fee_success": "Cập nhật phí quản lý thành công!",
+      "update_fee_error": "Có lỗi xảy ra khi cập nhật phí.",
+      "confirm_revoke": "Thu hồi quyền quản lý nhà \"{{houseName}}\" của nhân viên này?",
+      "revoke_error": "Không thể thu hồi quyền.",
+      "grant_no_house": "Vui lòng chọn ít nhất một nhà trọ để cấp quyền.",
+      "grant_success": "Đã cấp quyền thêm và thiết lập phí thành công!",
+      "grant_error": "Có lỗi xảy ra khi cấp quyền.",
+      "confirm_fire": "CẢNH BÁO: Bạn có chắc chắn muốn cho thôi việc và xóa tài khoản của nhân viên \"{{staffName}}\"? Hành động này sẽ xóa vĩnh viễn quyền truy cập của nhân viên này khỏi hệ thống.",
+      "fire_success": "Đã xóa nhân viên thành công.",
+      "fire_error": "Không thể xóa nhân viên."
+    }
+  },
+  "financial_page": {
+    "title": "Báo cáo tài chính",
+    "all_houses": "Tất cả nhà trọ",
+    "all_rooms": "Tất cả phòng",
+    "btn_export": "📊 Xuất Excel",
+    "btn_exporting": "⏳ Đang xuất...",
+    "empty_state": {
+      "loading": "Đang tổng hợp dữ liệu...",
+      "no_data": "Không có dữ liệu báo cáo cho tháng này.",
+      "no_data_table": "Chưa có dữ liệu."
+    },
+    "overview": {
+      "monthly_revenue": "Doanh thu tháng",
+      "monthly_cost": "Chi phí tháng",
+      "profit": "Lợi nhuận",
+      "loss": "Lỗ",
+      "revenue_by_category": "Doanh thu theo danh mục",
+      "cost_by_category": "Chi phí theo danh mục",
+      "click_details_rev": "Bấm để xem chi tiết khoản thu",
+      "click_details_cost": "Bấm để xem chi tiết khoản chi",
+      "monthly_chart": "Thu - Chi theo tháng",
+      "empty_revenue": "Chưa có thu nhập",
+      "empty_cost": "Chưa có chi tiêu",
+      "chart_income": "Thu nhập",
+      "chart_expense": "Chi tiêu",
+      "profit_analysis_title": "Phân tích Lời / Lỗ dịch vụ (Điện, Nước, Internet)",
+      "total_collected": "Tổng thu:",
+      "total_spent": "Tổng chi:",
+      "profit_loss": "Lời / Lỗ:"
+    },
+    "detail_view": {
+      "back_to_overview": "← Quay lại Tổng quan",
+      "total_revenue": "↓ Tổng Doanh Thu",
+      "total_cost": "↑ Tổng Chi Phí"
+    },
+    "categories": {
+      "rent": "Tiền thuê nhà",
+      "electric_rev": "Tiền điện (Thu từ người thuê)",
+      "water_rev": "Tiền nước (Thu từ người thuê)",
+      "service_rev": "Phí dịch vụ",
+      "additional_rev": "Phí phát sinh",
+      "cleaning_rev": "Phí vệ sinh",
+      "internet_rev": "Phí internet",
+      "electric_cost": "Tiền điện (Chủ trọ trả)",
+      "water_cost": "Tiền nước (Chủ trọ trả)",
+      "maintenance": "Sửa chữa & Bảo trì",
+      "base_cost": "Giá Cost (Vốn phòng)",
+      "management": "Nhân viên quản lý",
+      "other_costs": "Chi phí khác",
+      "internet_cost": "Chi phí Internet",
+      "discount": "Giảm trừ"
+    },
+    "tables": {
+      "room": "Phòng",
+      "amount": "Số tiền",
+      "reason": "Lý do",
+      "description": "Nội dung",
+      "handler": "Bên xử lý",
+      "cost": "Chi phí",
+      "cost_price": "Cost Price",
+      "category": "Hạng mục",
+      "allocated_cost": "Chi phí phân bổ",
+      "discount_reason": "Nội dung giảm trừ"
+    },
+    "inputs": {
+      "evn_title": "Nhập hoá đơn từ công ty Điện/Nước",
+      "evn_total_kwh": "Tổng Số Điện (kWh)",
+      "evn_total_electric_cost": "Tổng Tiền Điện (đ)",
+      "evn_total_water_cube": "Tổng Số Nước (m³)",
+      "evn_total_water_cost": "Tổng Tiền Nước (đ)",
+      "btn_save_calc": "Lưu & Tính toán",
+      "btn_processing": "Đang xử lý...",
+      
+      "other_cost_title": "Ghi nhận chi phí chung của nhà",
+      "other_cost_recorded": "Đã ghi nhận:",
+      "other_cost_recorded_desc": "Các khoản nhập bên dưới sẽ được cộng thêm vào số này và chia đều cho các phòng.",
+      "btn_clear_all": "Xoá hết",
+      "reason_label": "Lý do chi (Nội dung)",
+      "reason_placeholder": "VD: Rác, Vệ sinh...",
+      "amount_label": "Số tiền (đ)",
+      "btn_delete_row": "Xóa dòng này",
+      "btn_add_row": "Thêm dòng",
+      "recurring_monthly": "Lặp lại hàng tháng",
+      "btn_save_cost": "Lưu chi phí",
+      "btn_saving": "Đang lưu...",
+      
+      "internet_title": "Ghi nhận tổng hóa đơn Internet của nhà",
+      "internet_amount_label": "Tổng số tiền bill (đ)"
+    },
+    "alerts": {
+      "confirm_clear_other_cost": "Xoá toàn bộ chi phí khác đã ghi nhận của tháng này để nhập lại?",
+      "clear_other_cost_error": "Có lỗi xảy ra khi xoá chi phí khác.",
+      "empty_other_cost": "Vui lòng nhập ít nhất 1 khoản chi phí.",
+      "save_other_cost_success": "Đã ghi nhận thêm {{newAmount}} đ. Tổng chi phí khác của tháng: {{totalAmount}} đ",
+      "save_other_cost_error": "Có lỗi xảy ra khi lưu chi phí khác.",
+      "save_internet_success": "Đã lưu chi phí internet!",
+      "save_internet_error": "Có lỗi xảy ra khi lưu chi phí internet.",
+      "save_evn_success": "Đã cập nhật bill nhà mạng và tính toán lại chi phí!",
+      "save_evn_error": "Có lỗi xảy ra khi lưu chi phí.",
+      "export_error": "Lỗi xuất Excel"
+    },
+    "charts": {
+      "month_label": "Tháng {{month}}"
+    }
+  }
+}
