@@ -26,7 +26,7 @@ class ContractBase(BaseModel):
     tenant_id: int
     start_date: date
     end_date: date | None = None
-    monthly_rent: float = Field(gt=0)
+    monthly_rent: float = Field(default=0, ge=0)
     service_fee: float = Field(ge=0, default=0)
     cleaning_fee: float = Field(ge=0, default=0)
     internet_fee: float = Field(ge=0, default=0)
@@ -57,7 +57,7 @@ class ContractCreate(ContractBase):
 class ContractUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
-    monthly_rent: float | None = Field(default=None, gt=0)
+    monthly_rent: float | None = Field(default=None, ge=0)
     service_fee: float | None = Field(default=None, ge=0)
     cleaning_fee: float | None = Field(default=None, ge=0)
     internet_fee: float | None = Field(default=None, ge=0)

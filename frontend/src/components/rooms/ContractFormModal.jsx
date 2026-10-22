@@ -123,6 +123,25 @@ function NumericInput({ name, value, onChange, min, placeholder, required, class
 const INPUT = `w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm
                focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white`;
 
+const getLocalDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const optionalDate = (value) => value?.trim() || null;
+
+const isValidDate = (value) => {
+  if (!value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day);
+  return parsed.getFullYear() === year &&
+    parsed.getMonth() === month - 1 && parsed.getDate() === day;
+};
+
 // eslint-disable-next-line no-unused-vars
 const INIT = (room) => ({
   full_name: "", phone: "", email: "", id_card_number: "",
@@ -153,7 +172,6 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       if (currentCoTenants.length === extraTenants) return prev;
       
       const newCoTenants = [...currentCoTenants];
-      // Thêm object trống nếu tăng số người
       while (newCoTenants.length < extraTenants) {
         newCoTenants.push({ 
           full_name: "", 
@@ -212,6 +230,27 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
     setLoading(true);
 
     try {
+      const contractStartDate = optionalDate(form.start_date) || getLocalDate();
+      const dateFields = [
+        ["Ngày bắt đầu hợp đồng", contractStartDate],
+        ["Ngày kết thúc hợp đồng", form.end_date],
+        ["Ngày đăng ký tạm trú", form.temp_residence_reg ? form.temp_residence_start : ""],
+        ["Ngày hết hạn tạm trú", form.temp_residence_reg ? form.temp_residence_expiry : ""],
+        ...form.co_tenants.flatMap((ct, idx) => ct.temp_residence_reg ? [
+          [`Ngày tạm trú người thứ ${idx + 2}`, ct.temp_residence_start],
+          [`Ngày hết hạn người thứ ${idx + 2}`, ct.temp_residence_expiry],
+        ] : []),
+      ];
+      const invalidDate = dateFields.find(([, value]) => !isValidDate(value));
+      if (invalidDate) {
+        setError(`${invalidDate[0]} không hợp lệ. Vui lòng nhập đúng định dạng dd/mm/yyyy hoặc để trống.`);
+        return;
+      }
+      if (form.end_date && form.end_date <= contractStartDate) {
+        setError("Ngày kết thúc hợp đồng phải sau ngày bắt đầu.");
+        return;
+      }
+
       setSubmitStep("Đang kiểm tra thông tin người thuê...");
       const existingTenantsRes = await api.get("/tenants");
       const existingTenant = existingTenantsRes.data.find(
@@ -242,25 +281,25 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       const contractRes = await api.post("/contracts", {
         room_id:            room.id,
         tenant_id:          tenantId,
-        start_date:         form.start_date,
-        monthly_rent:       Number(form.monthly_rent),
+        start_date:         contractStartDate,
+        monthly_rent:       Number(form.monthly_rent) || 0,
         service_fee:        form.service_fee ? Number(form.service_fee) : 0,
         cleaning_fee:       form.cleaning_fee ? Number(form.cleaning_fee) : 0,
         internet_fee:       form.internet_fee ? Number(form.internet_fee) : 0,
         deposit:            form.deposit ? Number(form.deposit) : 0,
         electric_calc_method: form.electric_calc_method,
-        num_tenants:        Number(form.num_tenants),
-        num_vehicles:       Number(form.num_vehicles),
-        payment_day:        Number(form.payment_day),
+        num_tenants:        Number(form.num_tenants) || 1,
+        num_vehicles:       Number(form.num_vehicles) || 0,
+        payment_day:        form.payment_day === "" ? 5 : Number(form.payment_day),
         temp_residence_reg: form.temp_residence_reg,
-        temp_residence_start: form.temp_residence_reg ? form.temp_residence_start : null,
-        temp_residence_expiry: form.temp_residence_reg ? form.temp_residence_expiry : null,
+        temp_residence_start: form.temp_residence_reg ? optionalDate(form.temp_residence_start) : null,
+        temp_residence_expiry: form.temp_residence_reg ? optionalDate(form.temp_residence_expiry) : null,
         temp_residence_dec: form.temp_residence_dec, 
         co_tenants:         form.co_tenants
                               .filter(ct => ct.full_name.trim() !== "")
                               .map(ct => ({
                                 full_name: ct.full_name,
-                                id_card_number: ct.id_card_number,
+                                id_card_number: ct.id_card_number?.trim() || null,
                                 temp_residence_reg: ct.temp_residence_reg || false,
                                 temp_residence_start: (ct.temp_residence_reg && ct.temp_residence_start) ? ct.temp_residence_start : null,
                                 temp_residence_expiry: (ct.temp_residence_reg && ct.temp_residence_expiry) ? ct.temp_residence_expiry : null,
@@ -280,7 +319,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       const ratePayload = {
         room_id:        room.id,
         electric_price: electricPriceVal,
-        effective_from: form.start_date,
+        effective_from: contractStartDate,
       };
 
       if (room.is_water_meter) {
@@ -294,7 +333,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       await api.post("/utility-rates", ratePayload);
 
       setSubmitStep("Đang lưu số điện/nước ban đầu...");
-      const startMonth = form.start_date.slice(0, 7);
+      const startMonth = contractStartDate.slice(0, 7);
       await api.post("/utility", {
         room_id:       room.id,
         billing_month: startMonth,
@@ -327,7 +366,10 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
       onSaved();
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Có lỗi xảy ra. Vui lòng kiểm tra lại thông tin.");
+      const validationMessage = Array.isArray(detail)
+        ? detail.map(item => `${item.loc?.slice(1).join(".") || "Dữ liệu"}: ${item.msg}`).join("; ")
+        : null;
+      setError(typeof detail === "string" ? detail : (validationMessage || "Có lỗi xảy ra. Vui lòng kiểm tra lại thông tin."));
     } finally {
       setLoading(false);
       setSubmitStep("");
@@ -370,13 +412,13 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
           {/* 2. Thông tin hợp đồng */}
           <Section title="Thông tin hợp đồng">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Ngày bắt đầu" required><VNDateInput name="start_date" value={form.start_date} onChange={handleChange} required /></Field>
+              <Field label="Ngày bắt đầu" hint="Để trống sẽ lấy ngày tạo hợp đồng"><VNDateInput name="start_date" value={form.start_date} onChange={handleChange} /></Field>
               <Field label="Ngày kết thúc"><VNDateInput name="end_date" value={form.end_date} onChange={handleChange} /></Field>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Tiền thuê (đ/tháng)" required>
-                <FormattedNumberInput name="monthly_rent" value={form.monthly_rent} onChange={handleChange} required className={INPUT} />
+              <Field label="Tiền thuê (đ/tháng)" hint="Để trống sẽ lưu 0đ; có thể cập nhật sau">
+                <FormattedNumberInput name="monthly_rent" value={form.monthly_rent} onChange={handleChange} className={INPUT} />
               </Field>
               <Field label="Tiền đặt cọc (đ)">
                 <FormattedNumberInput name="deposit" value={form.deposit} onChange={handleChange} placeholder="0" className={INPUT} />
@@ -402,7 +444,7 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Số người thuê" required><NumericInput name="num_tenants" min={1} value={form.num_tenants} onChange={handleChange} required className={INPUT} /></Field>
+              <Field label="Số người thuê"><NumericInput name="num_tenants" min={1} value={form.num_tenants} onChange={handleChange} className={INPUT} /></Field>
               <Field label="Số lượng xe"><NumericInput name="num_vehicles" min={0} value={form.num_vehicles} onChange={handleChange} className={INPUT} /></Field>
             </div>
 
@@ -441,8 +483,8 @@ export default function ContractFormModal({ room, onClose, onSaved }) {
                     <p className="text-xs font-semibold text-blue-600 uppercase">Người thứ {idx + 2}</p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Field label="Họ tên" required>
-                        <input value={ct.full_name} onChange={(e) => handleCoTenantChange(idx, 'full_name', e.target.value)} required placeholder="Nguyễn Văn B" className={INPUT} />
+                      <Field label="Họ tên" hint="Có thể bổ sung người ở cùng sau">
+                        <input value={ct.full_name} onChange={(e) => handleCoTenantChange(idx, 'full_name', e.target.value)} placeholder="Nguyễn Văn B" className={INPUT} />
                       </Field>
                       <Field label="CCCD">
                         <input value={ct.id_card_number} onChange={(e) => handleCoTenantChange(idx, 'id_card_number', e.target.value)} placeholder="Nhập 12 số..." maxLength={12} className={INPUT} />

@@ -121,6 +121,21 @@ function NumericInput({ name, value, onChange, min, placeholder, required, class
   );
 }
 
+// Các ngày có thể bỏ trống; ngày đã nhập phải đúng chuẩn YYYY-MM-DD.
+function optionalDate(value, label) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    throw new Error(`${label}: vui lòng nhập ngày hợp lệ (dd/mm/yyyy).`);
+  }
+  const [year, month, day] = raw.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
+    throw new Error(`${label}: ngày không tồn tại.`);
+  }
+  return raw;
+}
+
 export default function EditContractModal({ contract, room, onClose, onSaved }) {
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState("");
@@ -255,12 +270,47 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
     setLoading(true);
 
     try {
-      const tenantPayload = {};
-      if (tenant.full_name !== contract.tenant?.full_name) tenantPayload.full_name = tenant.full_name;
-      if (tenant.email !== (contract.tenant?.email || "")) tenantPayload.email = tenant.email;
+      // Kiểm tra trước khi gọi API để tránh cập nhật tenant rồi mới phát hiện ngày sai.
+      const fullName = tenant.full_name.trim();
+      const phone = tenant.phone.trim();
+      if (!fullName || !phone) {
+        throw new Error("Họ tên và Số điện thoại là hai trường bắt buộc.");
+      }
+      const startDate = optionalDate(contractForm.start_date, "Ngày bắt đầu")
+        || contract.start_date;
+      if (!startDate) throw new Error("Hợp đồng thiếu ngày bắt đầu.");
+      const endDate = optionalDate(contractForm.end_date, "Ngày kết thúc");
+      if (endDate && endDate <= startDate) {
+        throw new Error("Ngày kết thúc phải sau ngày bắt đầu.");
+      }
+      const residenceStart = contractForm.temp_residence_reg
+        ? optionalDate(contractForm.temp_residence_start, "Ngày đăng ký tạm trú") : null;
+      const residenceExpiry = contractForm.temp_residence_reg
+        ? optionalDate(contractForm.temp_residence_expiry, "Thời hạn tạm trú") : null;
+      const coTenantsPayload = contractForm.co_tenants
+        .filter(ct => ct.full_name?.trim())
+        .map(ct => ({
+          full_name: ct.full_name.trim(),
+          id_card_number: ct.id_card_number?.trim() || null,
+          temp_residence_reg: Boolean(ct.temp_residence_reg),
+          temp_residence_start: ct.temp_residence_reg
+            ? optionalDate(ct.temp_residence_start, `Ngày tạm trú của ${ct.full_name}`) : null,
+          temp_residence_expiry: ct.temp_residence_reg
+            ? optionalDate(ct.temp_residence_expiry, `Hạn tạm trú của ${ct.full_name}`) : null,
+          temp_residence_dec: Boolean(ct.temp_residence_dec),
+        }));
+      const effectiveDate = rateForm.updateRate
+        ? optionalDate(rateForm.effective_from, "Ngày hiệu lực đơn giá") || startDate
+        : null;
 
-      const isPhoneChanged = tenant.phone !== contract.tenant?.phone;
-      if (isPhoneChanged) tenantPayload.phone = tenant.phone;
+      const tenantPayload = {};
+      if (fullName !== contract.tenant?.full_name) tenantPayload.full_name = fullName;
+      if (tenant.email.trim() !== (contract.tenant?.email || "")) {
+        tenantPayload.email = tenant.email.trim() || null;
+      }
+
+      const isPhoneChanged = phone !== contract.tenant?.phone;
+      if (isPhoneChanged) tenantPayload.phone = phone;
      
       if (Object.keys(tenantPayload).length > 0) {
         setSubmitStep("Đang cập nhật người thuê...");
@@ -284,32 +334,23 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
 
       setSubmitStep("Đang cập nhật hợp đồng...");
       await api.patch(`/contracts/${contract.id}`, {
-        start_date:         contractForm.start_date,
+        start_date:         startDate,
         monthly_rent:       Number(contractForm.monthly_rent),
         service_fee:        Number(contractForm.service_fee) || 0,
         cleaning_fee:       Number(contractForm.cleaning_fee) || 0, 
         internet_fee:       Number(contractForm.internet_fee) || 0, 
         deposit:            Number(contractForm.deposit) || 0,
         electric_calc_method: contractForm.electric_calc_method,
-        payment_day:        Number(contractForm.payment_day),
-        num_tenants:        Number(contractForm.num_tenants),
+        payment_day:        contractForm.payment_day === "" ? (contract.payment_day ?? 5) : Number(contractForm.payment_day),
+        num_tenants:        Number(contractForm.num_tenants) || 1,
         num_vehicles:       Number(contractForm.num_vehicles),
         temp_residence_reg: contractForm.temp_residence_reg,
-        temp_residence_start: contractForm.temp_residence_reg ? contractForm.temp_residence_start : null, 
-        temp_residence_expiry: contractForm.temp_residence_reg ? contractForm.temp_residence_expiry : null,
+        temp_residence_start: residenceStart, 
+        temp_residence_expiry: residenceExpiry,
         temp_residence_dec: contractForm.temp_residence_dec,
-        co_tenants:         contractForm.co_tenants
-                              .filter(ct => ct.full_name.trim() !== "")
-                              .map(ct => ({
-                                full_name: ct.full_name,
-                                id_card_number: ct.id_card_number,
-                                temp_residence_reg: ct.temp_residence_reg || false,
-                                temp_residence_start: (ct.temp_residence_reg && ct.temp_residence_start) ? ct.temp_residence_start : null,
-                                temp_residence_expiry: (ct.temp_residence_reg && ct.temp_residence_expiry) ? ct.temp_residence_expiry : null,                                
-                                temp_residence_dec: ct.temp_residence_dec || false,
-                              })),
+        co_tenants:         coTenantsPayload,
         notes:              contractForm.notes,
-        ...(contractForm.end_date && { end_date: contractForm.end_date }),
+        end_date:           endDate,
       });
 
       if (rateForm.updateRate) {
@@ -318,12 +359,14 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
           room_id:        contract.room_id,
           electric_price: Number(rateForm.electric_price),
           water_price:    isWaterMeter ? Number(rateForm.water_price) : 0,
-          effective_from: rateForm.effective_from,
+          effective_from: effectiveDate,
           ...(!isWaterMeter && rateForm.default_water_amount ? { default_water_amount: Number(rateForm.default_water_amount) } : {}),
         });
       }
 
-      if (utilityId && (utilityForm.electric_reading !== "" || utilityForm.water_reading !== "")) {
+      // Không vô tình ghi đè chỉ số còn thiếu bằng 0 khi người dùng xóa trống ô nhập.
+      if (utilityId && utilityForm.electric_reading !== ""
+          && (!isWaterMeter || utilityForm.water_reading !== "")) {
         setSubmitStep("Đang cập nhật số điện/nước ban đầu...");
         await api.put(`/utility/${utilityId}`, {
           electric_old: Number(utilityForm.electric_reading),
@@ -335,7 +378,12 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
       onSaved();
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Có lỗi xảy ra. Vui lòng kiểm tra lại.");
+      console.error("Không thể lưu hợp đồng:", err.response?.status, detail || err);
+      if (Array.isArray(detail)) {
+        setError(detail.map(item => `${item.loc?.join(".") || "Dữ liệu"}: ${item.msg}`).join(" | "));
+      } else {
+        setError(typeof detail === "string" ? detail : (err.message || "Có lỗi xảy ra. Vui lòng kiểm tra lại."));
+      }
     } finally {
       setLoading(false);
       setSubmitStep("");
@@ -358,9 +406,9 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 space-y-6">
 
           <Section title="Thông tin người thuê">
-            <Field label="Họ tên"><input name="full_name" value={tenant.full_name} onChange={handleTenantChange} className={INPUT} /></Field>
+            <Field label="Họ tên *"><input name="full_name" value={tenant.full_name} onChange={handleTenantChange} required className={INPUT} /></Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Số điện thoại" hint="Nhập số điện thoại mới nếu muốn đổi."><input name="phone" value={tenant.phone} onChange={handleTenantChange} className={INPUT} /></Field>
+              <Field label="Số điện thoại" hint="Nhập số điện thoại mới nếu muốn đổi."><input name="phone" value={tenant.phone} onChange={handleTenantChange} required className={INPUT} /></Field>
               <Field label="Email"><input name="email" type="email" value={tenant.email} onChange={handleTenantChange} placeholder="—" className={INPUT} /></Field>
             </div>
           </Section>
@@ -424,8 +472,8 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
                     <p className="text-xs font-semibold text-blue-600 uppercase">Người thứ {idx + 2}</p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Field label="Họ tên" required>
-                        <input value={ct.full_name} onChange={(e) => handleCoTenantChange(idx, 'full_name', e.target.value)} required placeholder="Nguyễn Văn B" className={INPUT} />
+                      <Field label="Họ tên">
+                        <input value={ct.full_name} onChange={(e) => handleCoTenantChange(idx, 'full_name', e.target.value)} placeholder="Nguyễn Văn B" className={INPUT} />
                       </Field>
                       <Field label="CCCD">
                         <input value={ct.id_card_number} onChange={(e) => handleCoTenantChange(idx, 'id_card_number', e.target.value)} placeholder="Nhập 12 số..." maxLength={12} className={INPUT} />
