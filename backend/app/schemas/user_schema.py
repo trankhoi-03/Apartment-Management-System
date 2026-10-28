@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
@@ -10,6 +12,12 @@ def normalize_phone(phone: str) -> str:
     return phone
 
 
+def validate_bcrypt_password(value: str) -> str:
+    if len(value.encode("utf-8")) > 72:
+        raise ValueError("Mật khẩu không được vượt quá 72 byte UTF-8.")
+    return value
+
+
 class UserBase(BaseModel):
     full_name: str = Field(max_length=100)
     phone: str = Field(pattern=VN_PHONE_PATTERN)
@@ -20,12 +28,14 @@ class UserBase(BaseModel):
         return normalize_phone(v)
 
 
-
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=72)
-    role: str = Field(default="staff", description="owner hoặc staff")
+    role: Literal["owner", "staff"] = "staff"
 
-
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_bcrypt_password(v)
 
 
 class UserUpdate(BaseModel):
@@ -36,9 +46,12 @@ class UserUpdate(BaseModel):
     @field_validator("phone", mode="after")
     @classmethod
     def normalize_phone_number(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        return normalize_phone(v)
+        return normalize_phone(v) if v is not None else None
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str | None) -> str | None:
+        return validate_bcrypt_password(v) if v is not None else None
 
 
 class UserResponse(UserBase):
@@ -50,7 +63,7 @@ class UserResponse(UserBase):
 
 class LoginRequest(BaseModel):
     phone: str = Field(pattern=VN_PHONE_PATTERN)
-    password: str
+    password: str = Field(max_length=1024)
 
     @field_validator("phone", mode="after")
     @classmethod

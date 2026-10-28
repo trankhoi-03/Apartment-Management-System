@@ -21,6 +21,7 @@ export default function LoginPage() {
       localStorage.setItem("user_role", role);
       const fullName = res.data.full_name || res.data.user?.full_name || (role === "owner" ? "Chủ trọ" : "Nhân viên");
       localStorage.setItem("full_name", fullName);
+      localStorage.setItem("current_user_id", String(res.data.user.id));
       // Redirect về dashboard sau khi login thành công
       window.location.href = "/";
     } catch (err) {

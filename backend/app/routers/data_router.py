@@ -13,11 +13,24 @@ from app.models.contract import Contract
 from app.models.houses import House
 from app.models.user import User
 from app.models.utility_rate import UtilityRate
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_owner, verify_house_access, verify_house_owner
 from app.routers.report_router import get_house_financial_report, get_all_houses_financial_report
 
 router = APIRouter(prefix="/data", tags=["data"])
 
+
+
+def _scoped_house_ids(db: Session, current_user: User, *, owner_only: bool = False) -> list[int]:
+    """Verify every managed house using the same canonical dependencies as other routers.
+
+    Owner-only operations fail closed if a house has zero or multiple owners.
+    Staff reads use assigned-house access; staff writes are blocked by require_owner.
+    """
+    ids = sorted({house.id for house in current_user.managed_houses})
+    checker = verify_house_owner if owner_only or current_user.role == "owner" else verify_house_access
+    for house_id in ids:
+        checker(house_id=house_id, db=db, current_user=current_user)
+    return ids
 
 
 @router.get("/export")
@@ -26,7 +39,7 @@ def export_excel(
     current_user: User = Depends(get_current_user) 
 ):    
     # 1. Lấy danh sách ID các nhà mà user hiện tại đang quản lý
-    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    allowed_house_ids = _scoped_house_ids(db, current_user)
     
     # 2. Lọc danh sách phòng và hợp đồng chỉ thuộc về các nhà được phép
     rooms = db.query(Room).filter(Room.house_id.in_(allowed_house_ids)).all()
@@ -148,115 +161,131 @@ def export_excel(
 async def import_excel(
     file: UploadFile = File(...), 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user) 
+    current_user: User = Depends(require_owner) 
 ):    
-    if not file.filename.endswith(('.xlsx', '.xls')):
+    # Owner-only access is enforced by the shared dependency before parsing Excel.
+
+    if not file.filename or not file.filename.lower().endswith(('.xlsx', '.xls')):
         raise HTTPException(status_code=400, detail="Chỉ hỗ trợ định dạng file Excel (.xlsx, .xls)")
-        
+
     contents = await file.read()
-    
     try:
         excel_data = pd.read_excel(io.BytesIO(contents), sheet_name=None)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="File Excel bị lỗi hoặc không đúng định dạng.")
 
-    sheet_name = None
-    if "Phòng" in excel_data:
-        sheet_name = "Phòng"
-    else:
-        sheet_name = list(excel_data.keys())[0]
-
+    if not excel_data:
+        raise HTTPException(status_code=400, detail="File Excel không có sheet dữ liệu.")
+    sheet_name = "Phòng" if "Phòng" in excel_data else next(iter(excel_data))
     df_rooms = excel_data[sheet_name]
-    df_rooms = df_rooms.where(pd.notnull(df_rooms), None)
-    
+    required_columns = {"Tên nhà", "Số Phòng"}
+    if not required_columns.issubset(df_rooms.columns):
+        raise HTTPException(status_code=400, detail="Sheet phòng thiếu cột 'Tên nhà' hoặc 'Số Phòng'.")
+
     status_reverse_map = {
         "trống": "vacant",
         "đang thuê": "occupied",
         "ngừng thuê": "inactive"
     }
-    
-    allowed_house_ids = [h.id for h in current_user.managed_houses]
-    
-    for _, row in df_rooms.iterrows():
-        house_name = str(row.get("Tên nhà")).strip() if row.get("Tên nhà") else None
-        room_number = str(row.get("Số Phòng")).strip() if row.get("Số Phòng") else None
-        
-        if not house_name or not room_number:
-            continue 
-            
-        house = None
-        if allowed_house_ids:
-            house = db.query(House).filter(
-                House.name == house_name,
-                House.id.in_(allowed_house_ids)
-            ).first()
-            
-        if not house:
-            house = House(name=house_name)
-            current_user.managed_houses.append(house) 
-            
-            db.add(house)
-            db.commit() 
-            db.refresh(house)
-            
-            allowed_house_ids.append(house.id) 
-            
-        furnitures_str = row.get("Đặc điểm & Nội thất")
-        furnitures_arr = [f.strip() for f in str(furnitures_str).split(",")] if furnitures_str else []
-        
-        raw_water = row.get("Đồng hồ nước (Có hoặc Không)")
-        if raw_water is None:
-            raw_water = row.get("Đồng hồ nước")
-            
-        is_water = True if str(raw_water).strip().lower() == "có" else False
 
-        raw_status = row.get("Trạng thái (Trống hoặc Đang thuê)")
-        if raw_status is None:
-            raw_status = row.get("Trạng thái")
-            
-        db_status = status_reverse_map.get(str(raw_status).strip().lower() if raw_status else "", "vacant")
+    def _value(row, key):
+        v = row.get(key)
+        return None if v is None or pd.isna(v) else v
 
-        cost_val = row.get("Giá vốn (VNĐ)")
-        if pd.isna(cost_val) or cost_val is None:
-            cost_val = row.get("Giá thuê (VNĐ)")
-        
-        cost_price = float(cost_val) if cost_val and not pd.isna(cost_val) else 0.0
-
-        existing_room = db.query(Room).filter(
-            Room.house_id == house.id, 
-            Room.room_number == room_number
-        ).first()
-
-        if existing_room:
-            existing_room.area_sqm = row.get("Diện tích (m2)")
-            existing_room.cost_price = cost_price
-            if raw_status:
-                existing_room.status = db_status
-            existing_room.is_water_meter = is_water
-            existing_room.feature_and_furniture = furnitures_arr 
-        else:
-            new_room = Room(
-                house_id=house.id,
-                room_number=room_number,
-                area_sqm=row.get("Diện tích (m2)"),
-                cost_price=cost_price,
-                status=db_status,
-                is_water_meter=is_water,
-                feature_and_furniture=furnitures_arr 
-            )
-            db.add(new_room)
-            
+    # Scope is derived from the authenticated owner, not from an Excel value.
+    allowed_house_ids = _scoped_house_ids(db, current_user, owner_only=True)
     try:
+        # Keep newly created houses in the current transaction, never commit per row.
+        created_by_name = {}
+        for index, row in df_rooms.iterrows():
+            line = index + 2  # Excel header occupies row 1.
+            house_raw = _value(row, "Tên nhà")
+            room_raw = _value(row, "Số Phòng")
+            house_name = str(house_raw).strip() if house_raw is not None else ""
+            room_number = str(room_raw).strip() if room_raw is not None else ""
+            if not house_name and not room_number:
+                continue
+            if not house_name or not room_number:
+                raise HTTPException(status_code=400, detail=f"Dòng {line}: thiếu tên nhà hoặc số phòng.")
+
+            house = created_by_name.get(house_name)
+            if house is None:
+                matching = (db.query(House)
+                    .filter(House.name == house_name, House.id.in_(allowed_house_ids))
+                    .limit(2).all()) if allowed_house_ids else []
+                if len(matching) > 1:
+                    raise HTTPException(status_code=400, detail=f"Dòng {line}: tên nhà '{house_name}' không duy nhất trong tài khoản.")
+                if matching:
+                    house = verify_house_owner(house_id=matching[0].id, db=db, current_user=current_user)
+                else:
+                    # A same-named house owned by ANOTHER owner must never be updated.
+                    house = House(name=house_name)
+                    current_user.managed_houses.append(house)
+                    db.add(house)
+                    db.flush()
+                    # New house must have one unambiguous owner, as in room_router.
+                    verify_house_owner(house_id=house.id, db=db, current_user=current_user)
+                    allowed_house_ids.append(house.id)
+                created_by_name[house_name] = house
+
+            furnishings = _value(row, "Đặc điểm & Nội thất")
+            furnitures_arr = [x.strip() for x in str(furnishings).split(",") if x.strip()] if furnishings is not None else []
+
+            raw_water = _value(row, "Đồng hồ nước (Có hoặc Không)")
+            if raw_water is None:
+                raw_water = _value(row, "Đồng hồ nước")
+            is_water = str(raw_water).strip().lower() == "có" if raw_water is not None else False
+
+            raw_status = _value(row, "Trạng thái (Trống hoặc Đang thuê)")
+            if raw_status is None:
+                raw_status = _value(row, "Trạng thái")
+            db_status = status_reverse_map.get(str(raw_status).strip().lower(), "vacant") if raw_status is not None else "vacant"
+
+            cost_val = _value(row, "Giá vốn (VNĐ)")
+            if cost_val is None:
+                cost_val = _value(row, "Giá thuê (VNĐ)")
+            try:
+                cost_price = float(cost_val) if cost_val is not None and str(cost_val).strip() else 0.0
+            except (ValueError, TypeError):
+                raise HTTPException(status_code=400, detail=f"Dòng {line}: giá vốn không hợp lệ.")
+
+            area = _value(row, "Diện tích (m2)")
+            existing_room = db.query(Room).filter(
+                Room.house_id == house.id,
+                Room.room_number == room_number
+            ).first()
+            if existing_room:
+                existing_room.area_sqm = area
+                existing_room.cost_price = cost_price
+                if raw_status is not None:
+                    existing_room.status = db_status
+                existing_room.is_water_meter = is_water
+                existing_room.feature_and_furniture = furnitures_arr
+            else:
+                db.add(Room(
+                    house_id=house.id,
+                    room_number=room_number,
+                    area_sqm=area,
+                    cost_price=cost_price,
+                    status=db_status,
+                    is_water_meter=is_water,
+                    feature_and_furniture=furnitures_arr
+                ))
+
         db.commit()
-    except Exception as e:
+    except HTTPException:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Có lỗi xảy ra khi lưu vào cơ sở dữ liệu.")
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Có lỗi xảy ra khi lưu dữ liệu import.")
 
     return {"detail": "Import dữ liệu thành công!"}
 
 
 @router.get("/template")
-def download_template():    
+def download_template(current_user: User = Depends(require_owner)):
+
     room_columns = [
         "Tên nhà", 
         "Số Phòng", 
@@ -346,15 +375,22 @@ def export_financial_excel(
     month: str, 
     house_id: str = "all", 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user) 
+    current_user: User = Depends(require_owner) 
 ):
+    allowed_house_ids = _scoped_house_ids(db, current_user, owner_only=True)
     try:
         if house_id == "all":
             report_data = get_all_houses_financial_report(month=month, db=db, current_user=current_user)
         else:
-            report_data = get_house_financial_report(house_id=int(house_id), month=month, db=db, current_user=current_user)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+            target_house_id = int(house_id)
+            if target_house_id not in allowed_house_ids:
+                raise HTTPException(status_code=403, detail="Không có quyền xuất tài chính của nhà này.")
+            verify_house_owner(house_id=target_house_id, db=db, current_user=current_user)
+            report_data = get_house_financial_report(house_id=target_house_id, month=month, db=db, current_user=current_user)
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(status_code=422, detail="house_id không hợp lệ.")
         
     def _g(obj, key, default=""):
         if isinstance(obj, dict): return obj.get(key, default)

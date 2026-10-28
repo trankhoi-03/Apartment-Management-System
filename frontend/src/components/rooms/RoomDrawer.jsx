@@ -584,13 +584,15 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
                     </button>
                   </div>
                 )}
-                <button 
-                  onClick={handleExportContract}
-                  disabled={isExporting}
-                  className="w-full px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 rounded-xl text-sm font-medium transition mt-3 flex items-center justify-center gap-2"
-                >
-                  {isExporting ? "⏳ Đang tải..." : "📄 Xuất hợp đồng"}
-                </button>
+                {isOwner && (
+                  <button 
+                    onClick={handleExportContract}
+                    disabled={isExporting}
+                    className="w-full px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50 rounded-xl text-sm font-medium transition mt-3 flex items-center justify-center gap-2"
+                  >
+                    {isExporting ? "⏳ Đang tải..." : "📄 Xuất hợp đồng"}
+                  </button>
+                )}
                 <button onClick={() => setShowGenerateBill(true)}
                   className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition mt-1">
                   🧾 Ghi chỉ số & Tính tiền
@@ -599,10 +601,12 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
             ) : (
               <div className="text-center py-6 text-gray-400">
                 <p className="mb-3 text-sm">Phòng chưa có hợp đồng</p>
-                <button onClick={() => setShowContractForm(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition">
-                  + Thêm hợp đồng
-                </button>
+                {isOwner && (
+                  <button onClick={() => setShowContractForm(true)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition">
+                    + Thêm hợp đồng
+                  </button>
+                )}
               </div>
             )}
           </section>
@@ -626,7 +630,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
         </button>
       )}
 
-      {showContractForm && (
+      {isOwner && showContractForm && (
         <ContractFormModal
           room={room}
           onClose={() => setShowContractForm(false)}
@@ -638,7 +642,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
         />
       )}
 
-      {showEditContract && contract && (
+      {isOwner && showEditContract && contract && (
         <EditContractModal
           room={room}
           contract={contract}
@@ -651,7 +655,7 @@ export default function RoomDrawer({ room, onClose, onEdit, onDuplicate, onDelet
         />
       )}
 
-      {showEndContract && contract && (
+      {isOwner && showEndContract && contract && (
         <EndContractModal
           contract={contract}
           roomNumber={room.room_number}

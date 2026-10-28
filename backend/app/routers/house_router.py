@@ -4,7 +4,7 @@ from app.core.database import get_db
 from app.models.houses import House
 from app.models.user import User
 from app.schemas.house_schema import HouseCreate, HouseUpdate, HouseResponse
-from app.core.dependencies import get_current_user, verify_house_access
+from app.core.dependencies import get_current_user, require_owner, verify_house_owner
 
 router = APIRouter(prefix="/houses", tags=["houses"])
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/houses", tags=["houses"])
 def create_house(
     payload: HouseCreate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user) 
+    current_user: User = Depends(require_owner) 
 ):
     house = House(**payload.model_dump())
     house.managers.append(current_user) 
@@ -35,7 +35,7 @@ def update_house(
     house_id: int,
     payload: HouseUpdate, 
     db: Session = Depends(get_db),
-    house: House = Depends(verify_house_access) 
+    house: House = Depends(verify_house_owner),
 ):
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(house, field, value)
@@ -47,7 +47,7 @@ def update_house(
 def delete_house(
     house_id: int,
     db: Session = Depends(get_db),
-    house: House = Depends(verify_house_access) 
+    house: House = Depends(verify_house_owner),
 ):
     from app.models.room import Room
     if db.query(Room).filter(Room.house_id == house.id).first():

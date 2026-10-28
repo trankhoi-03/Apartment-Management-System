@@ -63,3 +63,30 @@ def verify_house_access(
             detail="Bạn không có quyền truy cập vào dữ liệu của nhà trọ này."
         )
     return house
+
+
+def verify_house_owner(
+    house_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_owner),
+) -> House:
+    """Owner-only operations: infer the unique owner from existing user_house links.
+
+    No schema migration is required. Fail closed for zero/multiple owner links.
+    """
+    house = db.query(House).filter(House.id == house_id).first()
+    if house is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhà trọ.")
+
+    owner_ids = {u.id for u in house.managers if u.role == "owner"}
+    if current_user.id not in owner_ids:
+        raise HTTPException(
+            status_code=403,
+            detail="Bạn không có quyền sở hữu nhà trọ này.",
+        )
+    if owner_ids != {current_user.id}:
+        raise HTTPException(
+            status_code=409,
+            detail="Quyền sở hữu nhà trọ không rõ ràng. Cần kiểm tra dữ liệu.",
+        )
+    return house

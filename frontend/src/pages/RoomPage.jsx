@@ -8,6 +8,17 @@ import HouseFormModal from "../components/houses/HouseFormModal";
 import ContractTemplateSettings from "../components/houses/ContractTemplateSettings";
 
 
+const PINNED_TAGS_KEY = "room-filter-pinned-amenities-v1";
+
+const readTagPreference = (key) => {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value.filter((tag) => typeof tag === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
 const STATUS_TAGS = [
   { id: "status_vacant", label: "Trống" },
   { id: "status_occupied", label: "Đang thuê" },
@@ -43,6 +54,9 @@ export default function RoomsPage() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState("");
+  const [pinnedAmenities, setPinnedAmenities] = useState(() => readTagPreference(PINNED_TAGS_KEY));
+  const [catalogAmenities, setCatalogAmenities] = useState([]);
+  const [deletingTag, setDeletingTag] = useState(null);
 
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [editingRoom, setEditingRoom] = useState(null);
@@ -53,14 +67,16 @@ export default function RoomsPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [housesRes, roomsRes, contractsRes] = await Promise.all([
+      const [housesRes, roomsRes, contractsRes, tagsRes] = await Promise.all([
         api.get("/houses").catch(() => ({ data: [] })),
         api.get("/rooms").catch(() => ({ data: [] })),
-        api.get("/contracts").catch(() => ({ data: [] }))
+        api.get("/contracts").catch(() => ({ data: [] })),
+        api.get("/tags/").catch(() => ({ data: [] }))
       ]);
       setHouses(housesRes.data);
       setRooms(roomsRes.data);
       setContracts(contractsRes.data);
+      setCatalogAmenities(tagsRes.data.filter(t => ["furniture", "amenity", "feature"].includes(t.type)).map(t => t.name));
     } finally {
       setLoading(false);
     }
@@ -181,14 +197,56 @@ export default function RoomsPage() {
 
   const uniqueAmenities = Array.from(
     new Set(
-      houseFilteredRooms.flatMap(r => {
+      [...houseFilteredRooms.flatMap(r => {
         const tags = Array.isArray(r.feature_and_furniture) 
           ? r.feature_and_furniture 
           : (r.furnitures || []);
         return tags.map(t => typeof t === 'string' ? t.trim() : "").filter(Boolean);
-      })
+      }), ...(isOwner ? catalogAmenities : [])].filter(Boolean)
     )
   ).sort((a, b) => a.localeCompare(b));
+
+  // Ghim tag chỉ thay đổi giao diện trên trình duyệt; không sửa dữ liệu server.
+  useEffect(() => {
+    localStorage.setItem(PINNED_TAGS_KEY, JSON.stringify(pinnedAmenities));
+  }, [pinnedAmenities]);
+
+  const pinnedVisibleAmenities = pinnedAmenities.filter(tag => uniqueAmenities.includes(tag));
+
+  const togglePinnedAmenity = (tag) => {
+    setPinnedAmenities(prev => prev.includes(tag)
+      ? prev.filter(item => item !== tag)
+      : [...prev, tag]);
+  };
+
+  const unpinAmenity = (tag) => {
+    setPinnedAmenities(prev => prev.filter(item => item !== tag));
+    // Không bỏ trạng thái lọc đang chọn và không tác động database.
+  };
+
+  // Xóa hoàn toàn: chỉ Owner, gọi API xóa tag khỏi danh mục và mọi phòng thuộc Owner.
+  const deleteAmenityPermanently = async (tag) => {
+    if (!isOwner || deletingTag) return;
+    const confirmed = window.confirm(
+      `Xóa hoàn toàn tag "${tag}"?\n\nTag sẽ bị gỡ khỏi tất cả phòng của tài khoản bạn và khỏi danh mục gợi ý. Hành động này không thể hoàn tác.`
+    );
+    if (!confirmed) return;
+    setDeletingTag(tag);
+    try {
+      await api.post("/tags/bulk-delete", { names: [tag] });
+      setPinnedAmenities(prev => prev.filter(item => item.toLocaleLowerCase() !== tag.toLocaleLowerCase()));
+      setSelectedTags(prev => prev.filter(item => item.toLocaleLowerCase() !== tag.toLocaleLowerCase()));
+      await loadData();
+      if (selectedRoom?.id) {
+        const refreshedRoom = await api.get(`/rooms/${selectedRoom.id}`);
+        setSelectedRoom(refreshedRoom.data);
+      }
+    } catch (err) {
+      alert(err.response?.data?.detail || "Không thể xóa tag. Vui lòng thử lại.");
+    } finally {
+      setDeletingTag(null);
+    }
+  };
 
   const toggleTag = (tagId) => {
     setSelectedTags(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
@@ -330,20 +388,23 @@ export default function RoomsPage() {
             );
           })}
 
-          {uniqueAmenities.slice(0, 4).map((tag) => {
+          {pinnedVisibleAmenities.map((tag) => {
             const isSelected = selectedTags.includes(tag);
             return (
-              <button
-                key={tag}
-                onClick={() => toggleTag(tag)}
-                className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                  isSelected
-                    ? "border-blue-600 text-blue-700 bg-blue-50/40"
-                    : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-                }`}
-              >
-                {tag}
-              </button>
+              <div key={tag} className={`group relative flex items-center border-b-2 transition-colors ${
+                isSelected ? "border-blue-600 text-blue-700 bg-blue-50/40" : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+              }`}>
+                <button type="button" onClick={() => toggleTag(tag)}
+                  className="pl-5 pr-9 py-3.5 text-sm font-medium whitespace-nowrap">
+                  {tag}
+                </button>
+                <button type="button" title={`Bỏ ghim ${tag} khỏi thanh lọc`}
+                  aria-label={`Bỏ ghim ${tag} khỏi thanh lọc`}
+                  onClick={() => unpinAmenity(tag)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity">
+                  ×
+                </button>
+              </div>
             );
           })}
         </div>
@@ -373,20 +434,32 @@ export default function RoomsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
+                  <p className="px-3 pt-2 text-xs text-gray-500">Chọn để lọc · ☆ để ghim · Xóa để gỡ tag khỏi tất cả phòng</p>
                   <div className="max-h-60 overflow-y-auto p-2 flex flex-col gap-1">
                     {uniqueAmenities
-                      .filter(t => t.toLowerCase().includes(tagSearch.toLowerCase()))
+                      .filter(t => t.toLowerCase().includes(tagSearch.trim().toLowerCase()))
                       .map(tag => (
-                        <label key={tag} className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors group">
-                          <input 
-                            type="checkbox" 
-                            checked={selectedTags.includes(tag)}
-                            onChange={() => toggleTag(tag)}
-                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700 group-hover:text-blue-700">{tag}</span>
-                        </label>
-                    ))}
+                        <div key={tag} className="flex items-center gap-2 px-2 py-2 hover:bg-blue-50 rounded-lg">
+                          <label className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer">
+                            <input type="checkbox" checked={selectedTags.includes(tag)}
+                              onChange={() => toggleTag(tag)} className="w-4 h-4 shrink-0 accent-blue-600" />
+                            <span className="text-sm text-gray-700 truncate" title={tag}>{tag}</span>
+                          </label>
+                          <button type="button" onClick={() => togglePinnedAmenity(tag)}
+                              title={pinnedAmenities.includes(tag) ? "Bỏ ghim" : "Ghim lên thanh lọc"}
+                              className="px-2 py-1 rounded text-blue-600 hover:bg-blue-100">
+                              {pinnedAmenities.includes(tag) ? "★" : "☆"}
+                            </button>
+                          {isOwner && (
+                            <button type="button" onClick={() => deleteAmenityPermanently(tag)}
+                              disabled={Boolean(deletingTag)}
+                              title="Xóa hoàn toàn tag khỏi tất cả phòng của bạn"
+                              className="px-2 py-1 rounded text-red-600 hover:bg-red-50 disabled:opacity-40">
+                              {deletingTag === tag ? "Đang xóa..." : "Xóa"}
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     {uniqueAmenities.length === 0 && (
                       <p className="text-sm text-gray-500 text-center py-4">Chưa có đặc điểm/nội thất nào.</p>
                     )}
@@ -405,7 +478,11 @@ export default function RoomsPage() {
                 return (
                   <span key={tagId} className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg border border-blue-200">
                     {label}
-                    <button onClick={() => toggleTag(tagId)} className="text-blue-400 hover:text-red-500 font-bold leading-none mb-0.5">×</button>
+                    {!isStatus && (
+                      <button type="button" onClick={() => toggleTag(tagId)}
+                        aria-label={`Bỏ lọc ${label}`}
+                        className="text-blue-400 hover:text-red-500 font-bold leading-none mb-0.5">×</button>
+                    )}
                   </span>
                 );
               })}

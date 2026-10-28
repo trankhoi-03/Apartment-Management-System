@@ -1,11 +1,10 @@
-from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 
 from app.core.database import get_db
-from app.core.dependencies import require_owner, get_current_user, verify_house_access
+from app.core.dependencies import require_owner, get_current_user, verify_house_access, verify_house_owner
 from app.models.user import User
 from app.models.room import Room
 from app.models.contract import Contract
@@ -26,7 +25,7 @@ def create_room(
     db: Session = Depends(get_db), 
     current_user: User = Depends(require_owner)
 ):
-    verify_house_access(house_id=payload.house_id, db=db, current_user=current_user)
+    verify_house_owner(house_id=payload.house_id, db=db, current_user=current_user)
 
     user_house_ids = [h.id for h in current_user.managed_houses]
 
@@ -37,7 +36,7 @@ def create_room(
 
     
     if payload.feature_and_furniture:
-        for f_name in payload.feature_and_furniture:
+        for f_name in dict.fromkeys(payload.feature_and_furniture):
             tag_name = f_name.strip()
             if not tag_name:
                 continue
@@ -50,7 +49,7 @@ def create_room(
             if not existing:
                 new_tag = Tag(name=tag_name, type="amenity", user_id=current_user.id)
                 db.add(new_tag)
-        db.commit()
+        # Tag và phòng được commit chung một transaction.
     
     # is_premium = (
     #     current_user.subscription_plan != "free"
@@ -67,6 +66,7 @@ def create_room(
     ).first()
     
     if existing_room:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Số phòng '{payload.room_number}' đã tồn tại trong nhà trọ này.",
@@ -102,13 +102,18 @@ def list_rooms(
 
 
 @router.get("/{room_id}", response_model=RoomResponse)
-def get_room(room_id: int, db: Session = Depends(get_db)):
+def get_room(
+    room_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     room = db.query(Room).filter(Room.id == room_id).first()
     if room is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy phòng có id={room_id}",
         )
+    verify_house_access(house_id=room.house_id, db=db, current_user=current_user)
     return room
 
 
@@ -126,35 +131,42 @@ def update_room(
             detail=f"Không tìm thấy phòng có id={room_id}",
         )
 
-    if payload.feature_and_furniture:
-        for f_name in payload.feature_and_furniture:
+    # Cần được cấp quyền trên nhà trọ hiện tại trước khi thay đổi phòng.
+    verify_house_owner(house_id=room.house_id, db=db, current_user=current_user)
+
+    update_data = payload.model_dump(exclude_unset=True)
+    target_house_id = update_data.get("house_id", room.house_id)
+    if target_house_id is None:
+        raise HTTPException(status_code=422, detail="Nhà trọ của phòng không được để trống.")
+
+    # Nếu chuyển phòng qua nhà khác, owner phải có quyền ở cả hai nhà.
+    verify_house_owner(house_id=target_house_id, db=db, current_user=current_user)
+
+    new_room_number = update_data.get("room_number", room.room_number)
+    if (new_room_number != room.room_number or target_house_id != room.house_id):
+        existing_room = db.query(Room).filter(
+            Room.room_number == new_room_number,
+            Room.house_id == target_house_id,
+            Room.id != room.id,
+        ).first()
+        if existing_room:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Số phòng '{new_room_number}' đã tồn tại trong nhà trọ này.",
+            )
+
+    if update_data.get("feature_and_furniture"):
+        for f_name in dict.fromkeys(update_data["feature_and_furniture"]):
             tag_name = f_name.strip()
             if not tag_name:
                 continue
-            
             existing = db.query(Tag).filter(
                 func.lower(Tag.name) == tag_name.lower(),
-                Tag.user_id == current_user.id
+                Tag.user_id == current_user.id,
             ).first()
-            
             if not existing:
-                new_tag = Tag(name=tag_name, type="amenity", user_id=current_user.id)
-                db.add(new_tag)
-        db.commit()
+                db.add(Tag(name=tag_name, type="amenity", user_id=current_user.id))
 
-    if payload.room_number is not None and payload.room_number != room.room_number:
-        existing_room = db.query(Room).filter(
-            Room.room_number == payload.room_number,
-            Room.house_id == room.house_id  
-        ).first()
-        
-        if existing_room:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Số phòng '{payload.room_number}' đã tồn tại trong nhà trọ này.",
-            )
-
-    update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(room, field, value)
 
@@ -172,13 +184,19 @@ def update_room(
 
 
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_room(room_id: int, db: Session = Depends(get_db)):
+def delete_room(
+    room_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_owner),
+):
     room = db.query(Room).filter(Room.id == room_id).first()
     if room is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy phòng có id={room_id}",
         )
+
+    verify_house_owner(house_id=room.house_id, db=db, current_user=current_user)
 
     # Kiểm tra hợp đồng đang active
     active_contract = db.query(Contract).filter(
@@ -235,31 +253,46 @@ def delete_room(room_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/sync-legacy-tags", status_code=status.HTTP_200_OK)
-def sync_legacy_tags(db: Session = Depends(get_db)):
+def sync_legacy_tags(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_owner),
+):
+    """Đồng bộ tag cũ chỉ từ các nhà mà owner hiện tại quản lý.
+
+    Không quét phòng của các tài khoản khác; tạo Tag có user_id cụ thể.
+    Chỉ nên gọi khi thực sự cần đồng bộ dữ liệu cũ.
     """
-    API dùng 1 lần để quét toàn bộ phòng cũ và tạo Tag nội thất
-    """
-    rooms = db.query(Room).all()
-    new_tags_count = 0
+    allowed_house_ids = [h.id for h in current_user.managed_houses]
+    if not allowed_house_ids:
+        return {"message": "Không có nhà trọ để đồng bộ.", "tags": []}
+
+    # Đồng bộ là thao tác ghi: từ chối nếu có nhà không thuộc duy nhất owner hiện tại.
+    for house_id in allowed_house_ids:
+        verify_house_owner(house_id=house_id, db=db, current_user=current_user)
+
+    rooms = db.query(Room).filter(Room.house_id.in_(allowed_house_ids)).all()
+    existing_tags = db.query(Tag).filter(Tag.user_id == current_user.id).all()
+    known_names = {tag.name.strip().casefold() for tag in existing_tags}
     added_tags = []
-    
+
     for room in rooms:
-        if room.feature_and_furniture:
-            for f_name in room.feature_and_furniture:
-                tag_name = f_name.strip()
-                if not tag_name:
-                    continue
-                
-                # Kiểm tra xem tag đã có trong bảng tags hay chưa
-                existing = db.query(Tag).filter(Tag.name == tag_name, Tag.type == "furniture").first()
-                if not existing:
-                    new_tag = Tag(name=tag_name, type="furniture")
-                    db.add(new_tag)
-                    db.commit() # Lưu ngay vào DB
-                    new_tags_count += 1
-                    added_tags.append(tag_name)
-                    
+        for f_name in (room.feature_and_furniture or []):
+            if not isinstance(f_name, str):
+                continue
+            tag_name = f_name.strip()
+            if not tag_name or tag_name.casefold() in known_names:
+                continue
+            db.add(Tag(name=tag_name, type="furniture", user_id=current_user.id))
+            known_names.add(tag_name.casefold())
+            added_tags.append(tag_name)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Không thể đồng bộ do xung đột dữ liệu tag.")
+
     return {
-        "message": f"Đã đồng bộ thành công {new_tags_count} tag mới từ dữ liệu cũ.",
-        "tags": added_tags
+        "message": f"Đã đồng bộ thành công {len(added_tags)} tag mới từ dữ liệu cũ.",
+        "tags": added_tags,
     }

@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -18,7 +19,7 @@ class RoomUpdate(BaseModel):
     room_number: str | None = Field(default=None, max_length=20)
     area_sqm: float | None = None
     cost_price: float | None = Field(default=None, ge=0)
-    status: str | None = None
+    status: Literal["vacant", "occupied", "inactive"] | None = None
     is_water_meter: bool | None = None
     feature_and_furniture: list[str] | None = None
 

@@ -5,11 +5,19 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+const clearAuthSession = () => {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("user_role");
+  localStorage.removeItem("full_name");
+  localStorage.removeItem("current_user_id");
+};
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    delete config.headers.Authorization;
   }
   return config;
 });
@@ -17,9 +25,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem("access_token");
-      window.location.href = "/login";
+    const status = error.response?.status;
+    const url = error.config?.url || "";
+    const isAuthFormRequest = /\/auth\/(login|register)(?:\?|$)/.test(url);
+
+    // Không redirect khi user nhập sai mật khẩu: để LoginPage hiện lỗi.
+    if (status === 401 && !isAuthFormRequest) {
+      clearAuthSession();
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
     }
     return Promise.reject(error);
   }

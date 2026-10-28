@@ -5,7 +5,7 @@ from decimal import Decimal
 import calendar
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import require_owner, verify_house_owner
 from app.models.user import User
 from app.models.houses import House
 from app.models.room import Room
@@ -119,10 +119,13 @@ def _allocate_house_water_cost(db: Session, rooms, month: str, total_cube, total
 def get_all_houses_financial_report(
     month: str, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_owner)
 ):
     allowed_house_ids = [h.id for h in current_user.managed_houses]
     houses = db.query(House).filter(House.id.in_(allowed_house_ids)).all()
+    # Fail closed nếu nhà có liên kết owner thiếu hoặc không duy nhất.
+    for house in houses:
+        verify_house_owner(house_id=house.id, db=db, current_user=current_user)
     
     rent_details = []
     other_revenue_details = [] 
@@ -338,10 +341,9 @@ def get_all_houses_financial_report(
 def update_internet_cost(
     house_id: int, month: str, payload: InternetCostUpdate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_owner)
 ):
-    if house_id not in [h.id for h in current_user.managed_houses]:
-        raise HTTPException(status_code=403, detail="Không có quyền truy cập nhà này")
+    verify_house_owner(house_id=house_id, db=db, current_user=current_user)
 
     cost = db.query(MonthlyHouseCost).filter(
         MonthlyHouseCost.house_id == house_id, 
@@ -361,10 +363,9 @@ def update_internet_cost(
 def update_other_cost(
     house_id: int, month: str, payload: OtherCostUpdate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_owner)
 ):
-    if house_id not in [h.id for h in current_user.managed_houses]:
-        raise HTTPException(status_code=403, detail="Không có quyền truy cập nhà này")
+    verify_house_owner(house_id=house_id, db=db, current_user=current_user)
 
     cost = db.query(MonthlyHouseCost).filter(
         MonthlyHouseCost.house_id == house_id, 
@@ -385,10 +386,9 @@ def update_other_cost(
 def update_monthly_cost(
     house_id: int, month: str, payload: MonthlyCostUpdate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_owner)
 ):
-    if house_id not in [h.id for h in current_user.managed_houses]:
-        raise HTTPException(status_code=403, detail="Không có quyền truy cập nhà này")
+    verify_house_owner(house_id=house_id, db=db, current_user=current_user)
 
     cost = db.query(MonthlyHouseCost).filter(
         MonthlyHouseCost.house_id == house_id, 
@@ -411,10 +411,9 @@ def update_monthly_cost(
 def get_house_financial_report(
     house_id: int, month: str, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_owner)
 ):
-    if house_id not in [h.id for h in current_user.managed_houses]:
-        raise HTTPException(status_code=403, detail="Không có quyền truy cập báo cáo của nhà này")
+    verify_house_owner(house_id=house_id, db=db, current_user=current_user)
 
     house = db.query(House).filter(House.id == house_id).first()
     if not house:

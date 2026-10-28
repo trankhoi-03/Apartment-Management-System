@@ -10,6 +10,10 @@ from app.schemas.user_schema import UserCreate, UserResponse, LoginRequest
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Sinh bcrypt hash thật một lần khi khởi động, không sinh lại mỗi request.
+# Hash này không liên quan đến bất kỳ tài khoản nào.
+DUMMY_PASSWORD_HASH = hash_password("nonexistent-account-dummy-password")
+
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
@@ -35,11 +39,10 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == payload.phone).first()
+    password_to_check = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
+    password_valid = verify_password(payload.password, password_to_check)
 
-    dummy_hash = "$2b$12$dummyhashforpreventingtimingattackxxxxxxxxxxxxxxxxxxxxxxxx"
-    password_to_check = user.password_hash if user else dummy_hash
-
-    if not user or not verify_password(payload.password, password_to_check):
+    if user is None or not password_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Số điện thoại hoặc mật khẩu không đúng.",

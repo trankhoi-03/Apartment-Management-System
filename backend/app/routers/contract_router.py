@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_owner, get_current_user
+from app.core.dependencies import require_owner, get_current_user, verify_house_access, verify_house_owner
 from app.core.security import decrypt_cccd
 from app.core.database import get_db
 from app.core.security import encrypt_cccd
@@ -21,6 +21,45 @@ from app.schemas.contract_schema import ContractCreate, ContractUpdate, Contract
 
 
 router = APIRouter(prefix="/contracts", tags=["contracts"])
+
+
+def _authorized_contract(db: Session, contract_id: int, current_user: User, owner_only: bool = False) -> Contract:
+    """Resolve Contract -> Room -> House before allowing any read/write.
+
+    Orphan historical contracts fail closed until ownership can be established.
+    """
+    contract = db.query(Contract).filter(Contract.id == contract_id).first()
+    if contract is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy hợp đồng.")
+    if contract.room_id is None:
+        raise HTTPException(status_code=409, detail="Hợp đồng không còn liên kết phòng; chưa thể xác minh quyền truy cập.")
+    room = db.query(Room).filter(Room.id == contract.room_id).first()
+    if room is None:
+        raise HTTPException(status_code=409, detail="Không xác định được nhà của hợp đồng.")
+    check = verify_house_owner if owner_only else verify_house_access
+    check(house_id=room.house_id, db=db, current_user=current_user)
+    return contract
+
+
+def _verify_tenant_available_for_owner(db: Session, tenant_id: int, current_user: User) -> None:
+    """Owner marker is authoritative; existing contract links are checked too."""
+    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy khách thuê.")
+    if tenant.owner_id is None:
+        raise HTTPException(status_code=409, detail="Khách thuê chưa xác định được chủ sở hữu; cần xử lý dữ liệu.")
+    if tenant.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền sử dụng hồ sơ khách thuê này.")
+
+    contracts = db.query(Contract).filter(Contract.tenant_id == tenant_id).all()
+    for contract in contracts:
+        if contract.room_id is None:
+            raise HTTPException(status_code=409, detail="Không xác định được chủ sở hữu của khách thuê từ hợp đồng cũ.")
+        room = db.query(Room).filter(Room.id == contract.room_id).first()
+        if room is None:
+            raise HTTPException(status_code=409, detail="Không tìm thấy phòng của hợp đồng cũ.")
+        verify_house_owner(house_id=room.house_id, db=db, current_user=current_user)
+
 
 # Hàm hỗ trợ duyệt qua các đoạn văn và bảng biểu trong Word để thay thế dữ liệu
 def replace_text_in_doc(doc, replacements):
@@ -48,7 +87,7 @@ def _replace_text_in_paragraph(p, replacements):
 
 
 @router.post("", response_model=ContractResponse, status_code=status.HTTP_201_CREATED)
-def create_contract(payload: ContractCreate, db: Session = Depends(get_db)):
+def create_contract(payload: ContractCreate, db: Session = Depends(get_db), current_user: User = Depends(require_owner)):
     """Tạo hợp đồng mới
     3 bước validate nghiệp vụ phải làm trước khi insert:
     1. room_id tồn tại
@@ -63,6 +102,8 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db)):
             detail=f"Không tìm thấy phòng có id={payload.room_id}"
         )
     
+    verify_house_owner(house_id=room.house_id, db=db, current_user=current_user)
+
     tenant = db.query(Tenant).filter(Tenant.id == payload.tenant_id).first()
     if tenant is None:
         raise HTTPException(
@@ -70,6 +111,8 @@ def create_contract(payload: ContractCreate, db: Session = Depends(get_db)):
             detail=f"Không tìm thấy khách thuê có id={payload.tenant_id}"
         )
     
+    _verify_tenant_available_for_owner(db, tenant.id, current_user)
+
     existing_active = (
         db.query(Contract)
         .filter(Contract.room_id == payload.room_id, Contract.status == "active")
@@ -126,14 +169,8 @@ def list_contracts(
 
 
 @router.get("/{contract_id}", response_model=ContractResponse)
-def get_contract(contract_id: int, db: Session = Depends(get_db)):
-    contract = db.query(Contract).filter(Contract.id == contract_id).first()
-    if contract is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Không tìm thấy hợp đồng có id={contract_id}"
-        )
-    return contract
+def get_contract(contract_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return _authorized_contract(db, contract_id, current_user)
 
 
 @router.patch("/{contract_id}", response_model=ContractResponse)
@@ -145,6 +182,8 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
             detail=f"Không tìm thấy hợp đồng có id={contract_id}"
         )
     
+    _authorized_contract(db, contract_id, current_user, owner_only=True)
+
     update_data = payload.model_dump(exclude_unset=True)
     
     # 1. Tách mảng co_tenants ra khỏi payload
@@ -198,7 +237,7 @@ def update_contract(contract_id: int, payload: ContractUpdate, db: Session = Dep
 
 
 @router.delete("/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_contract(contract_id: int, db: Session = Depends(get_db)):
+def delete_contract(contract_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_owner)):
     contract = db.query(Contract).filter(Contract.id == contract_id).first()
     if contract is None:
         raise HTTPException(
@@ -206,6 +245,8 @@ def delete_contract(contract_id: int, db: Session = Depends(get_db)):
             detail=f"Không tìm thấy hợp đồng có id={contract_id}"
         )
     
+    _authorized_contract(db, contract_id, current_user, owner_only=True)
+
     has_bill = db.query(Bill).filter(Bill.contract_id == contract_id).first() is not None
     if has_bill:
         raise HTTPException(
@@ -225,10 +266,9 @@ def export_contract_word(
     water_price: float = 0,
     electric_reading: float = 0,
     water_reading: float = 0,
-    db: Session = Depends(get_db)):
-    contract = db.query(Contract).filter(Contract.id == contract_id).first()
-    if not contract:
-        raise HTTPException(status_code=404, detail="Hợp đồng không tồn tại")
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_owner)):
+    contract = _authorized_contract(db, contract_id, current_user, owner_only=True)
         
     room = contract.room
     house = room.house

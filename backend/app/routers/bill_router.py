@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_db
-from app.core.dependencies import require_owner, get_current_user
+from app.core.dependencies import require_owner, get_current_user, verify_house_access, verify_house_owner
 from app.models.contract import Contract
 from app.models.utility_reading import UtilityReading
 from app.models.utility_rate import UtilityRate
@@ -20,6 +20,22 @@ from app.services.gmail_service import send_bill_email
 router = APIRouter(prefix="/bills", tags=["bills"])
 
 
+def _check_contract_access(db: Session, contract: Contract, user: User, owner_only: bool = False) -> None:
+    if contract is None or contract.room_id is None:
+        raise HTTPException(status_code=409, detail="Không xác định được phòng của hợp đồng.")
+    room = db.query(Room).filter(Room.id == contract.room_id).first()
+    if room is None:
+        raise HTTPException(status_code=409, detail="Không xác định được nhà của hợp đồng.")
+    checker = verify_house_owner if owner_only else verify_house_access
+    checker(house_id=room.house_id, db=db, current_user=user)
+
+
+def _check_bill_access(db: Session, bill: Bill, user: User, owner_only: bool = False) -> None:
+    contract = db.query(Contract).filter(Contract.id == bill.contract_id).first()
+    _check_contract_access(db, contract, user, owner_only=owner_only)
+
+
+
 def _billing_month_to_last_date(billing_month: str) -> date:
     year, month = billing_month.split("-")
     year, month = int(year), int(month)
@@ -28,7 +44,7 @@ def _billing_month_to_last_date(billing_month: str) -> date:
 
 
 @router.post("/generate", response_model=BillResponse, status_code=status.HTTP_201_CREATED)
-def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
+def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
 
     # Bước 1: Lấy Contract, kiểm tra active
     contract = db.query(Contract).filter(Contract.id == payload.contract_id).first()
@@ -37,6 +53,7 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy hợp đồng có id={payload.contract_id}",
         )
+    _check_contract_access(db, contract, current_user)
     if contract.status != "active":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -197,18 +214,19 @@ def list_bills(
 
 
 @router.get("/{bill_id}", response_model=BillResponse)
-def get_bill(bill_id: int, db: Session = Depends(get_db)):
+def get_bill(bill_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
     if bill is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy bill có id={bill_id}",
         )
+    _check_bill_access(db, bill, current_user)
     return bill
 
 
 @router.patch("/{bill_id}", response_model=BillResponse)
-def update_bill_status(bill_id: int, payload: BillUpdate, db: Session = Depends(get_db)):
+def update_bill_status(bill_id: int, payload: BillUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_owner)):
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
     if bill is None:
         raise HTTPException(
@@ -216,6 +234,7 @@ def update_bill_status(bill_id: int, payload: BillUpdate, db: Session = Depends(
             detail=f"Không tìm thấy bill có id={bill_id}",
         )
 
+    _check_bill_access(db, bill, current_user, owner_only=True)
     update_data = payload.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(bill, field, value)
@@ -226,11 +245,12 @@ def update_bill_status(bill_id: int, payload: BillUpdate, db: Session = Depends(
 
 
 @router.get("/{bill_id}/utility-reading")
-def get_bill_utility_reading(bill_id: int, db: Session = Depends(get_db)):
+def get_bill_utility_reading(bill_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
     if not bill:
         raise HTTPException(status_code=404, detail="Không tìm thấy bill.")
     
+    _check_bill_access(db, bill, current_user)
     contract = db.query(Contract).filter(Contract.id == bill.contract_id).first()
     
     reading = db.query(UtilityReading).filter(
@@ -248,11 +268,12 @@ def get_bill_utility_reading(bill_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{bill_id}/edit", response_model=BillResponse)
-def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session = Depends(get_db)):
+def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session = Depends(get_db), current_user: User = Depends(require_owner)):
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
     if bill is None:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy bill id={bill_id}")
     
+    _check_bill_access(db, bill, current_user, owner_only=True)
     if bill.status not in ["pending", "sent", "paid"]:
         raise HTTPException(
             status_code=422,
@@ -427,7 +448,7 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     return bill
 
 @router.post("/{bill_id}/send", response_model=BillResponse)
-def send_bill(bill_id: int, db: Session = Depends(get_db)):
+def send_bill(bill_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     bill = (
         db.query(Bill)
         .options(
@@ -442,6 +463,7 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Không tìm thấy bill có id={bill_id}",
         )
+    _check_bill_access(db, bill, current_user)
     if bill.status not in ["pending", "sent", "paid"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -503,7 +525,7 @@ def send_bill(bill_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/{bill_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_bill(bill_id: int, db: Session = Depends(get_db)):
+def delete_bill(bill_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_owner)):
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
     if bill is None:
         raise HTTPException(
@@ -511,6 +533,7 @@ def delete_bill(bill_id: int, db: Session = Depends(get_db)):
             detail=f"Không tìm thấy bill có id={bill_id}",
         )
 
+    _check_bill_access(db, bill, current_user, owner_only=True)
     db.delete(bill)
     db.commit()
     return None

@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 from .base import Base
@@ -15,5 +15,10 @@ class Tenant(Base):
     phone: Mapped[str] = mapped_column(String(15), nullable=False)
     email: Mapped[str | None] = mapped_column(String(150), nullable=True)
     id_card_number: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", name="fk_tenants_owner_id"),
+        nullable=True,
+        index=True
+    )
 
     contracts: Mapped[list["Contract"]] = relationship(back_populates="tenant")

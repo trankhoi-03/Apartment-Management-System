@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+
 import bcrypt
 from jose import JWTError, jwt
 from cryptography.fernet import Fernet
@@ -8,48 +9,41 @@ from app.core.config import settings
 
 fernet = Fernet(settings.ENCRYPTION_KEY.encode())
 
-# --- Password ---
 
 def hash_password(plain_password: str) -> str:
-    """Hash password bằng bcrypt trực tiếp (không qua passlib).
-    bcrypt.gensalt() tự tạo salt ngẫu nhiên mỗi lần → cùng password
-    cho ra hash khác nhau, không thể dùng rainbow table để crack."""
     password_bytes = plain_password.encode("utf-8")
-    salt = bcrypt.gensalt()
-    return bcrypt.hashpw(password_bytes, salt).decode("utf-8")
+    if len(password_bytes) > 72:
+        raise ValueError("Mật khẩu không được vượt quá 72 byte UTF-8.")
+    return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """So sánh plain text password với bcrypt hash đã lưu trong DB."""
     password_bytes = plain_password.encode("utf-8")
-    hashed_bytes = hashed_password.encode("utf-8")
-    return bcrypt.checkpw(password_bytes, hashed_bytes)
-
+    if len(password_bytes) > 72:
+        return False
+    try:
+        return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def encrypt_cccd(plain_cccd: str) -> str:
     return fernet.encrypt(plain_cccd.encode("utf-8")).decode("utf-8")
 
+
 def decrypt_cccd(encrypted_cccd: str) -> str:
     return fernet.decrypt(encrypted_cccd.encode("utf-8")).decode("utf-8")
 
-# --- JWT ---
 
 def create_access_token(user_id: int) -> str:
-    """Tạo JWT token chứa user_id, hết hạn sau ACCESS_TOKEN_EXPIRE_MINUTES."""
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    payload = {
-        "sub": str(user_id),   # "sub" (subject) là claim chuẩn của JWT spec
-        "exp": expire,
-    }
+    payload = {"sub": str(user_id), "exp": expire}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def decode_access_token(token: str) -> int | None:
-    """Decode JWT token, trả về user_id nếu hợp lệ, None nếu sai/hết hạn.
-    JWTError bao gồm: token sai chữ ký, token hết hạn, format không hợp lệ."""
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
@@ -58,5 +52,5 @@ def decode_access_token(token: str) -> int | None:
         if user_id is None:
             return None
         return int(user_id)
-    except JWTError:
+    except (JWTError, ValueError, TypeError):
         return None
