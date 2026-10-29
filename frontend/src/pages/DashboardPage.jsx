@@ -16,6 +16,32 @@ const INCIDENT_STATUS_CONFIG = {
   processing: { label: "Đang xử lý",                     color: "bg-blue-100 text-blue-700 border-blue-200" },
 };
 
+function getDownloadFilename(contentDisposition, fallbackName) {
+  if (!contentDisposition) return fallbackName;
+
+  // Ưu tiên filename* hỗ trợ UTF-8
+  const utf8Match = contentDisposition.match(
+    /filename\*\s*=\s*UTF-8''([^;]+)/i
+  );
+
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim());
+    } catch {
+      return fallbackName;
+    }
+  }
+
+  // Fallback cho filename thông thường
+  const normalMatch = contentDisposition.match(
+    /filename\s*=\s*"?([^";]+)"?/i
+  );
+
+  return normalMatch
+    ? normalMatch[1].trim()
+    : fallbackName;
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const userRole = localStorage.getItem("user_role") || "staff";
@@ -267,16 +293,30 @@ export default function DashboardPage() {
   async function handleExport() {
     try {
       setIsExporting(true);
-      const res = await api.get("/data/export", { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+
+      const res = await api.get("/data/export", {
+        responseType: "blob",
+      });
+
+      const fileName = getDownloadFilename(
+        res.headers["content-disposition"],
+        "Du_Lieu_Phong_Tro.xlsx"
+      );
+
+      const url = window.URL.createObjectURL(res.data);
       const link = document.createElement("a");
+
       link.href = url;
-      const dateStr = new Date().toISOString().slice(0, 10);
-      link.setAttribute("download", `Data_PhongTro_${dateStr}.xlsx`);
+      link.setAttribute("download", fileName);
+
       document.body.appendChild(link);
       link.click();
-      link.parentNode.removeChild(link);
-    } catch {
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error("Export error:", err);
       alert("Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại.");
     } finally {
       setIsExporting(false);
@@ -285,15 +325,29 @@ export default function DashboardPage() {
 
   async function handleDownloadTemplate() {
     try {
-      const res = await api.get("/data/template", { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const res = await api.get("/data/template", {
+        responseType: "blob",
+      });
+
+      const fileName = getDownloadFilename(
+        res.headers["content-disposition"],
+        "Mẫu Nhập Liệu Phòng Trọ.xlsx"
+      );
+
+      const url = window.URL.createObjectURL(res.data);
       const link = document.createElement("a");
+
       link.href = url;
-      link.setAttribute("download", "Mau_Nhap_Lieu_PhongTro.xlsx"); 
+      link.setAttribute("download", fileName);
+
       document.body.appendChild(link);
       link.click();
-      link.parentNode.removeChild(link);
-    } catch {
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error("Download template error:", err);
       alert("Không thể tải file mẫu. Vui lòng thử lại.");
     }
   }

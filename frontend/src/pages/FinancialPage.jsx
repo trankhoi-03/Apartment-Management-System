@@ -668,15 +668,51 @@ export default function FinancialPage() {
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
+
       const endpoint = `/data/export-finance?month=${selectedMonth}&house_id=${selectedHouse}`;
-      const res = await api.get(endpoint, { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+
+      const res = await api.get(endpoint, {
+        responseType: "blob",
+      });
+
+      // Lấy tên nhà
+      const houseName =
+        selectedHouse === "all"
+          ? "Tất cả nhà trọ"
+          : houses.find(
+              (h) => h.id.toString() === selectedHouse.toString()
+            )?.name || "Nhà trọ";
+
+      // Chuyển YYYY-MM thành MM-YYYY
+      const [year, month] = selectedMonth.split("-");
+      const formattedMonth = `${month}-${year}`;
+
+      const safeHouseName = houseName
+        .replace(/[<>:"/\\|?*]/g, "")
+        .trim();
+
+      // Tên file tải xuống
+      const fileName = `Báo Cáo Tài Chính ${safeHouseName} tháng ${formattedMonth}.xlsx`;
+
+      // Tạo và tải file Excel
+      const url = window.URL.createObjectURL(res.data);
+
       const link = document.createElement("a");
       link.href = url;
-      const houseName = selectedHouse === "all" ? "Tất cả nhà trọ" : houses.find((h) => h.id.toString() === selectedHouse.toString())?.name || "Nha_Tro";
-      link.setAttribute("download", `Báo Cáo Tài Chính ${houseName} ${selectedMonth}.xlsx`);
-      document.body.appendChild(link); link.click(); link.parentNode.removeChild(link);
-    } catch { alert("Lỗi xuất Excel"); } finally { setIsExporting(false); }
+      link.setAttribute("download", fileName);
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("Lỗi xuất Excel:", error);
+      alert("Lỗi xuất Excel");
+    } finally {
+      setIsExporting(false);
+    }
   };
   
   const inputStyle = "w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";

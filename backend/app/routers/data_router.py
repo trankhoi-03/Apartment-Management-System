@@ -1,4 +1,5 @@
 import io
+import re
 import pandas as pd
 from openpyxl.worksheet.datavalidation import DataValidation
 from urllib.parse import quote
@@ -144,7 +145,7 @@ def export_excel(
     
     output.seek(0)
     
-    file_name = f"Dữ liệu Phòng Trọ_{datetime.now().strftime('%d%m%Y')}.xlsx"
+    file_name = f"Dữ liệu Phòng Trọ {datetime.now().strftime('%d-%m-%Y')}.xlsx"
     encoded_file_name = quote(file_name)
     headers = {
         "Content-Disposition": f"attachment; filename*=utf-8''{encoded_file_name}"
@@ -470,11 +471,27 @@ def export_financial_excel(
     
     output.seek(0)
     
+    # Lấy tên nhà từ báo cáo
     house_name_raw = _g(report_data, "house_name", "")
-    safe_house_name = house_name_raw.replace(' ', '_') if house_name_raw else f"Nha_Tro_{house_id}"
-    
-    file_name = f"Bao_Cao_Tai_Chinh_{safe_house_name}_{month}.xlsx"
+
+    if house_id == "all":
+        house_name = "Tất cả nhà trọ"
+    else:
+        house_name = house_name_raw or f"Nhà trọ {house_id}"
+
+    # Chuyển YYYY-MM thành MM-YYYY
+    year, month_num = month.split("-")
+    formatted_month = f"{month_num}-{year}"
+
+    safe_house_name = re.sub(r'[<>:"/\\|?*]', '', house_name).strip()
+
+    file_name = (
+        f"Báo Cáo Tài Chính {safe_house_name} "
+        f"tháng {formatted_month}.xlsx"
+    )
+
     encoded_file_name = quote(file_name)
+
     headers = {
         "Content-Disposition": f"attachment; filename*=utf-8''{encoded_file_name}"
     }
