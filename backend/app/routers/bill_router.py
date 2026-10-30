@@ -182,6 +182,8 @@ def generate_bill(payload: BillGenerateRequest, db: Session = Depends(get_db), c
         additional_fee=payload.additional_fee,
         additional_fee_reason=payload.additional_fee_reason,
         total_amount=total_amount,
+        electric_unit_price=rate.electric_price if payload.electric_calc_method == "fixed_price" else None,
+        water_unit_price=rate.water_price if room.is_water_meter else None,
         electric_consumed=float(electric_consumed),
         water_consumed=float(water_consumed),
         status="pending",
@@ -272,180 +274,159 @@ def edit_bill_calculations(bill_id: int, payload: BillEditRequest, db: Session =
     bill = db.query(Bill).filter(Bill.id == bill_id).first()
     if bill is None:
         raise HTTPException(status_code=404, detail=f"Không tìm thấy bill id={bill_id}")
-    
     _check_bill_access(db, bill, current_user, owner_only=True)
-    if bill.status not in ["pending", "sent", "paid"]:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Hóa đơn đang ở trạng thái '{bill.status}', không thể sửa."
-        )
+    if bill.status not in ("pending", "sent", "paid"):
+        raise HTTPException(status_code=422, detail=f"Hóa đơn đang ở trạng thái '{bill.status}', không thể sửa.")
+
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        return bill  # PATCH {} là no-op, không tính lại hóa đơn.
 
     contract = db.query(Contract).filter(Contract.id == bill.contract_id).first()
     room = contract.room
-
-    # 1. Lấy chỉ số điện nước cũ bằng billing_month HIỆN TẠI của bill
     reading = db.query(UtilityReading).filter(
         UtilityReading.room_id == contract.room_id,
-        UtilityReading.billing_month == bill.billing_month
+        UtilityReading.billing_month == bill.billing_month,
     ).first()
-    
-    if not reading:
+    if reading is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy số điện nước gốc của bill này.")
-        
-    # 2. Xử lý việc đổi tháng (nếu có)
-    new_billing_month = getattr(payload, 'billing_month', None)
-    if new_billing_month and new_billing_month != bill.billing_month:
-        # existing_bill = db.query(Bill).filter(
-        #     Bill.contract_id == contract.id,
-        #     Bill.billing_month == new_billing_month
-        # ).first()
-        
-        # if existing_bill:
-        #     raise HTTPException(
-        #         status_code=409, 
-        #         detail=f"Phòng này đã có hóa đơn cho tháng {new_billing_month}. Không thể đổi sang tháng này."
-        #     )
-            
-        existing_reading = db.query(UtilityReading).filter(
+
+    def dec(value):
+        return Decimal(str(value))
+
+    def changed(field, existing):
+        value = changes.get(field)
+        return field in changes and value is not None and dec(value) != dec(existing)
+
+    month = changes.get("billing_month")
+    month_changed = month is not None and month != bill.billing_month
+    if month_changed:
+        if not isinstance(month, str) or len(month) != 7 or month[4] != "-" or not month[:4].isdigit() or not month[5:].isdigit() or not 1 <= int(month[5:]) <= 12:
+            raise HTTPException(status_code=422, detail="Tháng hóa đơn không hợp lệ (YYYY-MM).")
+        conflicts = db.query(UtilityReading).filter(
             UtilityReading.room_id == contract.room_id,
-            UtilityReading.billing_month == new_billing_month
+            UtilityReading.billing_month == month,
         ).first()
-        
-        if existing_reading:
-            raise HTTPException(
-                status_code=409, 
-                detail=f"Phòng này đã có chốt điện nước cho tháng {new_billing_month}. Không thể đổi sang tháng này."
-            )
-            
-        reading.billing_month = new_billing_month
-        bill.billing_month = new_billing_month
+        if conflicts:
+            raise HTTPException(status_code=409, detail=f"Phòng đã có chốt điện nước cho tháng {month}.")
+        # Không di chuyển reading nếu còn bill khác sử dụng cùng reading.
+        shared = db.query(Bill).join(Contract, Bill.contract_id == Contract.id).filter(
+            Bill.id != bill.id, Contract.room_id == contract.room_id,
+            Bill.billing_month == bill.billing_month,
+        ).first()
+        if shared:
+            raise HTTPException(status_code=409, detail="Không thể đổi tháng: số điện nước đang được hóa đơn khác sử dụng.")
 
-    # 3. Tính toán số điện tiêu thụ
-    electric_new_val = payload.electric_new if payload.electric_new is not None else reading.electric_new
-    electric_consumed = Decimal(str(electric_new_val)) - Decimal(str(reading.electric_old))
-    if electric_consumed < 0:
+    calc_method = changes.get("electric_calc_method") or bill.electric_calc_method or "fixed_price"
+    if calc_method not in ("fixed_price", "split_ratio"):
+        raise HTTPException(status_code=422, detail="Phương thức tính tiền điện không hợp lệ.")
+
+    electric_new = changes.get("electric_new")
+    electric_new = reading.electric_new if electric_new is None else electric_new
+    water_new = changes.get("water_new")
+    water_new = reading.water_new if water_new is None else water_new
+    if dec(electric_new) < dec(reading.electric_old):
         raise HTTPException(status_code=400, detail="Số điện mới không được nhỏ hơn số điện cũ.")
+    if room.is_water_meter and dec(water_new) < dec(reading.water_old):
+        raise HTTPException(status_code=400, detail="Số nước mới không được nhỏ hơn số nước cũ.")
 
-    # 4. Xác định cách tính tiền điện và tính tiền điện
-    calc_method = payload.electric_calc_method or getattr(bill, "electric_calc_method", "fixed_price")
-
-    if calc_method == "split_ratio":
-        # Ưu tiên lấy từ payload, nếu không có lấy lại từ bill hiện tại
-        tot_consumed = payload.electric_total_consumed if payload.electric_total_consumed is not None else getattr(bill, "electric_total_consumed", None)
-        tot_cost = payload.electric_total_cost if payload.electric_total_cost is not None else getattr(bill, "electric_total_cost", None)
-
-        if not tot_consumed or Decimal(str(tot_consumed)) <= 0:
-            raise HTTPException(
-                status_code=400, 
-                detail="Tổng số kWh của hóa đơn tổng phải lớn hơn 0 khi tính theo chia tỉ lệ."
-            )
-        if tot_cost is None or Decimal(str(tot_cost)) < 0:
-            raise HTTPException(
-                status_code=400, 
-                detail="Tổng số tiền của hóa đơn tổng không hợp lệ."
-            )
-
-        total_consumed_dec = Decimal(str(tot_consumed))
-        total_cost_dec = Decimal(str(tot_cost))
-
-        # Công thức cách 2: (số điện phòng / số điện tổng) * tổng tiền điện
-        electric_amount = round((electric_consumed / total_consumed_dec) * total_cost_dec, 2)
-
-        # Lưu lại thông tin cách tính 2 vào bill
-        bill.electric_calc_method = "split_ratio"
-        bill.electric_total_consumed = float(tot_consumed)
-        bill.electric_total_cost = float(tot_cost)
-    else:
-        # Cách 1: Tính theo đơn giá cố định
-        billing_month_end = _billing_month_to_last_date(bill.billing_month)
-        rate = db.query(UtilityRate).filter(
-            UtilityRate.room_id == contract.room_id,
-            UtilityRate.effective_from <= billing_month_end
-        ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
-
-        if rate is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Chưa có đơn giá điện/nước áp dụng cho phòng tại tháng {bill.billing_month}."
-            )
-
-        electric_amount = electric_consumed * rate.electric_price
-
-        # Lưu lại thông tin cách tính 1 vào bill và dọn các trường cách 2
-        bill.electric_calc_method = "fixed_price"
-        bill.electric_total_consumed = None
-        bill.electric_total_cost = None
-
-    # 5. Tính toán tiền nước
-    if room.is_water_meter:
-        billing_month_end = _billing_month_to_last_date(bill.billing_month)
-        rate = db.query(UtilityRate).filter(
-            UtilityRate.room_id == contract.room_id,
-            UtilityRate.effective_from <= billing_month_end
-        ).order_by(UtilityRate.effective_from.desc(), UtilityRate.id.desc()).first()
-
-        water_new_val = payload.water_new if payload.water_new is not None else reading.water_new
-        water_consumed = Decimal(str(water_new_val)) - Decimal(str(reading.water_old))
-        if water_consumed < 0:
-            raise HTTPException(status_code=400, detail="Số nước mới không được nhỏ hơn số nước cũ.")
-        water_amount = water_consumed * rate.water_price
-    else:
-        water_consumed = Decimal("0")
-        if payload.default_water_amount is not None:
-            water_amount = Decimal(str(payload.default_water_amount))
-        else:
-            water_amount = Decimal(str(bill.water_amount))
-
-    # 6. Tính tổng tiền hóa đơn
-    rent_amt = Decimal(str(payload.rent_amount)) if payload.rent_amount is not None else Decimal(str(bill.rent_amount))
-    svc_fee = Decimal(str(payload.service_fee)) if payload.service_fee is not None else Decimal(str(bill.service_fee))
-    cln_fee = Decimal(str(payload.cleaning_fee)) if payload.cleaning_fee is not None else Decimal(str(bill.cleaning_fee))
-    net_fee = Decimal(str(payload.internet_fee)) if payload.internet_fee is not None else Decimal(str(bill.internet_fee))
-    add_fee = Decimal(str(payload.additional_fee)) if payload.additional_fee is not None else Decimal(str(bill.additional_fee))
-    add_reason = payload.additional_fee_reason if payload.additional_fee_reason is not None else bill.additional_fee_reason
-    dsc_amt = Decimal(str(payload.discount_amount)) if payload.discount_amount is not None else Decimal(str(bill.discount_amount))
-    dsc_reason = payload.discount_reason if payload.discount_reason is not None else bill.discount_reason
-
-    total_amount = (
-        rent_amt 
-        - dsc_amt
-        + electric_amount 
-        + water_amount 
-        + svc_fee + cln_fee + net_fee + add_fee
+    method_changed = calc_method != bill.electric_calc_method
+    electric_changed = (
+        changed("electric_new", reading.electric_new) or method_changed or
+        (calc_method == "split_ratio" and (
+            (changes.get("electric_total_consumed") is not None and dec(changes["electric_total_consumed"]) != dec(bill.electric_total_consumed or 0)) or
+            (changes.get("electric_total_cost") is not None and dec(changes["electric_total_cost"]) != dec(bill.electric_total_cost or 0))
+        )) or (bill.electric_unit_price is None and changes.get("electric_unit_price") is not None and calc_method == "fixed_price")
     )
-    if total_amount < 0:
-        total_amount = Decimal("0")
+    water_changed = (
+        (room.is_water_meter and (changed("water_new", reading.water_new) or (bill.water_unit_price is None and changes.get("water_unit_price") is not None)))
+        or (not room.is_water_meter and changed("default_water_amount", bill.water_amount))
+    )
 
-    # 7. Cập nhật record UtilityReading và Bill
-    reading.electric_new = electric_new_val
-    if room.is_water_meter:
-        reading.water_new = water_new_val
+    # Giá snapshot là bất biến sau khi chốt (kể cả nếu không tính lại).
+    if bill.electric_unit_price is not None and changes.get("electric_unit_price") is not None and dec(changes["electric_unit_price"]) != dec(bill.electric_unit_price):
+        raise HTTPException(status_code=409, detail="Hóa đơn đã chốt đơn giá điện.")
+    if bill.water_unit_price is not None and changes.get("water_unit_price") is not None and dec(changes["water_unit_price"]) != dec(bill.water_unit_price):
+        raise HTTPException(status_code=409, detail="Hóa đơn đã chốt đơn giá nước.")
 
-    if payload.due_date is not None: 
-        bill.due_date = payload.due_date
+    electric_amount = dec(bill.electric_amount)
+    electric_consumed = dec(bill.electric_consumed)
+    water_amount = dec(bill.water_amount)
+    water_consumed = dec(bill.water_consumed)
 
-    bill.rent_amount = float(rent_amt)
-    bill.electric_consumed = float(electric_consumed)
-    bill.water_consumed = float(water_consumed)
-    bill.electric_amount = float(electric_amount)
-    bill.water_amount = float(water_amount)
-    bill.service_fee = float(svc_fee)
-    bill.cleaning_fee = float(cln_fee)
-    bill.internet_fee = float(net_fee)
-    bill.additional_fee = float(add_fee)
-    bill.additional_fee_reason = add_reason  
-    bill.discount_amount = float(dsc_amt)
-    bill.discount_reason = dsc_reason
-    bill.total_amount = float(total_amount)
+    if electric_changed:
+        electric_consumed = dec(electric_new) - dec(reading.electric_old)
+        if calc_method == "split_ratio":
+            tot_kwh = changes.get("electric_total_consumed")
+            tot_cost = changes.get("electric_total_cost")
+            tot_kwh = bill.electric_total_consumed if tot_kwh is None else tot_kwh
+            tot_cost = bill.electric_total_cost if tot_cost is None else tot_cost
+            if tot_kwh is None or dec(tot_kwh) <= 0 or tot_cost is None or dec(tot_cost) < 0:
+                raise HTTPException(status_code=422, detail="Tổng điện và tổng tiền của bill tổng không hợp lệ.")
+            electric_amount = round(electric_consumed / dec(tot_kwh) * dec(tot_cost), 2)
+            bill.electric_total_consumed = float(tot_kwh)
+            bill.electric_total_cost = dec(tot_cost)
+        else:
+            if bill.electric_unit_price is None:
+                price = changes.get("electric_unit_price")
+                if price is None:
+                    raise HTTPException(status_code=422, detail="Bill cũ chưa lưu đơn giá điện; hãy xác nhận đơn giá.")
+                bill.electric_unit_price = dec(price)
+            electric_amount = electric_consumed * dec(bill.electric_unit_price)
+            bill.electric_total_consumed = None
+            bill.electric_total_cost = None
+        bill.electric_calc_method = calc_method
+        reading.electric_new = float(electric_new)
+        bill.electric_consumed = float(electric_consumed)
+        bill.electric_amount = electric_amount
+
+    if water_changed:
+        if room.is_water_meter:
+            water_consumed = dec(water_new) - dec(reading.water_old)
+            if bill.water_unit_price is None:
+                price = changes.get("water_unit_price")
+                if price is None:
+                    raise HTTPException(status_code=422, detail="Bill cũ chưa lưu đơn giá nước; hãy xác nhận đơn giá.")
+                bill.water_unit_price = dec(price)
+            water_amount = water_consumed * dec(bill.water_unit_price)
+            reading.water_new = float(water_new)
+        else:
+            water_consumed = dec(0)
+            water_amount = dec(changes["default_water_amount"])
+        bill.water_consumed = float(water_consumed)
+        bill.water_amount = water_amount
+
+    numeric_fields = ("rent_amount", "service_fee", "cleaning_fee", "internet_fee", "additional_fee", "discount_amount")
+    for name in numeric_fields:
+        value = changes.get(name)
+        if value is not None and dec(value) != dec(getattr(bill, name) or 0):
+            setattr(bill, name, dec(value))
+    for name in ("additional_fee_reason", "discount_reason", "due_date"):
+        if name in changes and changes[name] != getattr(bill, name):
+            setattr(bill, name, changes[name])
+
+    if month_changed:
+        reading.billing_month = month
+        bill.billing_month = month
+
+    # Tính lại tổng từ các thành phần lưu trên bill; không thay thế thành phần chưa sửa.
+    new_total = (dec(bill.rent_amount) - dec(bill.discount_amount or 0) +
+                 dec(bill.electric_amount) + dec(bill.water_amount) +
+                 dec(bill.service_fee or 0) + dec(bill.cleaning_fee or 0) +
+                 dec(bill.internet_fee or 0) + dec(bill.additional_fee or 0))
+    new_total = max(dec(0), new_total)
+    if new_total != dec(bill.total_amount):
+        bill.total_amount = new_total
 
     try:
-        db.commit()
-    except Exception as e:
+        if db.is_modified(bill) or db.is_modified(reading):
+            db.commit()
+    except Exception as exc:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu dữ liệu: {str(e)}")
-
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu dữ liệu: {exc}")
     db.refresh(bill)
     return bill
+
 
 @router.post("/{bill_id}/send", response_model=BillResponse)
 def send_bill(bill_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

@@ -48,4 +48,8 @@ class Bill(Base):
     electric_total_consumed: Mapped[float | None] = mapped_column(Float, nullable=True)  
     electric_total_cost: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
 
+    # Snapshot đơn giá khi lập bill; NULL nghĩa là bill cũ chưa có đơn giá được xác nhận.
+    electric_unit_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    water_unit_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+
     contract: Mapped["Contract"] = relationship(back_populates="bills")

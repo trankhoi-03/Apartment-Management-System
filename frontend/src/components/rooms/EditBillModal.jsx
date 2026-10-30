@@ -178,12 +178,16 @@ function VNDateInput({ name, value, onChange, required, className }) {
 
 export default function EditBillModal({ bill, onClose, onSaved }) {
   const [billingMonth, setBillingMonth] = useState("");
+  const initialFormRef = useRef(null);
+  const [readingLoaded, setReadingLoaded] = useState(false);
   
   const [form, setForm] = useState({
     rent_amount: "",
     electric_new: "",
     water_new: "",
     default_water_amount: "",
+    electric_unit_price: "",
+    water_unit_price: "",
     service_fee: "",
     cleaning_fee: "",            
     internet_fee: "",           
@@ -208,6 +212,8 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   useEffect(() => {
     const syncDataToForm = async () => { 
       if (bill) {
+        setReadingLoaded(false);
+        initialFormRef.current = null;
         let initialElectric = "";
         let initialWater = "";
         
@@ -222,11 +228,13 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
         const currentBillingMonth = bill.billing_month || "";
         setBillingMonth(currentBillingMonth);
 
-        setForm({
+        const initialForm = {
           rent_amount: bill.rent_amount ?? "",
           electric_new: initialElectric, 
           water_new: initialWater,       
-          default_water_amount: bill.default_water_amount ?? bill.water_amount ?? "", 
+          default_water_amount: bill.default_water_amount ?? bill.water_amount ?? "",
+          electric_unit_price: bill.electric_unit_price ?? "",
+          water_unit_price: bill.water_unit_price ?? "", 
           service_fee: bill.service_fee ?? 0,
           cleaning_fee: bill.cleaning_fee ?? 0, 
           internet_fee: bill.internet_fee ?? 0, 
@@ -238,7 +246,10 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
           electric_total_consumed: bill.electric_total_consumed ? String(bill.electric_total_consumed) : "",
           electric_total_cost: bill.electric_total_cost ? String(bill.electric_total_cost) : "",
           due_date: bill.due_date ? bill.due_date.slice(0, 10) : "",
-        });
+        };
+        initialFormRef.current = { ...initialForm, billing_month: currentBillingMonth };
+        setForm(initialForm);
+        setReadingLoaded(true);
         
         // REVERSE-CALCULATION: Tự động nhận diện Hóa đơn gộp/Tiền lẻ
         const contractRent = bill.computed_contract?.monthly_rent;
@@ -304,62 +315,75 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-
-    // Validate cho cách tính chia bill tổng
-    if (form.electric_calc_method === "split_ratio") {
-      if (!form.electric_total_consumed || Number(form.electric_total_consumed) <= 0) {
-        setError("Vui lòng nhập Tổng số điện (kWh) của hóa đơn tổng lớn hơn 0.");
-        return;
-      }
-      if (form.electric_total_cost === "" || Number(form.electric_total_cost) < 0) {
-        setError("Vui lòng nhập Tổng tiền của hóa đơn điện tổng hợp lệ.");
-        return;
-      }
+    const original = initialFormRef.current;
+    if (!readingLoaded || !original) {
+      setError("Chưa tải xong dữ liệu chỉ số điện/nước. Vui lòng mở lại hóa đơn.");
+      return;
     }
-    setLoading(true);
 
+    const payload = {};
+    const modified = (key, current = form[key]) => String(current ?? "") !== String(original[key] ?? "");
+    const putNumber = (key) => {
+      if (modified(key)) {
+        if (form[key] === "") throw new Error(`Vui lòng nhập giá trị hợp lệ cho ${key}.`);
+        payload[key] = Number(form[key]);
+      }
+    };
     try {
-      // 1. Luôn gửi các thông tin cơ bản
-      const payload = {
-        billing_month: billingMonth,
-        due_date: form.due_date,
-        rent_amount: Number(form.rent_amount) || 0,
-        electric_calc_method: form.electric_calc_method,
-      };
+      if (billingMonth !== original.billing_month) payload.billing_month = billingMonth;
+      if (modified("due_date")) payload.due_date = form.due_date || null;
+      for (const key of ["rent_amount", "service_fee", "cleaning_fee", "internet_fee", "additional_fee", "discount_amount"]) {
+        putNumber(key);
+      }
+      for (const key of ["additional_fee_reason", "discount_reason"]) {
+        if (modified(key)) payload[key] = form[key].trim() || null;
+      }
+      if (modified("electric_calc_method")) payload.electric_calc_method = form.electric_calc_method;
+      putNumber("electric_new");
+      if (isWaterMeter) putNumber("water_new");
+      else putNumber("default_water_amount");
 
-      // 2. Xử lý điện
+      const electricTouched = ["electric_new", "electric_calc_method"].some(k => k in payload);
+      const waterTouched = isWaterMeter ? "water_new" in payload : "default_water_amount" in payload;
+
       if (form.electric_calc_method === "split_ratio") {
-        payload.electric_total_consumed = Number(form.electric_total_consumed) || 0;
-        payload.electric_total_cost = Number(form.electric_total_cost) || 0;
-        payload.electric_new = Number(form.electric_new) || 0; // Vẫn cần gửi số chỉ đồng hồ phòng
-      } else {
-        payload.electric_new = Number(form.electric_new) || 0;
+        putNumber("electric_total_consumed");
+        putNumber("electric_total_cost");
+        if (electricTouched || "electric_total_consumed" in payload || "electric_total_cost" in payload) {
+          if (Number(form.electric_total_consumed) <= 0 || form.electric_total_consumed === "") {
+            throw new Error("Tổng kWh điện phải lớn hơn 0.");
+          }
+          if (form.electric_total_cost === "" || Number(form.electric_total_cost) < 0) {
+            throw new Error("Tổng tiền điện không hợp lệ.");
+          }
+        }
       }
-
-      // 3. Xử lý nước
-      if (isWaterMeter) {
-        payload.water_new = Number(form.water_new) || 0;
-      } else {
-        payload.default_water_amount = Number(form.default_water_amount) || 0;
+      // Giá lịch sử chỉ được xác nhận khi cần tính lại điện/nước, không bắt ép khi sửa phí khác.
+      if (form.electric_calc_method === "fixed_price" && bill.electric_unit_price == null && electricTouched) {
+        if (form.electric_unit_price === "") throw new Error("Vui lòng xác nhận đơn giá điện lịch sử.");
+        payload.electric_unit_price = Number(form.electric_unit_price);
       }
-
-      // 4. Các khoản phí dịch vụ (Nếu xóa trắng thì mặc định là 0)
-      payload.service_fee = Number(form.service_fee) || 0;
-      payload.cleaning_fee = Number(form.cleaning_fee) || 0;
-      payload.internet_fee = Number(form.internet_fee) || 0;
-      
-      payload.additional_fee = Number(form.additional_fee) || 0;
-      payload.additional_fee_reason = (form.additional_fee_reason || "").trim() === "" ? null : form.additional_fee_reason;
-      
-      payload.discount_amount = Number(form.discount_amount) || 0;
-      payload.discount_reason = (form.discount_reason || "").trim() === "" ? null : form.discount_reason;
-
-      // Gửi request PATCH tới API
+      if (isWaterMeter && bill.water_unit_price == null && waterTouched) {
+        if (form.water_unit_price === "") throw new Error("Vui lòng xác nhận đơn giá nước lịch sử.");
+        payload.water_unit_price = Number(form.water_unit_price);
+      }
+      // Cho phép xác nhận giá lịch sử dù chỉ số không đổi, nếu người dùng thực sự nhập giá.
+      if (form.electric_calc_method === "fixed_price" && bill.electric_unit_price == null && modified("electric_unit_price")) {
+        payload.electric_unit_price = Number(form.electric_unit_price);
+      }
+      if (isWaterMeter && bill.water_unit_price == null && modified("water_unit_price")) {
+        payload.water_unit_price = Number(form.water_unit_price);
+      }
+      if (Object.keys(payload).length === 0) {
+        onClose();
+        return;
+      }
+      setLoading(true);
       await api.patch(`/bills/${bill.id}/edit`, payload);
       onSaved();
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Có lỗi xảy ra khi sửa hóa đơn.");
+      setError(typeof detail === "string" ? detail : err.message || "Có lỗi xảy ra khi sửa hóa đơn.");
     } finally {
       setLoading(false);
     }
@@ -518,6 +542,18 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
                 </div>
               </div>
 
+              {form.electric_calc_method === "fixed_price" && (
+                <div className="mt-3">
+                  <label className="block text-xs text-gray-600 mb-1">Đơn giá điện áp dụng cho hóa đơn (đ/kWh)</label>
+                  {bill.electric_unit_price == null ? (
+                    <>
+                      <FormattedNumberInput name="electric_unit_price" value={form.electric_unit_price} onChange={handleChange} className={INPUT} placeholder="Nhập giá đã thỏa thuận của kỳ này" />
+                      <p className="text-xs text-amber-700 mt-1">Bill lịch sử thiếu đơn giá. Hãy kiểm tra hợp đồng/chứng từ trước khi xác nhận, kể cả khi giá là 0.</p>
+                    </>
+                  ) : <p className="text-sm text-gray-700">{Number(bill.electric_unit_price).toLocaleString("vi-VN")} đ/kWh (đã chốt)</p>}
+                </div>
+              )}
+
               {/* Chỉ số điện mới của phòng */}
               <div>
                 <label className="block text-xs text-gray-600 mb-1">
@@ -576,6 +612,13 @@ export default function EditBillModal({ bill, onClose, onSaved }) {
             <div>
               {isWaterMeter ? (
                 <div>
+                  <label className="block text-xs text-gray-600 mb-1">Đơn giá nước áp dụng cho hóa đơn (đ/m³)</label>
+                  {bill.water_unit_price == null ? (
+                    <>
+                      <FormattedNumberInput name="water_unit_price" value={form.water_unit_price} onChange={handleChange} className={INPUT} placeholder="Nhập giá nước của kỳ này" />
+                      <p className="text-xs text-amber-700 mt-1 mb-2">Bill lịch sử chưa lưu đơn giá nước; xác nhận theo hợp đồng cũ.</p>
+                    </>
+                  ) : <p className="text-sm text-gray-700 mb-2">{Number(bill.water_unit_price).toLocaleString("vi-VN")} đ/m³ (đã chốt)</p>}
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     💧 Số nước mới (m³) <span className="text-red-500">*</span>
                   </label>

@@ -354,14 +354,49 @@ export default function EditContractModal({ contract, room, onClose, onSaved }) 
       });
 
       if (rateForm.updateRate) {
-        setSubmitStep("Đang lưu đơn giá mới...");
-        await api.post("/utility-rates", {
-          room_id:        contract.room_id,
-          electric_price: Number(rateForm.electric_price),
-          water_price:    isWaterMeter ? Number(rateForm.water_price) : 0,
+        const electricPriceRaw = String(rateForm.electric_price).trim();
+        const waterPriceRaw = String(rateForm.water_price).trim();
+        const defaultWaterRaw = String(rateForm.default_water_amount).trim();
+
+        if (
+          contractForm.electric_calc_method === "fixed_price" &&
+          electricPriceRaw === ""
+        ) {
+          throw new Error(
+            "Vui lòng nhập giá điện mới trước khi cập nhật đơn giá."
+          );
+        }
+
+        if (isWaterMeter && waterPriceRaw === "") {
+          throw new Error(
+            "Vui lòng nhập giá nước mới trước khi cập nhật đơn giá."
+          );
+        }
+
+        if (!isWaterMeter && defaultWaterRaw === "") {
+          throw new Error(
+            "Vui lòng nhập tiền nước cố định mới."
+          );
+        }
+
+        // Khi dùng split_ratio, giá điện cố định không được sử dụng.
+        const electricPrice =
+          contractForm.electric_calc_method === "split_ratio"
+            ? 0
+            : Number(electricPriceRaw);
+
+        const ratePayload = {
+          room_id: contract.room_id,
+          electric_price: electricPrice,
+          water_price: isWaterMeter ? Number(waterPriceRaw) : 0,
+          default_water_amount: isWaterMeter
+            ? null
+            : Number(defaultWaterRaw),
           effective_from: effectiveDate,
-          ...(!isWaterMeter && rateForm.default_water_amount ? { default_water_amount: Number(rateForm.default_water_amount) } : {}),
-        });
+        };
+
+        setSubmitStep("Đang lưu đơn giá mới...");
+        await api.post("/utility-rates", ratePayload);
       }
 
       // Không vô tình ghi đè chỉ số còn thiếu bằng 0 khi người dùng xóa trống ô nhập.

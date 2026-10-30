@@ -27,7 +27,10 @@ class BillUpdate(BaseModel):
 
 
 class BillEditRequest(BaseModel):
-    billing_month: str | None = None
+    billing_month: str | None = Field(default=None, pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+    # Chỉ xác nhận đơn giá cho bill lịch sử chưa có snapshot hoặc khi chuyển sang fixed_price.
+    electric_unit_price: float | None = Field(default=None, ge=0)
+    water_unit_price: float | None = Field(default=None, ge=0)
     due_date: date | None = None
     rent_amount: float | None = Field(default=None, ge=0)
     electric_new: float | None = None
@@ -71,4 +74,7 @@ class BillResponse(BaseModel):
     electric_total_consumed: float | None = None
     electric_total_cost: float | None = None
  
+    electric_unit_price: float | None = None
+    water_unit_price: float | None = None
+
     model_config = ConfigDict(from_attributes=True)

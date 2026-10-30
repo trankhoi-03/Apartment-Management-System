@@ -1,3 +1,12 @@
+# Python test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+test-results/
+billing-results.xml
+
 # Application storage
 backend/storage/*
 !backend/storage/.gitkeep
